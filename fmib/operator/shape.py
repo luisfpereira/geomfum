@@ -6,7 +6,6 @@ import robust_laplacian
 
 
 class ShapeOperator(abc.ABC):
-    # TODO: call it shape operator instead?
     def __call__(self, shape):
         pass
 

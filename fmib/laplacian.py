@@ -1,6 +1,6 @@
 from fmib.basis import LaplaceEigenBasis
 from fmib.numerics.eig import ScipyEigsh
-from fmib.operator import ShapeLaplacian
+from fmib.operator.shape import ShapeLaplacian
 
 
 class LaplacianSpectrumFinder:
