@@ -35,7 +35,7 @@ def get_orientation_op(
 
     Notes
     -----
-    * vectorized version of ``pyFm.geometry.get_orientation_op``.
+    * vectorized version of ``pyFm.geometry.mesh.get_orientation_op``.
     """
     n_vertices = per_vert_area.shape[0]
     per_vert_area = np.asarray(per_vert_area)

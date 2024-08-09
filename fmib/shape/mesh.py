@@ -5,6 +5,7 @@ import scipy
 
 from fmib.io import load_mesh
 from fmib.operator.functional import (
+    FaceDivergenceOperator,
     FaceOrientationOperator,
     FaceValuedGradient,
 )
@@ -36,6 +37,7 @@ class TriangleMesh(Shape):
 
     def _at_init(self):
         self.equip_with_operator("face_valued_gradient", FaceValuedGradient)
+        self.equip_with_operator("face_divergence", FaceDivergenceOperator)
         self.equip_with_operator("face_orientation_operator", FaceOrientationOperator)
 
     @classmethod
