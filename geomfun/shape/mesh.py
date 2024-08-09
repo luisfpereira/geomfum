@@ -3,8 +3,8 @@
 import numpy as np
 import scipy
 
-from fmib.io import load_mesh
-from fmib.operator.functional import (
+from geomfun.io import load_mesh
+from geomfun.operator.functional import (
     FaceDivergenceOperator,
     FaceOrientationOperator,
     FaceValuedGradient,

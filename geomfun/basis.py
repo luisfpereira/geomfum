@@ -2,7 +2,7 @@
 
 import abc
 
-import fmib.linalg as la
+import geomfun.linalg as la
 
 
 class Basis(abc.ABC):

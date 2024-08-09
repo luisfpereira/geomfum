@@ -1,7 +1,7 @@
 import abc
 
-from fmib.basis import LaplaceEigenBasis
-from fmib.numerics.eig import ScipyEigsh
+from geomfun.basis import LaplaceEigenBasis
+from geomfun.numerics.eig import ScipyEigsh
 
 from ._registry import LaplacianFinderRegistry
 

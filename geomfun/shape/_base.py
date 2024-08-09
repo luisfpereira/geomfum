@@ -3,8 +3,8 @@
 import abc
 import logging
 
-from fmib.basis import LaplaceEigenBasis
-from fmib.laplacian import LaplacianFinder, LaplacianSpectrumFinder
+from geomfun.basis import LaplaceEigenBasis
+from geomfun.laplacian import LaplacianFinder, LaplacianSpectrumFinder
 
 
 class Shape(abc.ABC):

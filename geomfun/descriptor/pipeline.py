@@ -4,7 +4,7 @@ import abc
 
 import numpy as np
 
-import fmib.linalg as la
+import geomfun.linalg as la
 
 from ._base import Descriptor
 from .spectral import SpectralDescriptor
