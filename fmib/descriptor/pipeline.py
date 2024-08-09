@@ -34,7 +34,7 @@ class Normalizer(abc.ABC):
 class L2InnerNormalizer(Normalizer):
     def __call__(self, shape, array):
         coeff = np.sqrt(
-            np.einsum("np,np->p", array, shape.basis.mass_matrix @ array),
+            np.einsum("np,np->p", array, shape.mass_matrix @ array),
         )
         return array / coeff
 

@@ -182,8 +182,7 @@ class OperatorCommutativityEnforcing(WeightedFactor):
         -------
         operators : array-like, shape=[..., spectrum_size, spectrum_size]
         """
-        pinv = basis.vecs.T @ basis.mass_matrix
-        return pinv @ fmib.linalg.columnwise_scaling(descr, basis.vecs)
+        return basis.pinv @ fmib.linalg.columnwise_scaling(descr, basis.vecs)
 
     @staticmethod
     def compute_orientation_operator(shape, descr, reversing=False, normalize=False):
@@ -206,7 +205,7 @@ class OperatorCommutativityEnforcing(WeightedFactor):
             (k2,k2) which represent operators supposed to commute.
         """
         # Precompute the inverse of the eigenvectors matrix
-        pinv = shape.basis.vecs.T @ shape.basis.mass_matrix  # (k1,n)
+        pinv = shape.basis.pinv  # (k1,n)
 
         # Compute the gradient of each descriptor
         grads = shape.face_valued_gradient(descr)

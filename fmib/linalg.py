@@ -36,3 +36,26 @@ def columnwise_scaling(vec, mat):
         rhs = _prefix_with_ellipsis(rhs)
 
     return np.einsum(f"{first_term},{second_term}->{rhs}", vec, mat)
+
+
+def matvecmul(mat, vec):
+    """Matrix vector multiplication.
+
+    Parameters
+    ----------
+    mat : array-like, shape=[..., m, n]
+        Matrix.
+    vec : array-like, shape=[..., n]
+        Vector.
+
+    Returns
+    -------
+    matvec : array-like, shape=[..., m]
+        Matrix vector multiplication.
+    """
+    if vec.ndim == 1:
+        return mat @ vec
+    if mat.ndim == 2:
+        return (mat @ vec.T).T
+
+    return np.einsum("...ij,...j->...i", mat, vec)
