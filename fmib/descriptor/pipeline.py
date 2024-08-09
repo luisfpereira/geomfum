@@ -1,19 +1,27 @@
+"""Descriptor pipeline."""
+
 import abc
 
 import numpy as np
+
+import fmib.linalg as la
 
 from ._base import Descriptor
 from .spectral import SpectralDescriptor
 
 
 class Subsampler(abc.ABC):
+    """Subsampler."""
+
     @abc.abstractmethod
     def __call__(self, array):
         pass
 
 
 class ArangeSubsampler(Subsampler):
-    def __init__(self, subsample_step=1, axis=-1):
+    """Subsampler based on arange method."""
+
+    def __init__(self, subsample_step=1, axis=0):
         self.subsample_step = subsample_step
         self.axis = axis
 
@@ -26,20 +34,26 @@ class ArangeSubsampler(Subsampler):
 
 
 class Normalizer(abc.ABC):
+    """Normalizer."""
+
     @abc.abstractmethod
     def __call__(self, shape, array):
         pass
 
 
 class L2InnerNormalizer(Normalizer):
+    """L2 inner normalizer."""
+
     def __call__(self, shape, array):
         coeff = np.sqrt(
-            np.einsum("np,np->p", array, shape.mass_matrix @ array),
+            np.einsum("...n,...n->...", array, la.matvecmul(shape.mass_matrix, array)),
         )
-        return array / coeff
+        return la.scalarvecmul(1 / coeff, array)
 
 
 class DescriptorPipeline:
+    """Descriptor pipeline."""
+
     # steps: descriptor, subsampler, normalizer
     def __init__(self, steps):
         self.steps = steps
@@ -47,7 +61,7 @@ class DescriptorPipeline:
     def _update_descr(self, current, new):
         if current is None:
             return new
-        return np.c_[current, new]
+        return np.r_[current, new]
 
     def apply(self, shape):
         descr = None
