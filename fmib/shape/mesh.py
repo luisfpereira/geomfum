@@ -1,40 +1,28 @@
-import abc
-import logging
+"""Definition of triangle mesh."""
 
 import numpy as np
 import scipy
 
+from fmib.io import load_mesh
 from fmib.operator.functional import (
     FaceOrientationOperator,
     FaceValuedGradient,
 )
 
-
-class Shape(abc.ABC):
-    def __init__(self):
-        # TODO: create automated way for computing this?
-        # TODO: should this be handled as e.g. laplacian.<>
-        self.basis = None
-
-        # TODO: empty np instead?
-        # TODO: add function to add them
-        self.landmarks = []
-
-    def equip_with_operator(self, name, Operator, allow_overwrite=True, **kwargs):
-        name_exists = hasattr(self, name)
-        if name_exists:
-            if allow_overwrite:
-                logging.warning(f"Overriding {name}.")
-            else:
-                raise ValueError(f"{name} already exists")
-
-        operator = Operator(self, **kwargs)
-        setattr(self, name, operator)
-
-        return self
+from ._base import Shape
 
 
 class TriangleMesh(Shape):
+    """Triangle mesh.
+
+    Parameters
+    ----------
+    vertices : array-like, shape=[n_vertices, 3]
+        Vertices of the mesh.
+    faces : array-like, shape=[n_faces, 3]
+        Faces of the mesh.
+    """
+
     def __init__(self, vertices, faces):
         super().__init__()
         self.vertices = vertices
@@ -50,23 +38,46 @@ class TriangleMesh(Shape):
         self.equip_with_operator("face_valued_gradient", FaceValuedGradient)
         self.equip_with_operator("face_orientation_operator", FaceOrientationOperator)
 
+    @classmethod
+    def from_file(cls, filename):
+        """Instantiate given a file.
+
+        Returns
+        -------
+        mesh : TriangleMesh
+            A triangle mesh.
+        """
+        vertices, faces = load_mesh(filename)
+        return cls(vertices, faces)
+
     @property
     def n_vertices(self):
+        """Number of vertices.
+
+        Returns
+        -------
+        n_vertices : int
+        """
         return self.vertices.shape[0]
 
     @property
     def n_faces(self):
+        """Number of faces.
+
+        Returns
+        -------
+        n_faces : int
+        """
         return self.faces.shape[0]
 
     @property
     def face_normals(self):
-        """
-        Compute face normals of a triangular mesh
+        """Compute face normals of a triangular mesh.
 
         Returns
         -------
-        normals : np.ndarray
-            (m,3) array of normalized per-face normals
+        normals : array-like, shape=[n_faces, 3]
+            Normalized per-face normals.
         """
         if self._face_normals is None:
             v1 = self.vertices[self.faces[:, 0]]
@@ -82,20 +93,12 @@ class TriangleMesh(Shape):
 
     @property
     def face_areas(self):
-        """
-        Compute per-face areas of a triangular mesh
-
-        Parameters
-        -----------------------------
-        vertices : np.ndarray
-            (n,3) array of vertices coordinates
-        faces    : np.ndarray
-            (m,3) array of vertex indices defining faces
+        """Compute per-face areas.
 
         Returns
-        -----------------------------
-        faces_areas : np.ndarray
-            (m,) array of per-face areas
+        -------
+        face_areas : array-like, shape=[n_faces]
+            Per-face areas.
         """
         if self._face_areas is None:
             v1 = self.vertices[self.faces[:, 0]]
@@ -107,23 +110,14 @@ class TriangleMesh(Shape):
 
     @property
     def vertex_areas(self):
-        """
-        Compute per-vertex areas of a triangular mesh.
-        Area of a vertex, approximated as one third of the sum of the area of its adjacent triangles.
+        """Compute per-vertex areas.
 
-        Parameters
-        ----------
-        vertices    : np.ndarray
-            (n,3) array of vertices coordinates
-        faces       : np.ndarray
-            (m,3) array of vertex indices defining faces
-        faces_areas : np.ndarray, optional
-            (m,) array of per-face areas
+        Area of a vertex, approximated as one third of the sum of the area of its adjacent triangles.
 
         Returns
         -------
-        vert_areas : np.ndarray
-            (n,) array of per-vertex areas
+        vertex_areas : array-like, shape=[n_vertices]
+            Per-vertex areas.
         """
         if self._vertex_areas is None:
             # THIS IS JUST A TRICK TO BE FASTER THAN NP.ADD.AT
@@ -139,9 +133,3 @@ class TriangleMesh(Shape):
             ).flatten()
 
         return self._vertex_areas
-
-
-class PointCloud(Shape):
-    def __init__(self, points):
-        super().__init__()
-        self.points = points
