@@ -1,12 +1,15 @@
+"""Factors to build functional map objective function."""
+
 import abc
 
 import numpy as np
 
-import fmib.linalg
+import fmib.linalg as la
 
 
 class WeightedFactor(abc.ABC):
-    """
+    """Weighted factor.
+
     Parameters
     ----------
     weight : float
@@ -18,22 +21,48 @@ class WeightedFactor(abc.ABC):
 
     @abc.abstractmethod
     def __call__(self, fmap_matrix):
+        """Compute energy.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
+
+        Returns
+        -------
+        weighted_energy : float
+            Weighted energy associated with the factor.
+        """
         pass
 
     @abc.abstractmethod
     def gradient(self, fmap_matrix):
+        """Compute energy gradient wrt functional map matrix.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
+
+        Returns
+        -------
+        energy_gradient : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Weighted energy gradient wrt functional map matrix.
+        """
         pass
 
 
 class SpectralDescriptorPreservation(WeightedFactor):
-    # TODO: update docstrings
-    """
+    """Spectral descriptor energy preservation.
+
     Parameters
     ----------
-    descr1 :
-        (K1,p) descriptors on first basis
-    descr2 :
-        (K2,p) descriptros on second basis
+    sdescr_a : array-like, shape=[..., spectrum_size_a]
+        Spectral descriptors on first basis.
+    sdescr_a : array-like, shape=[..., spectrum_size_b]
+        Spectral descriptors on second basis.
+    weight : float
+        Weight of the factor.
     """
 
     def __init__(self, sdescr_a, sdescr_b, weight=1.0):
@@ -42,53 +71,57 @@ class SpectralDescriptorPreservation(WeightedFactor):
         self.sdescr_b = sdescr_b
 
     def __call__(self, fmap_matrix):
-        """
-        Compute the descriptor preservation constraint
+        """Compute energy.
 
         Parameters
         ----------
-        fmap_matrix      :
-            (K2,K1) Functional map
+        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
 
         Returns
         -------
-        energy : float
-            descriptor preservation squared norm
+        weighted_energy : float
+            Weighted descriptor preservation squared norm.
         """
         return (
             self.weight
             * 0.5
-            * np.square(fmap_matrix @ self.sdescr_a - self.sdescr_b).sum()
+            * np.square(
+                # TODO: add vecmatmul
+                la.matvecmul(fmap_matrix.T, self.sdescr_a) - self.sdescr_b
+            ).sum()
         )
 
     def gradient(self, fmap_matrix):
-        """
-        Compute the gradient of the descriptor preservation constraint
+        """Compute energy gradient wrt functional map matrix.
 
         Parameters
         ----------
-        C      :
-            (K2,K1) Functional map
+        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
 
         Returns
         -------
-        gradient : np.ndarray
-            gradient of the descriptor preservation squared norm
+        energy_gradient : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Weighted energy gradient wrt functional map matrix.
         """
+        # TODO: make it proper
         return (
             self.weight
-            * (fmap_matrix @ self.sdescr_a - self.sdescr_b)
-            @ self.sdescr_a.T
+            * (la.matvecmul(fmap_matrix.T, self.sdescr_a) - self.sdescr_b).T
+            @ self.sdescr_a
         )
 
 
 class LBCommutativityEnforcing(WeightedFactor):
-    """
+    """Laplace-Beltrami commutativity constraint.
 
     Parameters
     ----------
-    ev_sqdiff :
-        (K2,K1) [normalized] matrix of squared eigenvalue differences
+    ev_sqdiff : array-like, shape=[spectrum_size_b, spectrum_size_a]
+        (Normalized) matrix of squared eigenvalue differences.
+    weight : float
+        Weight of the factor.
     """
 
     def __init__(self, vals_sqdiff, weight=1.0):
@@ -102,47 +135,47 @@ class LBCommutativityEnforcing(WeightedFactor):
         return LBCommutativityEnforcing(vals_sqdiff, weight=weight)
 
     def __call__(self, fmap_matrix):
-        """
-        Compute the LB commutativity constraint
+        """Compute energy.
 
         Parameters
-        ---------------------
-        C      :
-            (K2,K1) Functional map
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
 
         Returns
-        ---------------------
-        energy : float
-            (float) LB commutativity squared norm
+        -------
+        weighted_energy : float
+            Weighted LB commutativity squared norm.
         """
         return self.weight * 0.5 * (np.square(fmap_matrix) * self.vals_sqdiff).sum()
 
     def gradient(self, fmap_matrix):
-        """
-        Compute the gradient of the LB commutativity constraint
+        """Compute energy gradient wrt functional map matrix.
 
         Parameters
-        ---------------------
-        C         :
-            (K2,K1) Functional map
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
 
         Returns
-        ---------------------
-        gradient : np.ndarray
-            (K2,K1) gradient of the LB commutativity squared norm
+        -------
+        energy_gradient : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Weighted energy gradient wrt functional map matrix.
         """
         return self.weight * fmap_matrix * self.vals_sqdiff
 
 
 class OperatorCommutativityEnforcing(WeightedFactor):
-    """
+    """Operator commutativity constraint.
 
     Parameters
     ----------
-    op1 :
-        (K1,K1) operator on first basis
-    op2 :
-        (K2,K2) descriptros on second basis
+    oper_a : array-like, shape=[spectrum_size_a, spectrum_size_a]
+        Operator on first basis.
+    oper_b : array-like, shape=[spectrum_size_b, spectrum_size_b]
+        Operator on second basis.
+    weight : float
+        Weight of the factor.
     """
 
     def __init__(self, oper_a, oper_b, weight=1.0):
@@ -151,14 +184,21 @@ class OperatorCommutativityEnforcing(WeightedFactor):
         self.oper_b = oper_b
 
     def __new__(cls, oper_a, oper_b, weight=1.0):
-        """
+        """Create new instance of the operator.
 
         Parameters
         ----------
-        oper_a : array-like, shape=[..., K1, K1]
-            operator on first basis
-        oper_b : array-like, shape=[..., K2, K2]
-            (K2,K2) descriptros on second basis
+        oper_a : array-like, shape=[..., spectrum_size_a, spectrum_size_a]
+            Operator on first basis.
+        oper_b : array-like, shape=[..., spectrum_size_b, spectrum_size_b]
+            Operator on second basis.
+        weight : float
+            Weight of the factor.
+
+        Returns
+        -------
+        factor : OperatorCommutativityEnforcing or FactorSum
+            Weighted factor.
         """
         if oper_a.ndim > 2:
             factors = [
@@ -171,8 +211,7 @@ class OperatorCommutativityEnforcing(WeightedFactor):
 
     @staticmethod
     def compute_multiplication_operator(basis, descr):
-        """
-        Compute the multiplication operators associated with the descriptors
+        """Compute the multiplication operators associated with the descriptors.
 
         Parameters
         ----------
@@ -182,7 +221,7 @@ class OperatorCommutativityEnforcing(WeightedFactor):
         -------
         operators : array-like, shape=[..., spectrum_size, spectrum_size]
         """
-        return basis.pinv @ fmib.linalg.columnwise_scaling(descr, basis.vecs)
+        return basis.pinv @ la.columnwise_scaling(descr, basis.vecs)
 
     @staticmethod
     def compute_orientation_operator(shape, descr, reversing=False, normalize=False):
@@ -210,7 +249,7 @@ class OperatorCommutativityEnforcing(WeightedFactor):
         # Compute the gradient of each descriptor
         grads = shape.face_valued_gradient(descr)
         if normalize:
-            grads = fmib.linalg.normalize(grads)
+            grads = la.normalize(grads)
 
         # Compute the operators in reduced basis
         sign = -1 if reversing else 1.0
@@ -264,19 +303,17 @@ class OperatorCommutativityEnforcing(WeightedFactor):
         return OperatorCommutativityEnforcing(oper_a, oper_b, weight=weight)
 
     def __call__(self, fmap_matrix):
-        """
-        Compute the operator commutativity constraint.
-        Can be used with descriptor multiplication operator
+        """Compute energy.
 
         Parameters
-        ---------------------
-        C   :
-            (K2,K1) Functional map
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
 
         Returns
-        ---------------------
+        -------
         energy : float
-            (float) operator commutativity squared norm
+            Weighted operator commutativity squared norm.
         """
         return (
             self.weight
@@ -285,19 +322,17 @@ class OperatorCommutativityEnforcing(WeightedFactor):
         )
 
     def gradient(self, fmap_matrix):
-        """
-        Compute the gradient of the operator commutativity constraint.
-        Can be used with descriptor multiplication operator
+        """Compute energy gradient wrt functional map matrix.
 
         Parameters
-        ---------------------
-        C   :
-            (K2,K1) Functional map
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
 
         Returns
-        ---------------------
-        gradient : np.ndarray
-            (K2,K1) gradient of the operator commutativity squared norm
+        -------
+        energy_gradient : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Weighted energy gradient wrt functional map matrix.
         """
         return self.weight * (
             self.oper_b.T @ (self.oper_b @ fmap_matrix - fmap_matrix @ self.oper_a)
@@ -306,14 +341,46 @@ class OperatorCommutativityEnforcing(WeightedFactor):
 
 
 class FactorSum(WeightedFactor):
+    """Factor sum.
+
+    Parameters
+    ----------
+    factors : list[WeightedFactor]
+        Factors.
+    """
+
     def __init__(self, factors, weight=1.0):
         super().__init__(weight=weight)
         self.factors = factors
 
     def __call__(self, fmap_matrix):
+        """Compute energy.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
+
+        Returns
+        -------
+        weighted_energy : float
+            Weighted energy associated with the factor.
+        """
         return self.weight * np.sum([factor(fmap_matrix) for factor in self.factors])
 
     def gradient(self, fmap_matrix):
+        """Compute energy gradient wrt functional map matrix.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
+
+        Returns
+        -------
+        energy_gradient : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Weighted energy gradient wrt functional map matrix.
+        """
         return self.weight * np.sum(
             [factor.gradient(fmap_matrix) for factor in self.factors], axis=0
         )
