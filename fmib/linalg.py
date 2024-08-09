@@ -38,6 +38,24 @@ def columnwise_scaling(vec, mat):
     return np.einsum(f"{first_term},{second_term}->{rhs}", vec, mat)
 
 
+def scalarvecmul(scalar, vec):
+    """Scalar vector multiplication.
+
+    Parameters
+    ----------
+    scalar : array-like, shape=[....]
+        Scalar.
+    vec : array-like, shape=[..., n]
+        Vector.
+
+    Returns
+    -------
+    scaled_vec : array-like, shape=[..., n]
+        Scaled vector.
+    """
+    return np.einsum("...,...i->...i", scalar, vec)
+
+
 def matvecmul(mat, vec):
     """Matrix vector multiplication.
 
