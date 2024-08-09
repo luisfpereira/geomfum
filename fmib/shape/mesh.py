@@ -25,7 +25,7 @@ class TriangleMesh(Shape):
     """
 
     def __init__(self, vertices, faces):
-        super().__init__()
+        super().__init__(is_mesh=True)
         self.vertices = vertices
         self.faces = faces
 

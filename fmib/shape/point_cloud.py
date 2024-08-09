@@ -13,5 +13,5 @@ class PointCloud(Shape):
     """
 
     def __init__(self, vertices):
-        super().__init__()
+        super().__init__(is_mesh=False)
         self.vertices = vertices

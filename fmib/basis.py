@@ -20,17 +20,15 @@ class EigenBasis(Basis):
 
 
 class LaplaceEigenBasis(EigenBasis):
-    def __init__(self, vals, vecs, laplace_matrix, mass_matrix):
+    def __init__(self, shape, vals, vecs):
+        self._shape = shape
         super().__init__(vals, vecs)
-        self.laplace_matrix = laplace_matrix
-        self.mass_matrix = mass_matrix
 
     def truncate(self, spectrum_size):
         return LaplaceEigenBasis(
+            self._shape,
             self.vals[:spectrum_size],
             self.vecs[:spectrum_size],
-            self.laplace_matrix,
-            self.mass_matrix,
         )
 
     def project(self, array):
@@ -47,4 +45,5 @@ class LaplaceEigenBasis(EigenBasis):
             Projected array.
             (k,p) or (k,) projected function
         """
-        return self.vecs.T @ (self.mass_matrix @ array)
+        # TODO: make it proper
+        return self.vecs.T @ (self._shape.mass_matrix @ array)

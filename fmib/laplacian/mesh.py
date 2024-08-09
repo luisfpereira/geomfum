@@ -30,7 +30,7 @@ class RobustMeshLaplacianFinder(BaseLaplacianFinder):
         Returns
         -------
         laplace_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
-            Laplacian matrix.
+            Laplace matrix.
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
@@ -53,7 +53,7 @@ class PyfmMeshLaplacianFinder(BaseLaplacianFinder):
         Returns
         -------
         laplace_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
-            Laplacian matrix.
+            Laplace matrix.
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
@@ -77,7 +77,7 @@ class IglMeshLaplacianFinder(BaseLaplacianFinder):
         Returns
         -------
         laplace_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
-            Laplacian matrix.
+            Laplace matrix.
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
