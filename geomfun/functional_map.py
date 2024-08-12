@@ -83,11 +83,11 @@ class SpectralDescriptorPreservation(WeightedFactor):
         weighted_energy : float
             Weighted descriptor preservation squared norm.
         """
-        return (
-            self.weight
-            * 0.5
-            * np.square(la.matvecmul(fmap_matrix, self.sdescr_a) - self.sdescr_b).sum()
-        )
+        out = 0.5 * np.square(la.matvecmul(fmap_matrix, self.sdescr_a) - self.sdescr_b)
+        if out.ndim > 0:
+            out = out.sum()
+
+        return self.weight * out
 
     def gradient(self, fmap_matrix):
         """Compute energy gradient wrt functional map matrix.
@@ -102,11 +102,13 @@ class SpectralDescriptorPreservation(WeightedFactor):
         energy_gradient : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Weighted energy gradient wrt functional map matrix.
         """
-        return (
-            self.weight
-            * (la.matvecmul(fmap_matrix, self.sdescr_a) - self.sdescr_b).T
-            @ self.sdescr_a
+        out = la.outer(
+            la.matvecmul(fmap_matrix, self.sdescr_a) - self.sdescr_b, self.sdescr_a
         )
+
+        if out.ndim > 2:
+            out = out.sum(axis=tuple(range(out.ndim - 2)))
+        return self.weight * out
 
 
 class LBCommutativityEnforcing(WeightedFactor):

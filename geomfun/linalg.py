@@ -1,3 +1,5 @@
+"""Linear algebra utils."""
+
 import numpy as np
 
 
@@ -77,3 +79,28 @@ def matvecmul(mat, vec):
         return (mat @ vec.T).T
 
     return np.einsum("...ij,...j->...i", mat, vec)
+
+
+def outer(vec_a, vec_b):
+    """Outer product of two vectors.
+
+    Parameters
+    ----------
+    vec_a : array-like, shape=[..., n]
+        Vector.
+    vec_b : array-like, shape=[..., m]
+        Vector.
+
+    Returns
+    -------
+    mat : array-like, shape=[..., n, m]
+        Matrix.
+    """
+    if vec_a.ndim > 1 and vec_b.ndim > 1:
+        return np.einsum("...i,...j->...ij", vec_a, vec_b)
+
+    out = np.multiply.outer(vec_a, vec_b)
+    if vec_b.ndim > 1:
+        out = out.swapaxes(0, -2)
+
+    return out
