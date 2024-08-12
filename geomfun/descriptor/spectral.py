@@ -141,7 +141,7 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
         super().__init__(n_domain, domain or self.default_domain)
 
         self.scaled = scaled
-        self.sigma = None
+        self.sigma = sigma
 
     def default_sigma(self, e_min, e_max, n_domain):
         """Compute default sigma.
@@ -212,20 +212,20 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
         sigma = None
         if domain is None:
             if callable(self.domain):
-                energy, sigma = self.domain(basis, self.n_domain)
+                domain, sigma = self.domain(basis, self.n_domain)
             else:
-                energy = self.domain
+                domain = self.domain
 
         if sigma is None:
+            # TODO: simplify sigma
             # TODO: need to verify this
             sigma = (
                 self.default_sigma(np.amin(domain), np.amax(domain), len(domain))
                 if self.sigma is None
                 else self.sigma
             )
-
         return pyFM.signatures.WKS(
-            basis.vals, basis.vecs, energy, sigma, scaled=self.scaled
+            basis.vals, basis.vecs, domain, sigma, scaled=self.scaled
         ).T
 
 

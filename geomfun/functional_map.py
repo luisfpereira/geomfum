@@ -25,7 +25,7 @@ class WeightedFactor(abc.ABC):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
@@ -41,12 +41,12 @@ class WeightedFactor(abc.ABC):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
         -------
-        energy_gradient : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        energy_gradient : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Weighted energy gradient wrt functional map matrix.
         """
         pass
@@ -75,7 +75,7 @@ class SpectralDescriptorPreservation(WeightedFactor):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
@@ -86,10 +86,7 @@ class SpectralDescriptorPreservation(WeightedFactor):
         return (
             self.weight
             * 0.5
-            * np.square(
-                # TODO: add vecmatmul
-                la.matvecmul(fmap_matrix.T, self.sdescr_a) - self.sdescr_b
-            ).sum()
+            * np.square(la.matvecmul(fmap_matrix, self.sdescr_a) - self.sdescr_b).sum()
         )
 
     def gradient(self, fmap_matrix):
@@ -97,18 +94,17 @@ class SpectralDescriptorPreservation(WeightedFactor):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
         -------
-        energy_gradient : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        energy_gradient : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Weighted energy gradient wrt functional map matrix.
         """
-        # TODO: make it proper
         return (
             self.weight
-            * (la.matvecmul(fmap_matrix.T, self.sdescr_a) - self.sdescr_b).T
+            * (la.matvecmul(fmap_matrix, self.sdescr_a) - self.sdescr_b).T
             @ self.sdescr_a
         )
 
@@ -139,7 +135,7 @@ class LBCommutativityEnforcing(WeightedFactor):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
@@ -154,12 +150,12 @@ class LBCommutativityEnforcing(WeightedFactor):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
         -------
-        energy_gradient : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        energy_gradient : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Weighted energy gradient wrt functional map matrix.
         """
         return self.weight * fmap_matrix * self.vals_sqdiff
@@ -307,7 +303,7 @@ class OperatorCommutativityEnforcing(WeightedFactor):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
@@ -326,12 +322,12 @@ class OperatorCommutativityEnforcing(WeightedFactor):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
         -------
-        energy_gradient : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        energy_gradient : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Weighted energy gradient wrt functional map matrix.
         """
         return self.weight * (
@@ -358,7 +354,7 @@ class FactorSum(WeightedFactor):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
@@ -373,12 +369,12 @@ class FactorSum(WeightedFactor):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
         -------
-        energy_gradient : array-like, shape=[spectrum_size_a, spectrum_size_b]
+        energy_gradient : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Weighted energy gradient wrt functional map matrix.
         """
         return self.weight * np.sum(
