@@ -12,20 +12,8 @@ class SpectralDescriptorCmpCase(TestCase):
     """
 
     # TODO: add also descriptor batch?
-    # TODO: test with landmarks
-
-    def _process(self, shape, pyfm_shape, spectrum_size=None):
-        # TODO: do this in data, triggered by test?
-
-        spectrum_size = spectrum_size or self.spectrum_size
-        shape.find_laplacian_spectrum(spectrum_size=spectrum_size)
-
-        pyfm_shape.eigenvalues = shape.basis.vals
-        pyfm_shape.eigenvectors = shape.basis.vecs
 
     def test_descriptor_cmp(self, shape, pyfm_shape, atol, domain=None):
-        self._process(shape, pyfm_shape)
-
         descr = self.descriptor(shape.basis, domain=domain)
         pyfm_descr = self.pyfm_descriptor(pyfm_shape, domain=domain)
 
@@ -33,7 +21,7 @@ class SpectralDescriptorCmpCase(TestCase):
 
 
 class WeightedFactorCmpCase(TestCase):
-    # TODO: add gradient
+    # TODO: find bug without underscore
 
     def _random_fmap_matrix(self):
         return np.random.uniform(size=(self.spectrum_size_b, self.spectrum_size_a))

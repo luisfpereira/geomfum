@@ -3,6 +3,8 @@
 import abc
 import logging
 
+import numpy as np
+
 from geomfun.basis import LaplaceEigenBasis
 from geomfun.laplacian import LaplacianFinder, LaplacianSpectrumFinder
 
@@ -13,9 +15,7 @@ class Shape(abc.ABC):
 
         self.basis = None
 
-        # TODO: empty np instead?
-        # TODO: add function to add them
-        self.landmarks = []
+        self.landmark_indices = None
 
         self._laplace_matrix = None
         self._mass_matrix = None
@@ -31,6 +31,24 @@ class Shape(abc.ABC):
 
         operator = Operator(self, **kwargs)
         setattr(self, name, operator)
+
+        return self
+
+    def set_landmarks(self, landmark_indices, append=False):
+        """Set landmarks.
+
+        Parameters
+        ----------
+        landmark_indices : array-like, shape=[n_landmarks]
+            Landmarks.
+        append : bool
+            Whether to append landmarks to already-existing ones.
+        """
+        if append:
+            self.landmark_indices = np.stack(self.landmark_indices, landmark_indices)
+
+        else:
+            self.landmark_indices = landmark_indices
 
         return self
 
@@ -128,8 +146,7 @@ class Shape(abc.ABC):
             if set_as_basis:
                 return self.basis
 
-            # TODO: return full
-            return self.basis.vals, self.basis.vecs
+            return self.basis.full_vals, self.basis.full_vecs
 
         if laplacian_spectrum_finder is None:
             laplacian_spectrum_finder = LaplacianSpectrumFinder(
@@ -140,7 +157,6 @@ class Shape(abc.ABC):
 
         if set_as_basis:
             self.basis = laplacian_spectrum_finder(self, as_basis=True)
-            # TODO: return full
-            return self.basis.vals, self.basis.vecs
+            return self.basis.full_vals, self.basis.full_vecs
 
         return laplacian_spectrum_finder(self, as_basis=False)

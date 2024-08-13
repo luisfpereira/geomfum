@@ -180,3 +180,14 @@ class LaplaceEigenBasis(EigenBasis):
             self.vecs.T,
             la.matvecmul(self._shape.mass_matrix, array),
         )
+
+    @property
+    def landmark_indices(self):
+        """Landmarks.
+
+        Returns
+        -------
+        landmark_indices : array-like, shape=[n_landmarks]
+            Landmarks.
+        """
+        return self._shape.landmark_indices

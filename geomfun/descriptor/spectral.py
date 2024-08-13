@@ -23,9 +23,10 @@ class SpectralDescriptor(Descriptor, abc.ABC):
     # TODO: handle landmarks?
     # TODO: make general implementation
 
-    def __init__(self, n_domain, domain):
+    def __init__(self, n_domain, domain, use_landmarks=False):
         self.n_domain = n_domain
         self.domain = domain
+        self.use_landmarks = use_landmarks
 
     @abc.abstractmethod
     def __call__(self, basis, domain=None):
@@ -54,8 +55,10 @@ class PyfmHeatKernelSignature(SpectralDescriptor):
         time points.
     """
 
-    def __init__(self, scaled=True, n_domain=3, domain=None):
-        super().__init__(n_domain, domain or self.default_domain)
+    def __init__(self, scaled=True, n_domain=3, domain=None, use_landmarks=False):
+        super().__init__(
+            n_domain, domain or self.default_domain, use_landmarks=use_landmarks
+        )
         self.scaled = scaled
 
     def default_domain(self, basis, n_domain):
@@ -101,6 +104,15 @@ class PyfmHeatKernelSignature(SpectralDescriptor):
                 else self.domain
             )
 
+        if self.use_landmarks:
+            return pyFM.signatures.lm_HKS(
+                basis.vals,
+                basis.vecs,
+                basis.landmark_indices,
+                domain,
+                scaled=self.scaled,
+            ).T
+
         return pyFM.signatures.HKS(basis.vals, basis.vecs, domain, scaled=self.scaled).T
 
 
@@ -113,7 +125,7 @@ class HeatKernelSignature:
         One of: pyfm
     """
 
-    # TODO: add registry
+    # TODO: add registry (add also generic SpectralDescriptor)
     _MAP = {"pyfm": PyfmHeatKernelSignature}
 
     def __new__(cls, which="pyfm", **kwargs):
@@ -137,8 +149,12 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
         energy points.
     """
 
-    def __init__(self, scaled=True, sigma=None, n_domain=3, domain=None):
-        super().__init__(n_domain, domain or self.default_domain)
+    def __init__(
+        self, scaled=True, sigma=None, n_domain=3, domain=None, use_landmarks=False
+    ):
+        super().__init__(
+            n_domain, domain or self.default_domain, use_landmarks=use_landmarks
+        )
 
         self.scaled = scaled
         self.sigma = sigma
@@ -206,7 +222,7 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
 
         Returns
         -------
-        descr : array-like, shape=[n_domain, n_vertices]
+        descr : array-like, shape=[{n_domain, n_landmarks*n_domain}, n_vertices]
             Descriptor.
         """
         sigma = None
@@ -224,6 +240,17 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
                 if self.sigma is None
                 else self.sigma
             )
+
+        if self.use_landmarks:
+            return pyFM.signatures.lm_WKS(
+                basis.vals,
+                basis.vecs,
+                basis.landmark_indices,
+                domain,
+                sigma,
+                scaled=self.scaled,
+            ).T
+
         return pyFM.signatures.WKS(
             basis.vals, basis.vecs, domain, sigma, scaled=self.scaled
         ).T
