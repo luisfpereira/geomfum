@@ -159,8 +159,8 @@ class LaplaceEigenBasis(EigenBasis):
         """
         return LaplaceEigenBasis(
             self._shape,
-            self.vals[:spectrum_size],
-            self.vecs[:spectrum_size],
+            self.full_vals[:spectrum_size],
+            self.full_vecs[:, :spectrum_size],
         )
 
     def project(self, array):
