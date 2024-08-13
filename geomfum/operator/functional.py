@@ -5,7 +5,7 @@ import abc
 import numpy as np
 import pyFM.mesh.geometry
 
-import geomfun._pyfm
+import geomfum._pyfm
 
 
 class FunctionalOperator(abc.ABC):
@@ -131,7 +131,7 @@ class FaceOrientationOperator(VectorFieldOperator):
         operator : scipy.sparse.csc_matrix or list[sparse.csc_matrix], shape=[n_vertices, n_vertices]
             Orientation operator.
         """
-        return geomfun._pyfm.get_orientation_op(
+        return geomfum._pyfm.get_orientation_op(
             vector,
             self._shape.vertices,
             self._shape.faces,

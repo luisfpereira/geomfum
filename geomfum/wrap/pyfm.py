@@ -1,8 +1,8 @@
 import numpy as np
 import pyFM.signatures
 
-from geomfun.descriptor._base import SpectralDescriptor
-from geomfun.laplacian._base import BaseLaplacianFinder
+from geomfum.descriptor._base import SpectralDescriptor
+from geomfum.laplacian._base import BaseLaplacianFinder
 
 
 class PyfmMeshLaplacianFinder(BaseLaplacianFinder):

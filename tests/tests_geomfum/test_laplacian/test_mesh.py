@@ -5,7 +5,7 @@ import random
 import pytest
 from geomstats.test.parametrizers import DataBasedParametrizer
 
-from geomfun.laplacian import LaplacianFinder, LaplacianSpectrumFinder
+from geomfum.laplacian import LaplacianFinder, LaplacianSpectrumFinder
 from tests.cases.laplacian import (
     LaplacianFinderCmpCase,
     LaplacianSpectrumFinderCmpCase,

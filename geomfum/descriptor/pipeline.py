@@ -4,8 +4,8 @@ import abc
 
 import numpy as np
 
-import geomfun.linalg as la
-from geomfun.descriptor._base import SpectralDescriptor
+import geomfum.linalg as la
+from geomfum.descriptor._base import SpectralDescriptor
 
 from ._base import Descriptor
 

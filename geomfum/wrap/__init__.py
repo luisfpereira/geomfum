@@ -1,4 +1,4 @@
-from geomfun._registry import (
+from geomfum._registry import (
     register_heat_kernel_signature,
     register_laplacian_finder,
     register_wave_kernel_signature,

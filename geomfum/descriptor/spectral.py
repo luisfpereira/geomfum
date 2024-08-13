@@ -1,6 +1,6 @@
 """Spectral descriptors."""
 
-from geomfun._registry import (
+from geomfum._registry import (
     HeatKernelSignatureRegistry,
     WaveKernelSignatureRegistry,
 )

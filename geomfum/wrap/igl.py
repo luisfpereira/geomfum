@@ -1,6 +1,6 @@
 import igl
 
-from geomfun.laplacian._base import BaseLaplacianFinder
+from geomfum.laplacian._base import BaseLaplacianFinder
 
 
 class IglMeshLaplacianFinder(BaseLaplacianFinder):

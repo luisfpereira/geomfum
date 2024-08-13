@@ -5,7 +5,7 @@ import pyFM.signatures as sg
 import pytest
 from geomstats.test.parametrizers import DataBasedParametrizer
 
-from geomfun.descriptor.spectral import HeatKernelSignature, WaveKernelSignature
+from geomfum.descriptor.spectral import HeatKernelSignature, WaveKernelSignature
 from tests.cases.pyfm import SpectralDescriptorCmpCase
 
 from .data.spectral import SpectralDescriptorCmpData

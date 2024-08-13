@@ -4,7 +4,7 @@ import abc
 
 import numpy as np
 
-import geomfun.linalg as la
+import geomfum.linalg as la
 
 
 class WeightedFactor(abc.ABC):

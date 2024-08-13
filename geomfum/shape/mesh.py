@@ -3,8 +3,8 @@
 import numpy as np
 import scipy
 
-from geomfun.io import load_mesh
-from geomfun.operator.functional import (
+from geomfum.io import load_mesh
+from geomfum.operator.functional import (
     FaceDivergenceOperator,
     FaceOrientationOperator,
     FaceValuedGradient,

@@ -1,6 +1,6 @@
 from geomstats.test.data import TestData
 
-from geomfun.shape import TriangleMesh
+from geomfum.shape import TriangleMesh
 from tests.utils import DATA_DIR
 
 

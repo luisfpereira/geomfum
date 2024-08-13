@@ -1,6 +1,6 @@
-from geomfun._registry import LaplacianFinderRegistry
-from geomfun.basis import LaplaceEigenBasis
-from geomfun.numerics.eig import ScipyEigsh
+from geomfum._registry import LaplacianFinderRegistry
+from geomfum.basis import LaplaceEigenBasis
+from geomfum.numerics.eig import ScipyEigsh
 
 
 class LaplacianFinder:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 authors = [{ name = "Luís F. Pereira", email = "luisfgper@gmail.com" }]
-name = "geomfun"
+name = "geomfum"
 dynamic = ["version"]
 readme = "README.rst"
 description = "Geometry processing with functional maps."
@@ -31,13 +31,13 @@ dependencies = [
 test = ["pytest"]
 
 [project.urls]
-repository = "http://github.com/luisfpereira/geomfun"
+repository = "http://github.com/luisfpereira/geomfum"
 
 [tool.setuptools.dynamic]
-version = { attr = "geomfun.__version__" }
+version = { attr = "geomfum.__version__" }
 
 [tool.setuptools.packages.find]
-include = ["geomfun", "geomfun.*"]
+include = ["geomfum", "geomfum.*"]
 
 [tool.pytest.ini_options]
 markers = [

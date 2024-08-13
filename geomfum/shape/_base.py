@@ -5,8 +5,8 @@ import logging
 
 import numpy as np
 
-from geomfun.basis import LaplaceEigenBasis
-from geomfun.laplacian import LaplacianFinder, LaplacianSpectrumFinder
+from geomfum.basis import LaplaceEigenBasis
+from geomfum.laplacian import LaplacianFinder, LaplacianSpectrumFinder
 
 
 class Shape(abc.ABC):

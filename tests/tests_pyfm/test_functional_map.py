@@ -9,7 +9,7 @@ from pyFM.optimize.base_functions import (
     op_commutation_grad,
 )
 
-from geomfun.functional_map import (
+from geomfum.functional_map import (
     LBCommutativityEnforcing,
     OperatorCommutativityEnforcing,
     SpectralDescriptorPreservation,
