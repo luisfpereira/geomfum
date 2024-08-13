@@ -1,10 +1,6 @@
-"""Laplacian-related algorithms for meshes."""
-
-import igl
-import pyFM
 import robust_laplacian
 
-from ._base import BaseLaplacianFinder
+from geomfun.laplacian._base import BaseLaplacianFinder
 
 
 class RobustMeshLaplacianFinder(BaseLaplacianFinder):
@@ -39,49 +35,38 @@ class RobustMeshLaplacianFinder(BaseLaplacianFinder):
         )
 
 
-class PyfmMeshLaplacianFinder(BaseLaplacianFinder):
-    """Algorithm to find the Laplacian of a mesh."""
+class RobustPointCloudLaplacianFinder(BaseLaplacianFinder):
+    """Algorithm to find the Laplacian of a point cloud.
+
+    Parameters
+    ----------
+    mollify_factor : float
+        Amount of intrinsic mollification to perform.
+    n_neighbors : float
+        Number of nearest neighbors to use when constructing local triangulations.
+    """
+
+    def __init__(self, mollify_factor=1e-5, n_neighbors=30):
+        self.mollify_factor = mollify_factor
+        self.n_neighbors = n_neighbors
 
     def __call__(self, shape):
         """Apply algorithm.
 
         Parameters
         ----------
-        shape : TriangleMesh
-            Mesh.
+        shape : PointCloud
+            Point cloud.
 
         Returns
         -------
         laplace_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
-            Laplace matrix.
+            "Weak" Laplace matrix.
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
-        return (
-            pyFM.mesh.laplacian.cotangent_weights(shape.vertices, shape.faces),
-            pyFM.mesh.laplacian.dia_area_mat(shape.vertices, shape.faces),
-        )
-
-
-class IglMeshLaplacianFinder(BaseLaplacianFinder):
-    """Algorithm to find the Laplacian of a mesh."""
-
-    def __call__(self, shape):
-        """Apply algorithm.
-
-        Parameters
-        ----------
-        shape : TriangleMesh
-            Mesh.
-
-        Returns
-        -------
-        laplace_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
-            Laplace matrix.
-        mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
-            Diagonal lumped mass matrix.
-        """
-        return (
-            -igl.cotmatrix(shape.vertices, shape.faces),
-            igl.massmatrix(shape.vertices, shape.faces, igl.MASSMATRIX_TYPE_VORONOI),
+        return robust_laplacian.point_cloud_laplacian(
+            shape.vertices,
+            mollify_factor=self.mollify_factor,
+            n_neighbors=self.n_neighbors,
         )

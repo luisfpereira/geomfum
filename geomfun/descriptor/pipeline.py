@@ -5,9 +5,9 @@ import abc
 import numpy as np
 
 import geomfun.linalg as la
+from geomfun.descriptor._base import SpectralDescriptor
 
 from ._base import Descriptor
-from .spectral import SpectralDescriptor
 
 
 class Subsampler(abc.ABC):
