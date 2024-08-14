@@ -84,6 +84,9 @@ class EigenBasis(Basis):
         basis : Eigenbasis
             Truncated eigenbasis.
         """
+        if spectrum_size == self.spectrum_size:
+            return self
+
         return EigenBasis(self.vals[:spectrum_size], self.vecs[:spectrum_size])
 
 
@@ -157,6 +160,9 @@ class LaplaceEigenBasis(EigenBasis):
         basis : LaplaceEigenBasis
             Truncated eigenbasis.
         """
+        if spectrum_size == self.spectrum_size:
+            return self
+
         return LaplaceEigenBasis(
             self._shape,
             self.full_vals[:spectrum_size],

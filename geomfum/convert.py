@@ -24,6 +24,11 @@ class P2pFromFmConverter(BaseP2pFromFmConverter):
 
     References
     ----------
+    .. [OCSBG2012] Maks Ovsjanikov, Mirela Ben-Chen, Justin Solomon,
+        Adrian Butscher, and Leonidas Guibas.
+        “Functional Maps: A Flexible Representation of Maps between
+        Shapes.” ACM Transactions on Graphics 31, no. 4 (2012): 30:1-30:11.
+        https://doi.org/10.1145/2185520.2185526.
     .. [VM2023] Giulio Viganò  Simone Melzi. “Adjoint Bijective ZoomOut:
         Efficient Upsampling for Learned Linearly-Invariant Embedding.”
         The Eurographics Association, 2023. https://doi.org/10.2312/stag.20231293.
