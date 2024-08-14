@@ -8,8 +8,6 @@ from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter
 class Upsampler(abc.ABC):
     """Functional map upsampler."""
 
-    pass
-
 
 class ZoomOut(Upsampler):
     """Zoomout algorithm.
@@ -23,7 +21,14 @@ class ZoomOut(Upsampler):
     p2p_from_fm_converter : P2pFromFmConverter
         Pointwise map from functional map.
     fm_from_p2p_converter : FmFromP2pConverter
-        Functional map from pointwise map
+        Functional map from pointwise map.
+
+    References
+    ----------
+    .. [MRRSWO2019] Simone Melzi, Jing Ren, Emanuele Rodolà, Abhishek Sharma,
+        Peter Wonka, and Maks Ovsjanikov. “ZoomOut: Spectral Upsampling
+        for Efficient Shape Correspondence.” arXiv, September 12, 2019.
+        http://arxiv.org/abs/1904.07865
     """
 
     def __init__(
@@ -65,9 +70,9 @@ class ZoomOut(Upsampler):
             How much to increase each basis per iteration.
         """
         if isinstance(step, int):
-            step_a = step_b = step
+            self._step_a = self._step_b = step
         else:
-            step_a, step_b = step
+            self._step_a, self._step_b = step
 
     def iter(self, fmap_matrix, basis_a, basis_b):
         """Upsampler iteration.
@@ -118,17 +123,17 @@ class ZoomOut(Upsampler):
         if nit is None:
             nit = min(
                 (k1 - basis_a.full_spectrum_size) // self._step_a,
-                (k2 - basis_a.fullspectrum_size) // self._step_b,
+                (k2 - basis_b.full_spectrum_size) // self._step_b,
             )
         else:
-            msg = ""
+            msg = []
             if k1 + nit * self._step_a > basis_a.full_spectrum_size:
-                msg += "`basis_a`"
+                msg.append("`basis_a`")
             if k2 + nit * self._step_b > basis_b.full_spectrum_size:
-                msg += "`basis_b`"
+                msg.append("`basis_b`")
 
             if msg:
-                raise ValueError(f"Not enough eigenvectors on {msg.join(', ')}.")
+                raise ValueError(f"Not enough eigenvectors on {', '.join(msg)}.")
 
         nit = self.nit
 

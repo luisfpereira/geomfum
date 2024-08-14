@@ -12,8 +12,6 @@ from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter
 class Refiner(abc.ABC):
     """Functional map refiner."""
 
-    pass
-
 
 class IcpRefiner(Refiner):
     """Standard ICP algorithm.
