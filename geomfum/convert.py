@@ -1,9 +1,12 @@
+"""Conversion between pointwise and functional maps."""
+
 import scipy
 from sklearn.neighbors import NearestNeighbors
 
 
 class P2pFromFmConverter:
-    """
+    """Pointwise map from functional map.
+
     Parameters
     ----------
     n_neighbors : int
@@ -51,6 +54,8 @@ class P2pFromFmConverter:
 
 
 class FmFromP2pConverter:
+    """Functional map from pointwise map."""
+
     # TODO: add subsampling
     def __init__(self, use_area=False):
         self.use_area = use_area

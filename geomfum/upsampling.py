@@ -1,20 +1,34 @@
+"""Functional map upsampling machinery."""
+
 import abc
-import logging
 
 from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter
 
 
 class Upsampler(abc.ABC):
-    # TODO: add iter?
+    """Functional map upsampler."""
+
     pass
 
 
 class ZoomOut(Upsampler):
-    """Zoomout algorithm."""
+    """Zoomout algorithm.
+
+    Parameters
+    ----------
+    nit : int
+        Number of iterations.
+    step : int or tuple[2, int]
+        How much to increase each basis per iteration.
+    p2p_from_fm_converter : P2pFromFmConverter
+        Pointwise map from functional map.
+    fm_from_p2p_converter : FmFromP2pConverter
+        Functional map from pointwise map
+    """
 
     def __init__(
         self,
-        n_iter=None,
+        nit=None,
         step=1,
         p2p_from_fm_converter=None,
         fm_from_p2p_converter=None,
@@ -23,22 +37,55 @@ class ZoomOut(Upsampler):
             p2p_from_fm_converter = P2pFromFmConverter()
 
         if fm_from_p2p_converter is None:
-            fm_from_p2p_converter = FmFromP2pConverter(use_area=True)
+            fm_from_p2p_converter = FmFromP2pConverter()
 
-        self.n_iter = n_iter
+        self.nit = nit
+        self.step = step
         self.p2p_from_fm_converter = p2p_from_fm_converter
         self.fm_from_p2p_converter = fm_from_p2p_converter
 
-        # TODO: add step setter?
+    @property
+    def step(self):
+        """How much to increase each basis per iteration.
+
+        Returns
+        -------
+        step : tuple[2, int]
+            Step.
+        """
+        return self._step_a, self._step_b
+
+    @step.setter
+    def step(self, step):
+        """Set step.
+
+        Parameters
+        ----------
+        step : int or tuple[2, int]
+            How much to increase each basis per iteration.
+        """
         if isinstance(step, int):
             step_a = step_b = step
         else:
             step_a, step_b = step
 
-        self._step_a = step_a
-        self._step_b = step_b
-
     def iter(self, fmap_matrix, basis_a, basis_b):
+        """Upsampler iteration.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Functional map matrix.
+        basis_a : Eigenbasis.
+            Basis.
+        basis_b: Eigenbasis.
+            Basis.
+
+        Returns
+        -------
+        fmap_matrix : array-like, shape=[new_spectrum_size_b, new_spectrum_size_a]
+            Upsampled functional map matrix.
+        """
         k2, k1 = fmap_matrix.shape
         new_k1, new_k2 = k1 + self._step_a, k2 + self._step_b
 
@@ -58,32 +105,37 @@ class ZoomOut(Upsampler):
             Basis.
         basis_b: Eigenbasis.
             Basis.
+
+        Returns
+        -------
+        fmap_matrix : array-like, shape=[new_spectrum_size_b, new_spectrum_size_a]
+            Upsampled functional map matrix.
         """
-        # TODO: can we make it general?
+        # TODO: make it general?
         k2, k1 = fmap_matrix.shape
 
-        n_iter = self.n_iter
-        if n_iter is None:
-            n_iter = min(
+        nit = self.nit
+        if nit is None:
+            nit = min(
                 (k1 - basis_a.full_spectrum_size) // self._step_a,
                 (k2 - basis_a.fullspectrum_size) // self._step_b,
             )
         else:
             msg = ""
-            if k1 + n_iter * self._step_a > basis_a.full_spectrum_size:
+            if k1 + nit * self._step_a > basis_a.full_spectrum_size:
                 msg += "`basis_a`"
-            if k2 + n_iter * self._step_b > basis_b.full_spectrum_size:
+            if k2 + nit * self._step_b > basis_b.full_spectrum_size:
                 msg += "`basis_b`"
 
             if msg:
                 raise ValueError(f"Not enough eigenvectors on {msg.join(', ')}.")
 
-        n_iter = self.n_iter
+        nit = self.nit
 
         # TODO: bring subsampling
 
         new_fmap_matrix = fmap_matrix
-        for _ in range(n_iter):
+        for _ in range(nit):
             new_fmap_matrix = self.iter(new_fmap_matrix, basis_a, basis_b)
 
         return new_fmap_matrix
