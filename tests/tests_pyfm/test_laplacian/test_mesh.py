@@ -26,7 +26,7 @@ def _pyfm_finder(**kwargs):
 )
 def finders(request):
     kwargs_a, kwargs_b = request.param
-    request.cls.finder_a = LaplacianFinder(**kwargs_a)
+    request.cls.finder_a = LaplacianFinder.from_registry(**kwargs_a)
     request.cls.finder_b = _pyfm_finder(**kwargs_b)
 
 

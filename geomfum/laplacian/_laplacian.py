@@ -9,13 +9,31 @@ class LaplacianFinder:
     Parameters
     ----------
     mesh : bool
-        If mesh or point cloud.
+        Whether a mesh or point cloud.
     which : str
-        Which algorithm/library to use.
+        A registered implementation.
     """
 
-    def __new__(cls, mesh=True, which="robust", **kwargs):
-        return LaplacianFinderRegistry.MAP[(mesh, which)](**kwargs)
+    def __init__(self):
+        raise ValueError(LaplacianFinderRegistry.only_from_registry())
+
+    @staticmethod
+    def from_registry(mesh=True, which="robust", **kwargs):
+        """Instantiate wrapped implementation.
+
+        Parameters
+        ----------
+        mesh : bool
+            Whether a mesh or point cloud.
+        which : str
+            A registered implementation.
+
+        Returns
+        -------
+        obj : BaseLaplacianFinder
+            An instantiated object.
+        """
+        return LaplacianFinderRegistry.get(mesh, which)(**kwargs)
 
 
 class LaplacianSpectrumFinder:

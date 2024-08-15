@@ -105,7 +105,9 @@ class Shape(abc.ABC):
             return self._laplace_matrix, self._mass_matrix
 
         if laplacian_finder is None:
-            laplacian_finder = LaplacianFinder(mesh=self.is_mesh, which="robust")
+            laplacian_finder = LaplacianFinder.from_registry(
+                mesh=self.is_mesh, which="robust"
+            )
 
         self._laplace_matrix, self._mass_matrix = laplacian_finder(self)
 

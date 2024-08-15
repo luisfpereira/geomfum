@@ -24,8 +24,8 @@ class TestLaplacianFinderCmp(LaplacianFinderCmpCase, metaclass=DataBasedParametr
     Redundant with ``TestLaplacianSpectrumFinderCmp``.
     """
 
-    finder_a = LaplacianFinder(which="robust")
-    finder_b = LaplacianFinder(which="pyfm")
+    finder_a = LaplacianFinder.from_registry(which="robust")
+    finder_b = LaplacianFinder.from_registry(which="pyfm")
 
     testing_data = LaplacianFinderCmpData()
 
@@ -40,12 +40,12 @@ def spectrum_finders(request):
     spectrum_size = random.randint(2, 5)
     request.cls.finder_a = LaplacianSpectrumFinder(
         spectrum_size=spectrum_size,
-        laplacian_finder=LaplacianFinder(which=which_a),
+        laplacian_finder=LaplacianFinder.from_registry(which=which_a),
     )
 
     request.cls.finder_b = LaplacianSpectrumFinder(
         spectrum_size=spectrum_size,
-        laplacian_finder=LaplacianFinder(which=which_b),
+        laplacian_finder=LaplacianFinder.from_registry(which=which_b),
     )
 
 

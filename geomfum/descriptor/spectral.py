@@ -7,28 +7,46 @@ from geomfum._registry import (
 
 
 class HeatKernelSignature:
-    """Heat kernel signature.
+    """Heat kernel signature."""
 
-    Parameters
-    ----------
-    which : str
-        One of: pyfm
-    """
+    def __init__(self):
+        raise ValueError(HeatKernelSignatureRegistry.only_from_registry())
 
-    def __new__(cls, which="pyfm", **kwargs):
-        """Create new instance."""
-        return HeatKernelSignatureRegistry.MAP[which](**kwargs)
+    @staticmethod
+    def from_registry(which="pyfm", **kwargs):
+        """Instantiate registered implementation.
+
+        Parameters
+        ----------
+        which : str
+            A registered implementation.
+
+        Returns
+        -------
+        obj : BaseHeatKernelSignature
+            Instantiated object.
+        """
+        return HeatKernelSignatureRegistry.get(which)(**kwargs)
 
 
 class WaveKernelSignature:
-    """Wave kernel signature.
+    """Wave kernel signature."""
 
-    Parameters
-    ----------
-    which : str
-        One of: pyfm
-    """
+    def __init__(self):
+        raise ValueError(HeatKernelSignatureRegistry.from_wrap_msg())
 
-    def __new__(cls, which="pyfm", **kwargs):
-        """Create new instance."""
-        return WaveKernelSignatureRegistry.MAP[which](**kwargs)
+    @staticmethod
+    def from_registry(which="pyfm", **kwargs):
+        """Instantiate registered implementation.
+
+        Parameters
+        ----------
+        which : str
+            A registered implementation.
+
+        Returns
+        -------
+        obj : BaseWaveKernelSignature
+            Instantiated object.
+        """
+        return WaveKernelSignatureRegistry.get(which)(**kwargs)
