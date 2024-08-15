@@ -1,39 +1,12 @@
-from geomfum._registry import LaplacianFinderRegistry
+from geomfum._registry import LaplacianFinderRegistry, MeshWhichRegistryMixins
 from geomfum.basis import LaplaceEigenBasis
 from geomfum.numerics.eig import ScipyEigsh
 
 
-class LaplacianFinder:
-    """Algorithm to find the Laplacian.
+class LaplacianFinder(MeshWhichRegistryMixins):
+    """Algorithm to find the Laplacian."""
 
-    Parameters
-    ----------
-    mesh : bool
-        Whether a mesh or point cloud.
-    which : str
-        A registered implementation.
-    """
-
-    def __init__(self):
-        raise ValueError(LaplacianFinderRegistry.only_from_registry())
-
-    @staticmethod
-    def from_registry(mesh=True, which="robust", **kwargs):
-        """Instantiate wrapped implementation.
-
-        Parameters
-        ----------
-        mesh : bool
-            Whether a mesh or point cloud.
-        which : str
-            A registered implementation.
-
-        Returns
-        -------
-        obj : BaseLaplacianFinder
-            An instantiated object.
-        """
-        return LaplacianFinderRegistry.get(mesh, which)(**kwargs)
+    _Registry = LaplacianFinderRegistry
 
 
 class LaplacianSpectrumFinder:

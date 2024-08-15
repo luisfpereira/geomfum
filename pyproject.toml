@@ -18,10 +18,10 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 requires-python = ">= 3.9"
-dependencies = ["numpy", "scipy", "scikit-learn", "meshio", "pyfmaps"]
+dependencies = ["numpy", "scipy", "scikit-learn", "meshio"]
 
 [project.optional-dependencies]
-opt = ["robust-laplacian", "libigl"]
+opt = ["pyfmaps", "robust-laplacian", "libigl"]
 test = ["pytest", "geomfum[opt]"]
 
 [project.urls]

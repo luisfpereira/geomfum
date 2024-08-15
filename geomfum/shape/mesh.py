@@ -36,9 +36,15 @@ class TriangleMesh(Shape):
         self._at_init()
 
     def _at_init(self):
-        self.equip_with_operator("face_valued_gradient", FaceValuedGradient)
-        self.equip_with_operator("face_divergence", FaceDivergenceOperator)
-        self.equip_with_operator("face_orientation_operator", FaceOrientationOperator)
+        self.equip_with_operator(
+            "face_valued_gradient", FaceValuedGradient.from_registry
+        )
+        self.equip_with_operator(
+            "face_divergence", FaceDivergenceOperator.from_registry
+        )
+        self.equip_with_operator(
+            "face_orientation_operator", FaceOrientationOperator.from_registry
+        )
 
     @classmethod
     def from_file(cls, filename):
