@@ -12,11 +12,15 @@ from .pyfm import (
 )
 from .robust_laplacian import RobustMeshLaplacianFinder, RobustPointCloudLaplacianFinder
 
-register_laplacian_finder(True, "pyfm", PyfmMeshLaplacianFinder)
-register_laplacian_finder(True, "robust", RobustMeshLaplacianFinder)
-register_laplacian_finder(True, "igl", IglMeshLaplacianFinder)
-register_laplacian_finder(False, "robust", RobustPointCloudLaplacianFinder)
+register_laplacian_finder(True, "pyfm", PyfmMeshLaplacianFinder, requires="pyFM")
+register_laplacian_finder(
+    True, "robust", RobustMeshLaplacianFinder, requires="robust_laplacian"
+)
+register_laplacian_finder(True, "igl", IglMeshLaplacianFinder, requires="igl")
+register_laplacian_finder(
+    False, "robust", RobustPointCloudLaplacianFinder, requires="robust_laplacian"
+)
 
 
-register_heat_kernel_signature("pyfm", PyfmHeatKernelSignature)
-register_wave_kernel_signature("pyfm", PyfmWaveKernelSignature)
+register_heat_kernel_signature("pyfm", PyfmHeatKernelSignature, requires="pyFM")
+register_wave_kernel_signature("pyfm", PyfmWaveKernelSignature, requires="pyFM")

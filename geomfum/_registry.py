@@ -1,12 +1,11 @@
 import abc
-
-# TODO: add requires
+import importlib
 import inspect
 
 
 class Registry(abc.ABC):
     @classmethod
-    def register(cls, key, Obj):
+    def register(cls, key, Obj, requires=()):
         """Register.
 
         Parameters
@@ -15,8 +14,20 @@ class Registry(abc.ABC):
             Key.
         Obj : class
             Object to register.
+        requires : str or tuple
+            Required packages.
         """
-        cls.MAP[key] = Obj
+        if isinstance(requires, str):
+            requires = [requires]
+
+        for package_name in requires:
+            if importlib.util.find_spec(package_name) is None:
+                missing_package = package_name
+                break
+        else:
+            missing_package = None
+
+        cls.MAP[key] = (Obj, missing_package)
 
     @classmethod
     def get(cls, key):
@@ -32,7 +43,11 @@ class Registry(abc.ABC):
         Obj : class
             Registered object.
         """
-        return cls.MAP[key]
+        Obj, missing_package = cls.MAP[key]
+        if missing_package:
+            raise ModuleNotFoundError(missing_package)
+
+        return Obj
 
     @classmethod
     def list_available(cls):
@@ -65,7 +80,7 @@ class Registry(abc.ABC):
 
 class WhichRegistry(Registry, abc.ABC):
     @classmethod
-    def register(cls, which, Obj):
+    def register(cls, which, Obj, requires=()):
         """Register.
 
         Parameters
@@ -74,8 +89,10 @@ class WhichRegistry(Registry, abc.ABC):
             Key.
         Obj : class
             Object to register.
+        requires : str or tuple
+            Required packages.
         """
-        return super().register(which, Obj)
+        return super().register(which, Obj, requires)
 
     @classmethod
     def get(cls, which):
@@ -96,7 +113,7 @@ class WhichRegistry(Registry, abc.ABC):
 
 class MeshWhichRegistry(Registry, abc.ABC):
     @classmethod
-    def register(cls, mesh, which, Obj):
+    def register(cls, mesh, which, Obj, requires=()):
         """Register.
 
         Parameters
@@ -107,8 +124,10 @@ class MeshWhichRegistry(Registry, abc.ABC):
             Key.
         Obj : class
             Object to register.
+        requires : str or tuple
+            Required packages.
         """
-        return super().register((mesh, which), Obj)
+        return super().register((mesh, which), Obj, requires)
 
     @classmethod
     def get(cls, mesh, which):

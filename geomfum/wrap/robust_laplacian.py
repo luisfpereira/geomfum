@@ -1,4 +1,7 @@
-import robust_laplacian
+try:
+    import robust_laplacian
+except ModuleNotFoundError:
+    pass
 
 from geomfum.laplacian._base import BaseLaplacianFinder
 

@@ -1,5 +1,9 @@
 import numpy as np
-import pyFM.signatures
+
+try:
+    import pyFM.signatures
+except ModuleNotFoundError:
+    pass
 
 from geomfum.descriptor._base import SpectralDescriptor
 from geomfum.laplacian._base import BaseLaplacianFinder
