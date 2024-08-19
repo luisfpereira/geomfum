@@ -21,7 +21,12 @@ requires-python = ">= 3.9"
 dependencies = ["numpy", "scipy", "scikit-learn", "meshio"]
 
 [project.optional-dependencies]
-opt = ["pyfmaps", "robust-laplacian", "libigl"]
+opt = [
+    "pyfmaps",
+    "robust-laplacian",
+    "libigl",
+    "geopext @ git+https://github.com/luisfpereira/geopext.git@31b4e17cf71c1b49d23a74ceb7de596faafeb3d6",
+]
 test = ["pytest", "geomfum[opt]"]
 
 [project.urls]

@@ -8,6 +8,7 @@ from geomfum._registry import (
 )
 from geomfum._utils import has_package
 
+from .geopext import GeopextMeshLaplacianFinder
 from .igl import IglMeshLaplacianFinder
 from .pyfm import (
     PyfmFaceDivergenceOperator,
@@ -34,6 +35,10 @@ register_laplacian_finder(
     as_default=has_package("robust_laplacian"),
 )
 register_laplacian_finder(True, "igl", IglMeshLaplacianFinder, requires="igl")
+register_laplacian_finder(
+    True, "geopext", GeopextMeshLaplacianFinder, requires="geopext"
+)
+
 register_laplacian_finder(
     False, "robust", RobustPointCloudLaplacianFinder, requires="robust_laplacian"
 )
