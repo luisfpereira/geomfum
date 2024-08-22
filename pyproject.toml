@@ -25,7 +25,7 @@ opt = [
     "pyfmaps",
     "robust-laplacian",
     "libigl",
-    "geopext @ git+https://github.com/luisfpereira/geopext.git@31b4e17cf71c1b49d23a74ceb7de596faafeb3d6",
+    "geopext @ git+https://github.com/luisfpereira/geopext.git@2b7a7be1a8fdc6e5755e5f4bda88bc284065e829",
 ]
 test = ["pytest", "geomfum[opt]"]
 

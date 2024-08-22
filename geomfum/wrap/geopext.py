@@ -10,7 +10,23 @@ from geomfum.laplacian._base import BaseLaplacianFinder
 
 
 class GeopextMeshLaplacianFinder(BaseLaplacianFinder):
-    """Algorithm to find the Laplacian of a mesh."""
+    """Algorithm to find the Laplacian of a mesh.
+
+    Parameters
+    ----------
+    data_struct : str
+        Which data structure to use within rust code.
+        One of: "corner_table", "half_edge".
+    """
+
+    def __init__(self, data_struct="half_edge"):
+        available_ds = ("corner_table", "half_edge")
+        if data_struct not in available_ds:
+            raise ValueError(
+                f"Unknown data structure `{data_struct}`. Choose one of the following: {', '.join(available_ds)}"
+            )
+
+        self.data_struct = data_struct
 
     def __call__(self, shape):
         """Apply algorithm.
@@ -28,7 +44,7 @@ class GeopextMeshLaplacianFinder(BaseLaplacianFinder):
             Diagonal lumped mass matrix.
         """
         laplace_dict, mass_vec = geopext.mesh_laplacian(
-            shape.vertices, shape.faces.ravel().astype(np.uintp)
+            shape.vertices, shape.faces.ravel().astype(np.uintp), self.data_struct
         )
 
         indices_i = []
