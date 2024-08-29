@@ -87,7 +87,7 @@ class EigenBasis(Basis):
         if spectrum_size == self.spectrum_size:
             return self
 
-        return EigenBasis(self.vals[:spectrum_size], self.vecs[:spectrum_size])
+        return EigenBasis(self.vals[:spectrum_size], self.vecs[:, :spectrum_size])
 
 
 class LaplaceEigenBasis(EigenBasis):

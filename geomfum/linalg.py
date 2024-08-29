@@ -75,7 +75,7 @@ def matvecmul(mat, vec):
     """
     if vec.ndim == 1:
         return mat @ vec
-    if mat.ndim == 2:
+    if mat.ndim == 2 and vec.ndim == 2:
         return (mat @ vec.T).T
 
     return np.einsum("...ij,...j->...i", mat, vec)

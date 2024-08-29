@@ -3,6 +3,7 @@ from geomfum._registry import (
     register_face_orientation_operator,
     register_face_valued_gradient,
     register_heat_kernel_signature,
+    register_hierarchical_mesh,
     register_laplacian_finder,
     register_wave_kernel_signature,
 )
@@ -49,4 +50,9 @@ register_face_divergence_operator(
 
 register_face_orientation_operator(
     "pyfm", "PyFmFaceOrientationOperator", requires="pyFM", as_default=True
+)
+
+
+register_hierarchical_mesh(
+    "pyrmt", "PyrmtHierarchicalMesh", requires="PyRMT", as_default=True
 )
