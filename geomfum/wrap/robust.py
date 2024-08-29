@@ -1,7 +1,6 @@
-try:
-    import robust_laplacian
-except ModuleNotFoundError:
-    pass
+"""robust_laplacian wrapper."""
+
+import robust_laplacian
 
 from geomfum.laplacian._base import BaseLaplacianFinder
 

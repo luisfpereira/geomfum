@@ -1,11 +1,9 @@
-import numpy as np
-import scipy
+"""pyFM wrapper."""
 
-try:
-    import pyFM.mesh
-    import pyFM.signatures
-except ModuleNotFoundError:
-    pass
+import numpy as np
+import pyFM.mesh
+import pyFM.signatures
+import scipy
 
 from geomfum.descriptor._base import SpectralDescriptor
 from geomfum.laplacian._base import BaseLaplacianFinder

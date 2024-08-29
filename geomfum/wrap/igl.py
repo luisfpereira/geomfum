@@ -1,7 +1,6 @@
-try:
-    import igl
-except ModuleNotFoundError:
-    pass
+"""igl wrapper."""
+
+import igl
 
 from geomfum.laplacian._base import BaseLaplacianFinder
 

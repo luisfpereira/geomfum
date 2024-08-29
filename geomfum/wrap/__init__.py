@@ -8,57 +8,45 @@ from geomfum._registry import (
 )
 from geomfum._utils import has_package
 
-from .geopext import GeopextMeshLaplacianFinder
-from .igl import IglMeshLaplacianFinder
-from .pyfm import (
-    PyfmFaceDivergenceOperator,
-    PyFmFaceOrientationOperator,
-    PyfmFaceValuedGradient,
-    PyfmHeatKernelSignature,
-    PyfmMeshLaplacianFinder,
-    PyfmWaveKernelSignature,
-)
-from .robust_laplacian import RobustMeshLaplacianFinder, RobustPointCloudLaplacianFinder
-
 register_laplacian_finder(
     True,
     "pyfm",
-    PyfmMeshLaplacianFinder,
+    "PyfmMeshLaplacianFinder",
     requires="pyFM",
     as_default=not has_package("robust_laplacian"),
 )
 register_laplacian_finder(
     True,
     "robust",
-    RobustMeshLaplacianFinder,
+    "RobustMeshLaplacianFinder",
     requires="robust_laplacian",
     as_default=has_package("robust_laplacian"),
 )
-register_laplacian_finder(True, "igl", IglMeshLaplacianFinder, requires="igl")
+register_laplacian_finder(True, "igl", "IglMeshLaplacianFinder", requires="igl")
 register_laplacian_finder(
-    True, "geopext", GeopextMeshLaplacianFinder, requires="geopext"
+    True, "geopext", "GeopextMeshLaplacianFinder", requires="geopext"
 )
 
 register_laplacian_finder(
-    False, "robust", RobustPointCloudLaplacianFinder, requires="robust_laplacian"
+    False, "robust", "RobustPointCloudLaplacianFinder", requires="robust_laplacian"
 )
 
 
 register_heat_kernel_signature(
-    "pyfm", PyfmHeatKernelSignature, requires="pyFM", as_default=True
+    "pyfm", "PyfmHeatKernelSignature", requires="pyFM", as_default=True
 )
 register_wave_kernel_signature(
-    "pyfm", PyfmWaveKernelSignature, requires="pyFM", as_default=True
+    "pyfm", "PyfmWaveKernelSignature", requires="pyFM", as_default=True
 )
 
 register_face_valued_gradient(
-    "pyfm", PyfmFaceValuedGradient, requires="pyFM", as_default=True
+    "pyfm", "PyfmFaceValuedGradient", requires="pyFM", as_default=True
 )
 
 register_face_divergence_operator(
-    "pyfm", PyfmFaceDivergenceOperator, requires="pyFM", as_default=True
+    "pyfm", "PyfmFaceDivergenceOperator", requires="pyFM", as_default=True
 )
 
 register_face_orientation_operator(
-    "pyfm", PyFmFaceOrientationOperator, requires="pyFM", as_default=True
+    "pyfm", "PyFmFaceOrientationOperator", requires="pyFM", as_default=True
 )

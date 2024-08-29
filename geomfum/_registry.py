@@ -6,15 +6,15 @@ from geomfum._utils import has_package
 
 class Registry(abc.ABC):
     @classmethod
-    def register(cls, key, Obj, requires=(), as_default=False):
+    def register(cls, key, obj_name, requires=(), as_default=False):
         """Register.
 
         Parameters
         ----------
-        which : str
-            Key.
-        Obj : class
-            Object to register.
+        key : str or tuple
+            Key. First element must be wrap name.
+        obj_name : class name
+            Name of the object to register.
         requires : str or tuple
             Required packages.
         as_default : bool
@@ -33,7 +33,7 @@ class Registry(abc.ABC):
         if as_default:
             cls.default = key
 
-        cls.MAP[key] = (Obj, missing_package)
+        cls.MAP[key] = (obj_name, missing_package)
 
     @classmethod
     def get(cls, key):
@@ -41,8 +41,8 @@ class Registry(abc.ABC):
 
         Parameters
         ----------
-        which : str
-            Key.
+        key : str or tuple
+            Key. First element must be wrap name.
 
         Returns
         -------
@@ -51,9 +51,14 @@ class Registry(abc.ABC):
         """
         if key is None:
             key = cls.default
-        Obj, missing_package = cls.MAP[key]
+        obj_name, missing_package = cls.MAP[key]
         if missing_package:
             raise ModuleNotFoundError(missing_package)
+
+        package_name = key if isinstance(key, str) else key[0]
+
+        module = __import__(f"geomfum.wrap.{package_name}", fromlist=[""])
+        Obj = getattr(module, obj_name)
 
         return Obj
 
@@ -88,21 +93,21 @@ class Registry(abc.ABC):
 
 class WhichRegistry(Registry, abc.ABC):
     @classmethod
-    def register(cls, which, Obj, requires=(), as_default=False):
+    def register(cls, which, obj_name, requires=(), as_default=False):
         """Register.
 
         Parameters
         ----------
         which : str
             Key.
-        Obj : class
-            Object to register.
+        obj_name : class name
+            Name of the object to register.
         requires : str or tuple
             Required packages.
         as_default : bool
             Whether to set it as default.
         """
-        return super().register(which, Obj, requires, as_default)
+        return super().register(which, obj_name, requires, as_default)
 
     @classmethod
     def get(cls, which):
@@ -123,7 +128,7 @@ class WhichRegistry(Registry, abc.ABC):
 
 class MeshWhichRegistry(Registry, abc.ABC):
     @classmethod
-    def register(cls, mesh, which, Obj, requires=(), as_default=False):
+    def register(cls, mesh, which, obj_name, requires=(), as_default=False):
         """Register.
 
         Parameters
@@ -132,14 +137,14 @@ class MeshWhichRegistry(Registry, abc.ABC):
             Whether a mesh or point cloud.
         which : str
             Key.
-        Obj : class
-            Object to register.
+        obj_name : class name
+            Name of the object to register.
         requires : str or tuple
             Required packages.
         as_default : bool
             Whether to set it as default.
         """
-        return super().register((mesh, which), Obj, requires)
+        return super().register((which, mesh), obj_name, requires)
 
     @classmethod
     def get(cls, mesh, which):
@@ -157,7 +162,7 @@ class MeshWhichRegistry(Registry, abc.ABC):
         Obj : class
             Registered object.
         """
-        return super().get((mesh, which))
+        return super().get((which, mesh))
 
 
 class WhichRegistryMixins:
@@ -250,3 +255,10 @@ class FaceOrientationOperatorRegistry(WhichRegistry):
 
 
 register_face_orientation_operator = FaceOrientationOperatorRegistry.register
+
+
+class HierarchicalMeshRegistry(WhichRegistry):
+    MAP = {}
+
+
+register_hierarchical_mesh = HierarchicalMeshRegistry.register

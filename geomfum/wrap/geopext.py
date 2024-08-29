@@ -1,10 +1,8 @@
+"""geopext wrapper."""
+
+import geopext
 import numpy as np
 import scipy
-
-try:
-    import geopext
-except ModuleNotFoundError:
-    pass
 
 from geomfum.laplacian._base import BaseLaplacianFinder
 
