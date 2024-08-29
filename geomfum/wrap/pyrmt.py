@@ -40,11 +40,18 @@ class PyrmtHierarchicalMesh(HierarchicalShape):
         super().__init__(low=low, high=mesh)
 
     def _remesh(self, mesh, min_n_samples):
-        vertices = np.asfortranarray(mesh.vertices)
-        rhigh = RMTMesh(
-            vertices,
-            np.asfortranarray(mesh.faces.astype(np.int32)),
-        )
+        vertices = mesh.vertices
+        faces = mesh.faces
+        if not vertices.flags.f_contiguous:
+            vertices = np.asfortranarray(vertices)
+
+        if faces.dtype != np.int32:
+            faces = faces.astype(np.int32)
+
+        if not faces.flags.f_contiguous:
+            faces = np.asfortranarray(faces)
+
+        rhigh = RMTMesh(vertices, faces)
         rhigh.make_manifold()
 
         rlow = rhigh.remesh(min_n_samples)
@@ -54,7 +61,7 @@ class PyrmtHierarchicalMesh(HierarchicalShape):
         self._rlow = rlow
         self._baryc_map = rlow.baryc_map(vertices)
 
-        return TriangleMesh(rlow.vertices, rlow.triangles)
+        return TriangleMesh(np.array(rlow.vertices), np.array(rlow.triangles))
 
     def scalar_low_high(self, scalar):
         """Transfer scalar from low-resolution to high.
