@@ -58,6 +58,11 @@ class IdentityRefiner(Refiner):
 class OrthogonalRefiner(Refiner):
     """Refinement using singular value decomposition.
 
+    Parameters
+    ----------
+    flip_neg_det : bool
+        Whether to flip negative determinant for square matrices.
+
     References
     ----------
     .. [OCSBG2012] Maks Ovsjanikov, Mirela Ben-Chen, Justin Solomon,
@@ -66,6 +71,9 @@ class OrthogonalRefiner(Refiner):
         Shapes.” ACM Transactions on Graphics 31, no. 4 (2012): 30:1-30:11.
         https://doi.org/10.1145/2185520.2185526.
     """
+
+    def __init__(self, flip_neg_det=True):
+        self.flip_neg_det = flip_neg_det
 
     def __call__(self, fmap_matrix, basis_a=None, basis_b=None):
         """Apply refiner.
@@ -86,7 +94,17 @@ class OrthogonalRefiner(Refiner):
         """
         k2, k1 = fmap_matrix.shape
         U, _, VT = scipy.linalg.svd(fmap_matrix)
-        return U @ np.eye(k2, k1) @ VT
+
+        if k1 != k2 or not self.flip_neg_det:
+            return U @ np.eye(k2, k1) @ VT
+
+        opt_rot = np.matmul(U, VT)
+        if np.linalg.det(opt_rot) < 0.0:
+            diag_sign = np.diag(np.ones(VT.shape[0]))
+            diag_sign[-1, -1] = -1
+            opt_rot = np.matmul(U, np.matmul(diag_sign, VT))
+
+        return opt_rot
 
 
 class IterativeRefiner(Refiner):
