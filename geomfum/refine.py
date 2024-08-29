@@ -55,7 +55,7 @@ class IdentityRefiner(Refiner):
         return fmap_matrix
 
 
-class SvdRefiner(Refiner):
+class OrthogonalRefiner(Refiner):
     """Refinement using singular value decomposition.
 
     References
@@ -66,8 +66,6 @@ class SvdRefiner(Refiner):
         Shapes.” ACM Transactions on Graphics 31, no. 4 (2012): 30:1-30:11.
         https://doi.org/10.1145/2185520.2185526.
     """
-
-    # TODO: find better name
 
     def __call__(self, fmap_matrix, basis_a=None, basis_b=None):
         """Apply refiner.
@@ -102,8 +100,11 @@ class IterativeRefiner(Refiner):
     ----------
     nit : int
         Number of iterations.
+    step : int or tuple[2, int]
+        How much to increase each basis per iteration.
     atol : float
         Convergence tolerance.
+        Ignored if step different than 1.
     p2p_from_fm_converter : P2pFromFmConverter
         Pointwise map from functional map.
     fm_from_p2p_converter : FmFromP2pConverter
@@ -115,7 +116,8 @@ class IterativeRefiner(Refiner):
     def __init__(
         self,
         nit=10,
-        atol=1e-4,
+        step=0,
+        atol=None,
         p2p_from_fm_converter=None,
         fm_from_p2p_converter=None,
         iter_refiner=None,
@@ -131,10 +133,39 @@ class IterativeRefiner(Refiner):
             iter_refiner = IdentityRefiner()
 
         self.nit = nit
+        self.step = step
         self.atol = atol
         self.p2p_from_fm_converter = p2p_from_fm_converter
         self.fm_from_p2p_converter = fm_from_p2p_converter
         self.iter_refiner = iter_refiner
+
+        if self._step_a != self._step_b != 0 and atol is not None:
+            raise ValueError("`atol` can't be used with step different than 0.")
+
+    @property
+    def step(self):
+        """How much to increase each basis per iteration.
+
+        Returns
+        -------
+        step : tuple[2, int]
+            Step.
+        """
+        return self._step_a, self._step_b
+
+    @step.setter
+    def step(self, step):
+        """Set step.
+
+        Parameters
+        ----------
+        step : int or tuple[2, int]
+            How much to increase each basis per iteration.
+        """
+        if isinstance(step, int):
+            self._step_a = self._step_b = step
+        else:
+            self._step_a, self._step_b = step
 
     def iter(self, fmap_matrix, basis_a, basis_b):
         """Refiner iteration.
@@ -150,14 +181,16 @@ class IterativeRefiner(Refiner):
 
         Returns
         -------
-        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+        fmap_matrix : array-like, shape=[spectrum_size_b + step_b, spectrum_size_a + step_a]
             Refined functional map matrix.
         """
         k2, k1 = fmap_matrix.shape
+        new_k1, new_k2 = k1 + self._step_a, k2 + self._step_b
+
         p2p_21 = self.p2p_from_fm_converter(fmap_matrix, basis_a, basis_b)
 
         fmap_matrix = self.fm_from_p2p_converter(
-            p2p_21, basis_a.truncate(k1), basis_b.truncate(k2)
+            p2p_21, basis_a.truncate(new_k1), basis_b.truncate(new_k2)
         )
         return self.iter_refiner(fmap_matrix, basis_a, basis_b)
 
@@ -178,7 +211,27 @@ class IterativeRefiner(Refiner):
         fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Refined functional map matrix.
         """
-        for _ in range(self.nit):
+        k2, k1 = fmap_matrix.shape
+
+        nit = self.nit
+        if nit is None:
+            nit = min(
+                (k1 - basis_a.full_spectrum_size) // self._step_a,
+                (k2 - basis_b.full_spectrum_size) // self._step_b,
+            )
+        else:
+            msg = []
+            if k1 + nit * self._step_a > basis_a.full_spectrum_size:
+                msg.append("`basis_a`")
+            if k2 + nit * self._step_b > basis_b.full_spectrum_size:
+                msg.append("`basis_b`")
+
+            if msg:
+                raise ValueError(f"Not enough eigenvectors on {', '.join(msg)}.")
+
+        nit = self.nit
+
+        for _ in range(nit):
             new_fmap_matrix = self.iter(fmap_matrix, basis_a, basis_b)
 
             if (
@@ -190,12 +243,13 @@ class IterativeRefiner(Refiner):
             fmap_matrix = new_fmap_matrix
 
         else:
-            logging.warning(f"Maximum number of iterations reached: {self.nit}")
+            if self.atol is not None:
+                logging.warning(f"Maximum number of iterations reached: {nit}")
 
         return new_fmap_matrix
 
 
-class IterativeSvdRefiner(IterativeRefiner):
+class IcpRefiner(IterativeRefiner):
     """Iterative refinement of functional map using SVD.
 
     Parameters
@@ -218,8 +272,6 @@ class IterativeSvdRefiner(IterativeRefiner):
         https://doi.org/10.1145/2185520.2185526.
     """
 
-    # TODO: find better name
-
     def __init__(
         self,
         nit=10,
@@ -228,5 +280,48 @@ class IterativeSvdRefiner(IterativeRefiner):
         fm_from_p2p_converter=None,
     ):
         super().__init__(
-            nit, atol, p2p_from_fm_converter, fm_from_p2p_converter, SvdRefiner()
+            nit=nit,
+            step=0,
+            atol=atol,
+            p2p_from_fm_converter=p2p_from_fm_converter,
+            fm_from_p2p_converter=fm_from_p2p_converter,
+            iter_refiner=OrthogonalRefiner(),
+        )
+
+
+class ZoomOut(IterativeRefiner):
+    """Zoomout algorithm.
+
+    Parameters
+    ----------
+    nit : int
+        Number of iterations.
+    step : int or tuple[2, int]
+        How much to increase each basis per iteration.
+    p2p_from_fm_converter : P2pFromFmConverter
+        Pointwise map from functional map.
+    fm_from_p2p_converter : FmFromP2pConverter
+        Functional map from pointwise map.
+
+    References
+    ----------
+    .. [MRRSWO2019] Simone Melzi, Jing Ren, Emanuele Rodolà, Abhishek Sharma,
+        Peter Wonka, and Maks Ovsjanikov. “ZoomOut: Spectral Upsampling
+        for Efficient Shape Correspondence.” arXiv, September 12, 2019.
+        http://arxiv.org/abs/1904.07865
+    """
+
+    def __init__(
+        self,
+        nit=10,
+        step=1,
+        p2p_from_fm_converter=None,
+        fm_from_p2p_converter=None,
+    ):
+        super().__init__(
+            nit=nit,
+            step=step,
+            p2p_from_fm_converter=p2p_from_fm_converter,
+            fm_from_p2p_converter=fm_from_p2p_converter,
+            iter_refiner=None,
         )
