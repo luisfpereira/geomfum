@@ -1,11 +1,11 @@
 GEOMFUM
 =======
 
-A `pyFM <https://pypi.org/project/pyfmaps/>`_-inspired package for geometric processing with functional maps.
+A `pyFM <https://pypi.org/project/pyfmaps/>`_-inspired package for geometric processing with `functional maps <https://dl.acm.org/doi/10.1145/2185520.2185526>`_.
 
 
-Install
--------
+Installation
+------------
 
 ::
 
@@ -15,10 +15,11 @@ Install
 Or the classic pipeline ``clone + pip install .``.
 
 
-Installation issues may likely arise from one of the dependencies that relies in ``C++``
+Installation issues may likely arise from one of the dependencies that relies on ``C++``
 (in particular, `robust_laplacian <https://pypi.org/project/robust-laplacian/>`_).
 Make sure you have installed everything they require.
 
+For ``pyRMT`` follow the instructions `here <https://github.com/filthynobleman/rematching/tree/python-binding>`_.
 
 
 How to use
