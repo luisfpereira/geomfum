@@ -7,7 +7,7 @@ import scipy
 
 from geomfum.descriptor._base import SpectralDescriptor
 from geomfum.laplacian._base import BaseLaplacianFinder
-from geomfum.operator.functional import FunctionalOperator, VectorFieldOperator
+from geomfum.operator import FunctionalOperator, VectorFieldOperator
 
 
 class PyfmMeshLaplacianFinder(BaseLaplacianFinder):

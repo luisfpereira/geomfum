@@ -4,7 +4,7 @@ import numpy as np
 import scipy
 
 from geomfum.io import load_mesh
-from geomfum.operator.functional import (
+from geomfum.operator import (
     FaceDivergenceOperator,
     FaceOrientationOperator,
     FaceValuedGradient,

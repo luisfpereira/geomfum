@@ -5,7 +5,7 @@ import logging
 
 import numpy as np
 
-from geomfum.operator.functional import Laplacian
+from geomfum.operator import Laplacian
 
 
 class Shape(abc.ABC):
