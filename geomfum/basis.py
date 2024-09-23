@@ -144,7 +144,7 @@ class LaplaceEigenBasis(EigenBasis):
             Inverse of the eigenvectors matrix.
         """
         if self._pinv is None:
-            self._pinv = self.vecs.T @ self._shape.mass_matrix
+            self._pinv = self.vecs.T @ self._shape.laplacian.mass_matrix
         return self._pinv
 
     def truncate(self, spectrum_size):
@@ -184,7 +184,7 @@ class LaplaceEigenBasis(EigenBasis):
         """
         return la.matvecmul(
             self.vecs.T,
-            la.matvecmul(self._shape.mass_matrix, array),
+            la.matvecmul(self._shape.laplacian.mass_matrix, array),
         )
 
     @property

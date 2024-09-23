@@ -15,8 +15,8 @@ class BaseLaplacianFinder(abc.ABC):
 
         Returns
         -------
-        laplace_matrix : array-like, shape=[n_vertices, n_vertices]
-            Laplace matrix.
+        stiffness_matrix : array-like, shape=[n_vertices, n_vertices]
+            Stiffness matrix.
         mass_matrix : array-like, shape=[n_vertices, n_vertices]
-            Diagonal lumped mass matrix.
+            Mass matrix.
         """

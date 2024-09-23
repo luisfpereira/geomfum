@@ -36,25 +36,25 @@ class GeopextMeshLaplacianFinder(BaseLaplacianFinder):
 
         Returns
         -------
-        laplace_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
-            Laplace matrix.
+        stiffness_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
+            Stiffness matrix.
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
-        laplace_dict, mass_vec = geopext.mesh_laplacian(
+        stiff_dict, mass_vec = geopext.mesh_laplacian(
             shape.vertices, shape.faces.ravel().astype(np.uintp), self.data_struct
         )
 
         indices_i = []
         indices_j = []
         values = []
-        for (index_i, index_j), value in laplace_dict.items():
+        for (index_i, index_j), value in stiff_dict.items():
             indices_i.append(index_i)
             indices_j.append(index_j)
 
             values.append(-value)
 
-        laplace_matrix = scipy.sparse.coo_matrix(
+        stiffness_matrix = scipy.sparse.coo_matrix(
             (values, (indices_i, indices_j)), shape=(shape.n_vertices, shape.n_vertices)
         ).tocsc()
 
@@ -63,4 +63,4 @@ class GeopextMeshLaplacianFinder(BaseLaplacianFinder):
             (mass_vec, (indices, indices)), shape=(shape.n_vertices, shape.n_vertices)
         ).tocsc()
 
-        return laplace_matrix, mass_matrix
+        return stiffness_matrix, mass_matrix

@@ -111,8 +111,7 @@ class FmFromP2pConverter(BaseFmFromP2pConverter):
         evects1_pb = basis_a.vecs[p2p, :]
 
         if self.pseudo_inverse:
-            # TODO: give access to mass_matrix to basis?
-            return basis_b.vecs.T @ (basis_b._shape.mass_matrix @ evects1_pb)
+            return basis_b.vecs.T @ (basis_b._shape.laplacian.mass_matrix @ evects1_pb)
 
         return scipy.linalg.lstsq(basis_b.vecs, evects1_pb)[0]
 

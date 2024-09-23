@@ -27,7 +27,7 @@ class SpectralDescriptorCmpData(TestData):
     def set_spectrum(self, spectrum_size):
         spectrum_size = spectrum_size
         for shape, pyfm_shape in zip(self.shapes, self.pyfm_shapes):
-            shape.find_laplacian_spectrum(spectrum_size=spectrum_size)
+            shape.laplacian.find_spectrum(spectrum_size=spectrum_size)
             shape.basis.use_k = spectrum_size
 
             pyfm_shape.eigenvalues = shape.basis.full_vals

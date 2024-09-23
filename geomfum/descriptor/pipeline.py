@@ -46,7 +46,11 @@ class L2InnerNormalizer(Normalizer):
 
     def __call__(self, shape, array):
         coeff = np.sqrt(
-            np.einsum("...n,...n->...", array, la.matvecmul(shape.mass_matrix, array)),
+            np.einsum(
+                "...n,...n->...",
+                array,
+                la.matvecmul(shape.laplacian.mass_matrix, array),
+            ),
         )
         return la.scalarvecmul(1 / coeff, array)
 

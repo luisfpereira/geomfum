@@ -23,8 +23,8 @@ class WeightedFactorCmpTestData(TestData):
     _spectrum_size_b = random.randint(3, 5)
 
     # TODO: define better when to trigger this
-    shape_a.find_laplacian_spectrum(spectrum_size=_spectrum_size_a)
-    shape_b.find_laplacian_spectrum(spectrum_size=_spectrum_size_b)
+    shape_a.laplacian.find_spectrum(spectrum_size=_spectrum_size_a)
+    shape_b.laplacian.find_spectrum(spectrum_size=_spectrum_size_b)
 
     pyfm_shape_a.eigenvalues = shape_a.basis.vals
     pyfm_shape_a.eigenvectors = shape_a.basis.vecs

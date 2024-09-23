@@ -27,8 +27,8 @@ class RobustMeshLaplacianFinder(BaseLaplacianFinder):
 
         Returns
         -------
-        laplace_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
-            Laplace matrix.
+        stiffness_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
+            Stiffness matrix.
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
@@ -62,7 +62,7 @@ class RobustPointCloudLaplacianFinder(BaseLaplacianFinder):
 
         Returns
         -------
-        laplace_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
+        stiffness_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             "Weak" Laplace matrix.
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.

@@ -62,7 +62,7 @@ class HierarchicalShape(abc.ABC):
 
         if set_as_basis:
             basis = EigenBasis(self.low.basis.full_vals, hvecs)
-            self.high.basis = basis
+            self.high.set_basis(basis)
 
         return hvecs
 
@@ -195,6 +195,13 @@ class NestedHierarchicalShape:
         vecs : list[array-like], shape=[level.n_vertices, spectrum_size]
             Eigenvectors.
             As many as number of levels.
+
+        References
+        ----------
+        .. [MBMR2023] Filippo Maggioli, Daniele Baieri, Simone Melzi, and Emanuele Rodolà.
+           “ReMatching: Low-Resolution Representations for Scalable Shape
+            Correspondence.” arXiv, October 30, 2023.
+            https://doi.org/10.48550/arXiv.2305.09274.
         """
         n_levels = n_levels or len(self.hshapes)
 

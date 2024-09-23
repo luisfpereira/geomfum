@@ -86,11 +86,11 @@ class LaplacianSpectrumFinder:
         basis : LaplaceEigenBasis
             A basis. (If ``basis is True``.)
         """
-        laplace_matrix, mass_matrix = shape.find_laplacian(
+        stiffness_matrix, mass_matrix = shape.laplacian.find(
             self.laplacian_finder, recompute=recompute
         )
 
-        eigenvals, eigenvecs = self.eig_solver(laplace_matrix, M=mass_matrix)
+        eigenvals, eigenvecs = self.eig_solver(stiffness_matrix, M=mass_matrix)
 
         if self.nonzero:
             eigenvals = eigenvals[1:]
