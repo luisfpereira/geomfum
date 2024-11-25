@@ -42,6 +42,10 @@ class PyrmtHierarchicalMesh(HierarchicalShape):
     def _remesh(self, mesh, min_n_samples):
         vertices = mesh.vertices
         faces = mesh.faces
+
+        if vertices.dtype != np.float64:
+            vertices = vertices.astype(np.float64)
+
         if not vertices.flags.f_contiguous:
             vertices = np.asfortranarray(vertices)
 
