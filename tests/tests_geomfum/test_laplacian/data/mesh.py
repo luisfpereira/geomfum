@@ -1,14 +1,15 @@
 from geomstats.test.data import TestData
 
+from geomfum.dataset import NotebooksDataset
 from geomfum.shape import TriangleMesh
-from tests.utils import DATA_DIR
+
+_DATASET = NotebooksDataset()
 
 
 class LaplacianFinderCmpData(TestData):
-    # TODO: use smaller meshes
-    _filenames = ["cat-00.off"]
+    _indices = ["cat-00"]
     shapes = [
-        TriangleMesh.from_file(f"{DATA_DIR}/{filename}") for filename in _filenames
+        TriangleMesh.from_file(_DATASET.get_filename(index)) for index in _indices
     ]
 
     def matrices_cmp_test_data(self):
@@ -17,11 +18,9 @@ class LaplacianFinderCmpData(TestData):
 
 
 class LaplacianSpectrumFinderCmpData(TestData):
-    # TODO: use smaller meshes
-    # TODO: create default data
-    _filenames = ["cat-00.off"]
+    _indices = ["cat-00"]
     shapes = [
-        TriangleMesh.from_file(f"{DATA_DIR}/{filename}") for filename in _filenames
+        TriangleMesh.from_file(_DATASET.get_filename(index)) for index in _indices
     ]
 
     tolerances = {"eigenvals_cmp": {"atol": 1e-1}}

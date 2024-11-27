@@ -4,16 +4,18 @@ import numpy as np
 from geomstats.test.data import TestData
 from pyFM.mesh import TriMesh
 
+from geomfum.dataset import NotebooksDataset
 from geomfum.shape import TriangleMesh
-from tests.utils import DATA_DIR
+
+_DATASET = NotebooksDataset()
 
 
 class WeightedFactorCmpTestData(TestData):
     trials = 1
 
-    _filenames = ["cat-00.off", "lion-00.off"]
+    _indices = ["cat-00", "lion-00"]
     shape_a, shape_b = [
-        TriangleMesh.from_file(f"{DATA_DIR}/{filename}") for filename in _filenames
+        TriangleMesh.from_file(_DATASET.get_filename(index)) for index in _indices
     ]
     pyfm_shape_a, pyfm_shape_b = [
         TriMesh(shape.vertices, shape.faces) for shape in (shape_a, shape_b)
