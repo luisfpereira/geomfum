@@ -2,8 +2,9 @@
 
 import glob
 
-from geomstats.test.parametrizers import NotebooksParametrizer
 from geomstats.test.test_case import TestCase
+
+from .parametrizer import NotebooksParametrizer
 
 
 class NotebooksTestData:
