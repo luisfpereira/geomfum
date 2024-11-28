@@ -4,16 +4,18 @@ import numpy as np
 from geomstats.test.data import TestData
 from pyFM.mesh import TriMesh
 
+from geomfum.dataset import NotebooksDataset
 from geomfum.shape import TriangleMesh
-from tests.utils import DATA_DIR
+
+_DATASET = NotebooksDataset()
 
 
 class SpectralDescriptorCmpData(TestData):
     trials = 1
-    # TODO: use smaller meshes
-    _filenames = ["cat-00.off"]
+
+    _indices = ["cat-00"]
     shapes = [
-        TriangleMesh.from_file(f"{DATA_DIR}/{filename}") for filename in _filenames
+        TriangleMesh.from_file(_DATASET.get_filename(index)) for index in _indices
     ]
     pyfm_shapes = [TriMesh(mesh.vertices, mesh.faces) for mesh in shapes]
 
