@@ -32,6 +32,21 @@ jobs:
       - name: Setting up rust
         run: rustup default nightly
 
+      - name: Installing rematching
+        run: |
+          pip install pybind11
+          cd ..
+          git clone https://github.com/luisfpereira/rematching.git
+          cd rematching
+          git fetch
+          git switch python-binding
+          git submodule update --init --recursive --remote
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX="../install"
+          cmake --build . --config release
+          cd ../../geomfum
+
       - name: Installing dependencies [pip]
         run: |
           pip install --upgrade pip
