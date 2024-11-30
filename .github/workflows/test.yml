@@ -50,7 +50,7 @@ jobs:
 
       - name: Unit testing [pytest]
         run: |
-          pytest --cov --cov-report=xml tests -m "(not rematching)"
+          pytest --cov=geomfum --cov-report=xml tests -m "(not rematching)"
 
       - name: Uploading coverage reports to Codecov
         if: ${{github.ref == 'refs/heads/main'}}
