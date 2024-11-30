@@ -2,11 +2,18 @@ name: "Testing"
 
 on:
   push:
-    # TODO: add paths or paths-ignore
     branches: [main, github-actions-test]
+    paths:
+      - "**.py"
+      - "**.ipynb"
+      - "pyproject.toml"
 
   pull_request:
     branches: [main]
+    paths:
+      - "**.py"
+      - "**.ipynb"
+      - "pyproject.toml"
 
 jobs:
   build:
