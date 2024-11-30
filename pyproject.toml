@@ -28,7 +28,7 @@ opt = [
     "geopext @ git+https://github.com/luisfpereira/geopext.git@2b7a7be1a8fdc6e5755e5f4bda88bc284065e829",
 ]
 rematching = [
-    "Rematching @ git+https://github.com/paul0noah/rematching.git@python-binding",
+    "Rematching @ git+https://github.com/filthynobleman/rematching.git@python-binding",
 ]
 test = [
     "pytest",
