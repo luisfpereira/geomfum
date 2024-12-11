@@ -30,6 +30,11 @@ opt = [
 rematching = [
     "Rematching @ git+https://github.com/filthynobleman/rematching.git@python-binding",
 ]
+scalablefm=
+[
+"multiprocess",
+"ipywidgets",
+]
 test = [
     "pytest",
     "geomstats",
