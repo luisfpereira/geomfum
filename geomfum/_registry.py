@@ -258,7 +258,8 @@ register_face_orientation_operator = FaceOrientationOperatorRegistry.register
 
 
 class HierarchicalMeshRegistry(WhichRegistry):
-    MAP = {}
+    MAP = {
+    }
 
 
 register_hierarchical_mesh = HierarchicalMeshRegistry.register

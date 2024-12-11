@@ -54,5 +54,11 @@ register_face_orientation_operator(
 
 
 register_hierarchical_mesh(
+
     "pyrmt", "PyrmtHierarchicalMesh", requires="PyRMT", as_default=True
+)
+
+register_hierarchical_mesh(
+
+    "scalablefm", "ScalableHierarchicalMesh", requires="pyFM", as_default=True
 )
