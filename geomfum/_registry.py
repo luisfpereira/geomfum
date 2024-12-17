@@ -242,8 +242,7 @@ class FaceOrientationOperatorRegistry(WhichRegistry):
 
 
 class HierarchicalMeshRegistry(WhichRegistry):
-    MAP = {
-    }
+    MAP = {}
 
 
 def _create_register_funcs(module):

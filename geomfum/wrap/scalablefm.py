@@ -1,29 +1,19 @@
-import sys
+import time
 from functools import partial
+
 import multiprocess
 import numpy as np
-import scipy.sparse as sparse
 import pymeshlab
-import time
-
-from sklearn.neighbors import NearestNeighbors
-
+import scipy.sparse as sparse
+from pyFM.mesh import TriMesh as TM
+from sklearn.cluster import KMeans
+from sklearn.neighbors import NearestNeighbors, RadiusNeighborsRegressor
 from tqdm.notebook import tqdm
 
-from sklearn.cluster import KMeans
-from sklearn.neighbors import RadiusNeighborsRegressor
-
-
 import geomfum.linalg as la
+from geomfum.laplacian import LaplacianSpectrumFinder
 from geomfum.shape.hierarchical import HierarchicalShape
-from geomfum.shape.mesh import TriangleMesh
 from geomfum.shape.point_cloud import PointCloud
-
-
-from pyFM.mesh import TriMesh as TM
-
-
-from geomfum.laplacian._laplacian import LaplacianSpectrumFinder
 
 
 class ScalableLaplacianSpectrumFinder(LaplacianSpectrumFinder):
@@ -35,11 +25,10 @@ class ScalableLaplacianSpectrumFinder(LaplacianSpectrumFinder):
         Amount of intrinsic mollification to perform.
     """
 
-    def __init__(self,evecs,evals):
+    def __init__(self, evecs, evals):
+        self.evecs = evecs
+        self.evals = evals
 
-        self.evecs=evecs
-        self.evals=evals
-        
     def __call__(self, shape):
         """Apply algorithm.
 
@@ -55,8 +44,7 @@ class ScalableLaplacianSpectrumFinder(LaplacianSpectrumFinder):
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
-        return self.evals,self.evecs
-
+        return self.evals, self.evecs
 
 
 class ScalableHierarchicalMesh(HierarchicalShape):
@@ -77,26 +65,26 @@ class ScalableHierarchicalMesh(HierarchicalShape):
         "Scalable Functional Maps.” arXiv.
     """
 
-    def __init__(self, mesh, min_n_samples,params=None):
+    def __init__(self, mesh, min_n_samples, params=None):
         if min_n_samples > mesh.n_vertices:
             raise ValueError(
                 f"Number of samples ({min_n_samples}) is greater than number of"
                 f"vertices of high-resolution mesh ({mesh.n_vertices})"
             )
-        if params==None:
-            self.params= {
-                'dist_ratio': 3, # rho = dist_ratio * average_radius
-                'self_limit': .25,  # Minimum value for self weight
-                'correct_dist': False,
-                'interpolation': 'poly',
-                'return_dist': True,
-                'adapt_radius': True,
-                'n_jobs':10,
-                'n_clusters': 100,
-                'verbose': True
+        if params == None:
+            self.params = {
+                "dist_ratio": 3,  # rho = dist_ratio * average_radius
+                "self_limit": 0.25,  # Minimum value for self weight
+                "correct_dist": False,
+                "interpolation": "poly",
+                "return_dist": True,
+                "adapt_radius": True,
+                "n_jobs": 10,
+                "n_clusters": 100,
+                "verbose": True,
             }
         else:
-            self.params=params
+            self.params = params
 
         low = self._scalable_fm(mesh, min_n_samples)
 
@@ -107,17 +95,18 @@ class ScalableHierarchicalMesh(HierarchicalShape):
         faces = mesh.faces
         lmu = LargeMesh()
 
-
         rhigh = TM(vertices, faces).process(k=0, intrinsic=True)
 
-        U1, Ab1, Wb1, sub1, distmat1 = lmu.process_mesh(rhigh, min_n_samples, **self.params)
+        U1, Ab1, Wb1, sub1, distmat1 = lmu.process_mesh(
+            rhigh, min_n_samples, **self.params
+        )
         evals, evecs = lmu.get_approx_spectrum(Wb1, Ab1, verbose=True)
 
         rlow = PointCloud(vertices[sub1])
-        
-        #load evecs and evals
+
+        # load evecs and evals
         rlow.laplacian.find_spectrum(spectrum_size=10, set_as_basis=True)
-        spectrum_finder = ScalableLaplacianSpectrumFinder(evals,evecs)
+        spectrum_finder = ScalableLaplacianSpectrumFinder(evals, evecs)
         rlow.laplacian.find_spectrum(laplacian_spectrum_finder=spectrum_finder)
 
         self._rhigh = rhigh
@@ -142,35 +131,31 @@ class ScalableHierarchicalMesh(HierarchicalShape):
         return la.matvecmul(self._baryc_map, scalar)
 
 
-
-
-class LargeMesh():
-    '''
+class LargeMesh:
+    """
     Class to save the utils functions of Scalble functional maps
-    
-    '''
-    def linear_compact(self,x):
+
+    """
+
+    def linear_compact(self, x):
         """
         Linearly decreasing function between 0 and 1
         """
         return 1 - x
 
-
-    def poly_compact(self,x):
+    def poly_compact(self, x):
         """
         Polynomial decreasing function between 0 and 1
         """
         return 1 - 3 * x**2 + 2 * x**3
 
-
-    def exp_compact(self,x):
+    def exp_compact(self, x):
         """
         Exponential decreasing function between 0 and 1
         """
         return np.exp(1 - 1 / (1 - x**2))
 
-
-    def local_f(self,vals, rho, chi='exp', return_zeros_indices=False):
+    def local_f(self, vals, rho, chi="exp", return_zeros_indices=False):
         """
         Apply a local function to a set of values
 
@@ -192,21 +177,30 @@ class LargeMesh():
         inds = vals < rho
 
         # Compute local function
-        if chi == 'exp':
+        if chi == "exp":
             newv[inds] = self.exp_compact(vals[inds] / rho)
-        elif chi == 'poly':
+        elif chi == "poly":
             newv[inds] = self.poly_compact(vals[inds] / rho)
-        elif chi == 'linear':
+        elif chi == "linear":
             newv[inds] = self.linear_compact(vals[inds] / rho)
         else:
-            raise ValueError('Only "poly", "exp" and "linear" accepted as local interpolation functions')
+            raise ValueError(
+                'Only "poly", "exp" and "linear" accepted as local interpolation functions'
+            )
 
         if return_zeros_indices:
             return newv, ~inds
         return newv
 
-
-    def poisson_sample(self,path=None, vertices=None, faces=None, mesh=None, n_samples=1000, verbose=False):
+    def poisson_sample(
+        self,
+        path=None,
+        vertices=None,
+        faces=None,
+        mesh=None,
+        n_samples=1000,
+        verbose=False,
+    ):
         """
         Compute a sample using poisson disk sampling from several possible format, either:
         - A path to a mesh file
@@ -227,7 +221,9 @@ class LargeMesh():
         """
         ms = pymeshlab.MeshSet()
         if mesh is not None:
-            ms.add_mesh(pymeshlab.Mesh(vertex_matrix=mesh.vertices, face_matrix=mesh.faces))
+            ms.add_mesh(
+                pymeshlab.Mesh(vertex_matrix=mesh.vertices, face_matrix=mesh.faces)
+            )
         elif path is not None:
             ms.load_new_mesh(path)
         else:
@@ -236,8 +232,7 @@ class LargeMesh():
         ms.generate_sampling_poisson_disk(samplenum=n_samples)
         return ms.current_mesh().vertex_matrix()
 
-
-    def select_new_inds(self,choices, vert1, rho):
+    def select_new_inds(self, choices, vert1, rho):
         """
         Given a set of unseen vertices, select some sources from which a new local dijkstra can be
         computed without interference with each other.
@@ -260,7 +255,7 @@ class LargeMesh():
         selection : (p,) indices of vertices to use as new sources
         """
 
-        assert choices.ndim == 1, 'Problem of dimension'
+        assert choices.ndim == 1, "Problem of dimension"
 
         vertices_set = vert1[choices]  # (p,3)
 
@@ -271,21 +266,36 @@ class LargeMesh():
         # Iteratively add unseen vertices who lie at an euclidean distance bigger than rho
         # to the current selected vertices
 
-        dists = np.linalg.norm(vertices_set[inds[0]][None, :] - vertices_set, axis=1)  # (p,)
+        dists = np.linalg.norm(
+            vertices_set[inds[0]][None, :] - vertices_set, axis=1
+        )  # (p,)
         while np.any(dists > rho):
             newid = np.argmax(dists)
             inds.append(newid)
 
-            new_distance = np.linalg.norm(vertices_set[newid][None, :] - vertices_set, axis=1)
+            new_distance = np.linalg.norm(
+                vertices_set[newid][None, :] - vertices_set, axis=1
+            )
 
             dists = np.minimum(dists, new_distance)
 
         return choices[inds]
 
-
-    def update_sampled_points(self,graph, subsample, unseen_inds, rho, I, J, V,
-                            vert1=None, correct_dist=True, directed=True,
-                            fast_update=True, verbose=False):
+    def update_sampled_points(
+        self,
+        graph,
+        subsample,
+        unseen_inds,
+        rho,
+        I,
+        J,
+        V,
+        vert1=None,
+        correct_dist=True,
+        directed=True,
+        fast_update=True,
+        verbose=False,
+    ):
         """
         Add some unseen vertices to the sample set and compute the distances.
 
@@ -307,22 +317,27 @@ class LargeMesh():
         subsample : new sampled points
         """
         if correct_dist and (vert1 is None):
-            raise ValueError("Can only correct distances if vertex coordinates are given")
+            raise ValueError(
+                "Can only correct distances if vertex coordinates are given"
+            )
 
         if fast_update and (vert1 is None):
-            raise ValueError("Can do fast update of samples if vertex coordinates are given")
+            raise ValueError(
+                "Can do fast update of samples if vertex coordinates are given"
+            )
 
         n_samples = subsample.size
 
         # Loop while some vertices are unseen
-        all_seen = (len(unseen_inds) == 0)
+        all_seen = len(unseen_inds) == 0
         iteration = 0
         while not all_seen:
             iteration += 1
 
             if verbose:
-                print(f'Iteration {iteration} : '
-                    f'{unseen_inds.size} unseen vertices...')
+                print(
+                    f"Iteration {iteration} : " f"{unseen_inds.size} unseen vertices..."
+                )
 
             # Select one or multiple new sources
             if fast_update:
@@ -331,13 +346,15 @@ class LargeMesh():
                 new_inds = [unseen_inds[0]]
 
             if verbose:
-                print(f'\tAdding {len(new_inds)} vertices')
+                print(f"\tAdding {len(new_inds)} vertices")
 
             # Add vertices to the sample
             subsample = np.append(subsample, new_inds)
 
             # Compute distances from the new source
-            dists_new = sparse.csgraph.dijkstra(graph, directed=directed, indices=new_inds, limit=rho)
+            dists_new = sparse.csgraph.dijkstra(
+                graph, directed=directed, indices=new_inds, limit=rho
+            )
             I_new, J_new = np.where(dists_new < np.inf)
 
             # Correct distances if necessary
@@ -355,14 +372,25 @@ class LargeMesh():
 
             # Update unseen vertices
             unseen_inds = np.array([x for x in unseen_inds if x not in J_new])
-            all_seen = (len(unseen_inds) == 0)
+            all_seen = len(unseen_inds) == 0
 
         return I, J, V, subsample
 
-
-    def compute_sparse_dijkstra(self,mesh1, subsample, rho, real_rho=None, n_clusters=4, n_jobs=1, correct_dist=True, verbose=True):
+    def compute_sparse_dijkstra(
+        self,
+        mesh1,
+        subsample,
+        rho,
+        real_rho=None,
+        n_clusters=4,
+        n_jobs=1,
+        correct_dist=True,
+        verbose=True,
+    ):
         N = mesh1.n_vertices
-        kmeans = KMeans(n_clusters=n_clusters, max_iter=10).fit(mesh1.vertices[subsample])
+        kmeans = KMeans(n_clusters=n_clusters, max_iter=10).fit(
+            mesh1.vertices[subsample]
+        )
 
         edges = mesh1.edges
 
@@ -370,7 +398,9 @@ class LargeMesh():
 
         I_base = edges[:, 0]  # (p,)
         J_base = edges[:, 1]  # (p,)
-        V_base = np.linalg.norm(mesh1.vertices[J_base] - mesh1.vertices[I_base], axis=1)  # (p,)
+        V_base = np.linalg.norm(
+            mesh1.vertices[J_base] - mesh1.vertices[I_base], axis=1
+        )  # (p,)
 
         graph = sparse.csc_matrix((V_base, (I_base, J_base)), shape=(N, N))
 
@@ -378,7 +408,9 @@ class LargeMesh():
         Jn = np.array([], dtype=int)
         Vn = np.array([], dtype=float)
 
-        rad_tree = RadiusNeighborsRegressor(radius=1.01*rho, algorithm="ball_tree", leaf_size=40, n_jobs=n_jobs).fit(mesh1.vertices, np.ones(mesh1.n_vertices))
+        rad_tree = RadiusNeighborsRegressor(
+            radius=1.01 * rho, algorithm="ball_tree", leaf_size=40, n_jobs=n_jobs
+        ).fit(mesh1.vertices, np.ones(mesh1.n_vertices))
 
         seen = np.full(mesh1.n_vertices, False)
 
@@ -387,7 +419,7 @@ class LargeMesh():
             iterable = tqdm(iterable)
 
         for class_index in iterable:
-            subsample_sub_test = (kmeans.labels_ == class_index)  # (m,)
+            subsample_sub_test = kmeans.labels_ == class_index  # (m,)
 
             subsample_sub_inds = np.where(subsample_sub_test)[0]  # (m_curr,)
 
@@ -401,24 +433,36 @@ class LargeMesh():
             # vertices_2keep_test = (dists < rho)  # (n,)
             # vertices_2keep = np.where(vertices_2keep_test)[0]  # (n_curr, )
 
-            res_test = rad_tree.radius_neighbors(mesh1.vertices[subsample_curr], return_distance=False)
+            res_test = rad_tree.radius_neighbors(
+                mesh1.vertices[subsample_curr], return_distance=False
+            )
             # vertices_2keep = np.unique(np.concatenate([np.unique(x) for x in res_test]))  # (n_curr, )
             vertices_2keep = np.unique(np.concatenate(res_test))  # (n_curr, )
 
-            subgraph = graph[np.ix_(vertices_2keep, vertices_2keep)]  # (n_curr, n_curr) sparse
+            subgraph = graph[
+                np.ix_(vertices_2keep, vertices_2keep)
+            ]  # (n_curr, n_curr) sparse
 
             # sources_in_curr = utils.knn_query(mesh1.vertices[vertices_2keep], mesh1.vertices[subsample_curr], n_jobs=n_jobs)  # (m_curr,)
             # sources_in_curr = np.asarray([np.where(vertices_2keep == x)[0].item() for x in subsample_curr])
 
-            sources_in_curr = np.where(np.isin(vertices_2keep, subsample_curr, assume_unique=True))[0]
+            sources_in_curr = np.where(
+                np.isin(vertices_2keep, subsample_curr, assume_unique=True)
+            )[0]
 
-            dists_curr = sparse.csgraph.dijkstra(subgraph, directed=False, indices=sources_in_curr, limit=rho)  # (m_curr, n_curr) with many np.inf
+            dists_curr = sparse.csgraph.dijkstra(
+                subgraph, directed=False, indices=sources_in_curr, limit=rho
+            )  # (m_curr, n_curr) with many np.inf
 
             finite_test = dists_curr < np.inf  # (m_curr, n_curr) with many np.inf
             I, J = np.where(finite_test)
 
             if correct_dist:
-                V = np.linalg.norm(mesh1.vertices[vertices_2keep[J]] - mesh1.vertices[subsample[subsample_sub_inds[I]]], axis=1)
+                V = np.linalg.norm(
+                    mesh1.vertices[vertices_2keep[J]]
+                    - mesh1.vertices[subsample[subsample_sub_inds[I]]],
+                    axis=1,
+                )
 
                 if real_rho is not None:
                     test_dist = V < real_rho
@@ -445,8 +489,17 @@ class LargeMesh():
         # unseen_inds = np.where(np.all(dists == np.inf, axis=0))[0]
         return In, Jn, Vn, unseen_inds
 
-
-    def compute_sparse_dijkstra_mp(self,mesh1, subsample, rho, real_rho=None, n_clusters=4, n_jobs=1, correct_dist=True, verbose=True):
+    def compute_sparse_dijkstra_mp(
+        self,
+        mesh1,
+        subsample,
+        rho,
+        real_rho=None,
+        n_clusters=4,
+        n_jobs=1,
+        correct_dist=True,
+        verbose=True,
+    ):
         """
         Compute local dijkstra at samples using multiprocessing and a trick using KMeans to help memory consumption.
 
@@ -469,27 +522,45 @@ class LargeMesh():
 
         # Divide the samples in n_clusters parts
         N = mesh1.n_vertices
-        kmeans = KMeans(n_clusters=n_clusters, max_iter=10).fit(mesh1.vertices[subsample])
+        kmeans = KMeans(n_clusters=n_clusters, max_iter=10).fit(
+            mesh1.vertices[subsample]
+        )
 
         edges = mesh1.edges
 
         # Build adjacency matrix
         I_base = edges[:, 0]  # (p,)
         J_base = edges[:, 1]  # (p,)
-        V_base = np.linalg.norm(mesh1.vertices[J_base] - mesh1.vertices[I_base], axis=1)  # (p,)
+        V_base = np.linalg.norm(
+            mesh1.vertices[J_base] - mesh1.vertices[I_base], axis=1
+        )  # (p,)
 
         graph = sparse.csc_matrix((V_base, (I_base, J_base)), shape=(N, N))
 
         # Fit a ball tree to the vertices
-        rad_tree = RadiusNeighborsRegressor(radius=1.01*rho, algorithm="ball_tree", leaf_size=40, n_jobs=1)
+        rad_tree = RadiusNeighborsRegressor(
+            radius=1.01 * rho, algorithm="ball_tree", leaf_size=40, n_jobs=1
+        )
         rad_tree.fit(mesh1.vertices, np.ones(mesh1.n_vertices))
 
         # Run in parallel function `distances_in_cluster` for each cluster
-        local_dists = partial(self.distances_in_cluster,
-                            kmeans.labels_, mesh1.vertices, subsample, rad_tree, graph, rho,
-                            real_rho=real_rho, correct_dist=correct_dist)
+        local_dists = partial(
+            self.distances_in_cluster,
+            kmeans.labels_,
+            mesh1.vertices,
+            subsample,
+            rad_tree,
+            graph,
+            rho,
+            real_rho=real_rho,
+            correct_dist=correct_dist,
+        )
 
-        PROCESSES = min(n_jobs if n_jobs > 0 else multiprocess.cpu_count(), multiprocess.cpu_count(), n_clusters)
+        PROCESSES = min(
+            n_jobs if n_jobs > 0 else multiprocess.cpu_count(),
+            multiprocess.cpu_count(),
+            n_clusters,
+        )
         with multiprocess.Pool(PROCESSES) as pool:
             results = [pool.apply_async(local_dists, (i,)) for i in range(n_clusters)]
             if verbose:
@@ -508,10 +579,23 @@ class LargeMesh():
 
         return In, Jn, Vn, unseen_inds
 
-
-    def build_local_mat_new(self,mesh1, subsample, rho, update_sample=True, fast_update=True,
-                            interpolation="poly", correct_dist=True, return_dist=False, self_limit=.1,
-                            adapt_radius=False, batch_size=None, n_clusters=4, n_jobs=1, verbose=False):
+    def build_local_mat_new(
+        self,
+        mesh1,
+        subsample,
+        rho,
+        update_sample=True,
+        fast_update=True,
+        interpolation="poly",
+        correct_dist=True,
+        return_dist=False,
+        self_limit=0.1,
+        adapt_radius=False,
+        batch_size=None,
+        n_clusters=4,
+        n_jobs=1,
+        verbose=False,
+    ):
         """
         Compute the local basis (and local distance matrix).
 
@@ -549,41 +633,71 @@ class LargeMesh():
 
         graph = sparse.coo_matrix((V, (I, J)), shape=(N, N)).tocsc()
         if verbose:
-            print('Computing First Dijkstra run...')
+            print("Computing First Dijkstra run...")
             start_time = time.time()
 
         # Compute first run of local dijkstra
-        rho_prerun = 3*rho if correct_dist else rho
+        rho_prerun = 3 * rho if correct_dist else rho
         # I, J, V, unseen_inds = compute_sparse_dijkstra(mesh1, subsample, rho_prerun, real_rho=rho, n_clusters=n_clusters, n_jobs=n_jobs, correct_dist=correct_dist, verbose=verbose)
-        I, J, V, unseen_inds = self.compute_sparse_dijkstra_mp(mesh1, subsample, rho_prerun, real_rho=rho, n_clusters=n_clusters, n_jobs=n_jobs, correct_dist=correct_dist, verbose=verbose)
+        I, J, V, unseen_inds = self.compute_sparse_dijkstra_mp(
+            mesh1,
+            subsample,
+            rho_prerun,
+            real_rho=rho,
+            n_clusters=n_clusters,
+            n_jobs=n_jobs,
+            correct_dist=correct_dist,
+            verbose=verbose,
+        )
 
         # unseen_inds = np.array([],dtype=int)
         if verbose:
-            print(f'\tDone in {time.time() - start_time:.2f}s\n')
+            print(f"\tDone in {time.time() - start_time:.2f}s\n")
 
         # Add unseen samples
         if update_sample:
             if verbose:
-                print('Update sampled points')
-            I, J, V, subsample = self.update_sampled_points(graph, subsample, unseen_inds, rho, I, J, V,
-                                                    vert1=mesh1.vertices, correct_dist=correct_dist,
-                                                    directed=False, fast_update=fast_update, verbose=verbose)
+                print("Update sampled points")
+            I, J, V, subsample = self.update_sampled_points(
+                graph,
+                subsample,
+                unseen_inds,
+                rho,
+                I,
+                J,
+                V,
+                vert1=mesh1.vertices,
+                correct_dist=correct_dist,
+                directed=False,
+                fast_update=fast_update,
+                verbose=verbose,
+            )
 
         if verbose and update_sample:
-            print(f'{subsample.size - n_samples_base:d} vertices have been added to the sample\n')
+            print(
+                f"{subsample.size - n_samples_base:d} vertices have been added to the sample\n"
+            )
 
         # Modify the radius at some points
         if adapt_radius:
             if verbose:
-                print('Update radius :')
+                print("Update radius :")
 
             # Build the distance matrix
-            distmat = sparse.csc_matrix((V, (J, I)), shape=(mesh1.n_vertices, subsample.size))
+            distmat = sparse.csc_matrix(
+                (V, (J, I)), shape=(mesh1.n_vertices, subsample.size)
+            )
 
             # Adapt the necessary radius
-            U, dist_data_new, per_vertex_rho = self.adapt_rho(distmat, subsample,
-                                                        rho, threshold=self_limit, rho_decrease_ratio=2,
-                                                        interpolation=interpolation, verbose=verbose)
+            U, dist_data_new, per_vertex_rho = self.adapt_rho(
+                distmat,
+                subsample,
+                rho,
+                threshold=self_limit,
+                rho_decrease_ratio=2,
+                interpolation=interpolation,
+                verbose=verbose,
+            )
             # Eliminate new zeros added in the mix
             U.eliminate_zeros()
 
@@ -591,27 +705,50 @@ class LargeMesh():
             if return_dist or update_sample:
                 # Remove 0 in the distance matrix (but not on the diagonal)
                 distmat.data = dist_data_new
-                distmat += sparse.csc_matrix((np.full(subsample.size, 1e-10), (subsample, np.arange(subsample.size))), shape=distmat.shape)
+                distmat += sparse.csc_matrix(
+                    (
+                        np.full(subsample.size, 1e-10),
+                        (subsample, np.arange(subsample.size)),
+                    ),
+                    shape=distmat.shape,
+                )
 
                 distmat.eliminate_zeros()
 
                 # Update unseen indices
                 unseen_inds = np.where(U.sum(1) == 0)[0]
                 if update_sample and len(unseen_inds) > 0:
-
                     # Find unseen inds and compute new neighbords
                     unseen_inds = np.where(U.sum(1) == 0)[0]
-                    newI, newJ, newV, subsample = self.update_sampled_points(graph, subsample, unseen_inds, per_vertex_rho.min(), [], [], [],
-                                                                        vert1=mesh1.vertices, correct_dist=correct_dist,
-                                                                        directed=False, fast_update=fast_update, verbose=verbose)
+                    newI, newJ, newV, subsample = self.update_sampled_points(
+                        graph,
+                        subsample,
+                        unseen_inds,
+                        per_vertex_rho.min(),
+                        [],
+                        [],
+                        [],
+                        vert1=mesh1.vertices,
+                        correct_dist=correct_dist,
+                        directed=False,
+                        fast_update=fast_update,
+                        verbose=verbose,
+                    )
 
                     U = U.tocoo(copy=False)
 
                     # Add new values to U with the small rho
-                    Vn = np.concatenate([U.data, self.local_f(newV, per_vertex_rho.min(), chi=interpolation)])
+                    Vn = np.concatenate(
+                        [
+                            U.data,
+                            self.local_f(newV, per_vertex_rho.min(), chi=interpolation),
+                        ]
+                    )
                     Jn = np.concatenate([U.row, newJ])
                     In = np.concatenate([U.col, newI])
-                    U = sparse.csr_matrix((Vn, (Jn, In)), shape=(mesh1.n_vertices, subsample.size))
+                    U = sparse.csr_matrix(
+                        (Vn, (Jn, In)), shape=(mesh1.n_vertices, subsample.size)
+                    )
 
                     # Update distance matrix accordingly
                     if return_dist:
@@ -620,7 +757,9 @@ class LargeMesh():
                         Vn = np.concatenate([distmat.data, newV])
                         Jn = np.concatenate([distmat.row, newJ])
                         In = np.concatenate([distmat.col, newI])
-                        distmat = sparse.csr_matrix((Vn, (Jn, In)), shape=(mesh1.n_vertices, subsample.size))
+                        distmat = sparse.csr_matrix(
+                            (Vn, (Jn, In)), shape=(mesh1.n_vertices, subsample.size)
+                        )
                         # distmat += sparse.csc_matrix((newV, (newJ, newI)), shape=(mesh1.n_vertices, subsample.size))
 
                 distmat = distmat.tocsr(copy=False)
@@ -643,17 +782,27 @@ class LargeMesh():
 
         if verbose:
             n_nz = np.array((U > 0).sum(1), dtype=int).squeeze()
-            print(f'Nonzero elements :\n'
-                f'\tMean : {n_nz.mean():.2f} +- {n_nz.std():.2f}\n'
-                f'\tMin : {n_nz.min():d}\tMax: {n_nz.max():d}'
-                )
+            print(
+                f"Nonzero elements :\n"
+                f"\tMean : {n_nz.mean():.2f} +- {n_nz.std():.2f}\n"
+                f"\tMin : {n_nz.min():d}\tMax: {n_nz.max():d}"
+            )
 
         if return_dist:
             return U, subsample, distmat
         return U, subsample
 
-
-    def adapt_rho(self,distmat, subsample, rho, threshold=.1, rho_decrease_ratio=2, interpolation='poly', adapt_self=False, verbose=False):
+    def adapt_rho(
+        self,
+        distmat,
+        subsample,
+        rho,
+        threshold=0.1,
+        rho_decrease_ratio=2,
+        interpolation="poly",
+        adapt_self=False,
+        verbose=False,
+    ):
         """
         Modify radius locally.
 
@@ -674,7 +823,7 @@ class LargeMesh():
         per_vertex_rho : per-vertex value
         """
 
-        max_self_val = 1/threshold
+        max_self_val = 1 / threshold
 
         # Apply chi to the distmat
         U_data = self.local_f(distmat.data, rho, chi=interpolation)
@@ -682,15 +831,21 @@ class LargeMesh():
         dist_data_new = distmat.data.copy()
 
         # Build un-normalized U matrix
-        U = sparse.csc_matrix((U_data, distmat.indices, distmat.indptr), shape=distmat.shape).tocsr()
+        U = sparse.csc_matrix(
+            (U_data, distmat.indices, distmat.indptr), shape=distmat.shape
+        ).tocsr()
 
         # Indices with too low self weight
-        subinds_toadapt = np.where(np.asarray(U[subsample].sum(1)).squeeze() > max_self_val)[0]
+        subinds_toadapt = np.where(
+            np.asarray(U[subsample].sum(1)).squeeze() > max_self_val
+        )[0]
         n_inds2adapt = subinds_toadapt.size
 
         # Extract the second point witht the biggest influence (biggest being itself with value 1 by definition)
-        red_mat = U[subsample[subinds_toadapt]] - sparse.csr_matrix((np.ones(n_inds2adapt), (np.arange(n_inds2adapt), subinds_toadapt)),
-                                                                    shape=(n_inds2adapt, subsample.size))
+        red_mat = U[subsample[subinds_toadapt]] - sparse.csr_matrix(
+            (np.ones(n_inds2adapt), (np.arange(n_inds2adapt), subinds_toadapt)),
+            shape=(n_inds2adapt, subsample.size),
+        )
 
         subinds_2change = np.unique(np.asarray(red_mat.argmax(axis=1)).flatten())
 
@@ -701,8 +856,10 @@ class LargeMesh():
         while len(subinds_2change) > 0 and iteration < 7:
             iteration += 1
             if verbose:
-                print(f'Iteration {iteration} : '
-                    f'Modifying {subinds_2change.size} sampled points')
+                print(
+                    f"Iteration {iteration} : "
+                    f"Modifying {subinds_2change.size} sampled points"
+                )
 
             # compute new rho
             rho_curr /= rho_decrease_ratio
@@ -711,29 +868,42 @@ class LargeMesh():
             per_vertex_rho[subinds_2change] = rho_curr
 
             # Extract indices of data points to use (play with sparse matrices)
-            data_indices = self.get_data_inds_of_columns_inds_csc(distmat.indptr, subinds_2change)
+            data_indices = self.get_data_inds_of_columns_inds_csc(
+                distmat.indptr, subinds_2change
+            )
 
             if verbose:
-                print(f'\tRecomputing {data_indices.size} values\n')
+                print(f"\tRecomputing {data_indices.size} values\n")
 
             # Check new values of local functions (unnormalized)
-            res, inds_2rmv = self.local_f(distmat.data[data_indices], rho_curr, chi=interpolation, return_zeros_indices=True)
+            res, inds_2rmv = self.local_f(
+                distmat.data[data_indices],
+                rho_curr,
+                chi=interpolation,
+                return_zeros_indices=True,
+            )
 
             # update U accordingly
             U_data[data_indices] = res
             dist_data_new[data_indices[inds_2rmv]] = 0
 
-            U = sparse.csc_matrix((U_data, distmat.indices, distmat.indptr), shape=distmat.shape).tocsr()
+            U = sparse.csc_matrix(
+                (U_data, distmat.indices, distmat.indptr), shape=distmat.shape
+            ).tocsr()
 
             # indices with too low self-weight
-            subinds_toadapt = np.where(np.asarray(U[subsample].sum(1)).squeeze() > max_self_val)[0]
+            subinds_toadapt = np.where(
+                np.asarray(U[subsample].sum(1)).squeeze() > max_self_val
+            )[0]
             n_inds2adapt = subinds_toadapt.size
 
             # print(np.asarray(U[subsample].sum(1)).squeeze()[subinds_toadapt])
 
             # Extract the second point witht the biggest influence (biggest being itself with value 1 by definition)
-            red_mat = U[subsample[subinds_toadapt]] - sparse.csr_matrix((np.ones(n_inds2adapt), (np.arange(n_inds2adapt), subinds_toadapt)),
-                                                                        shape=(n_inds2adapt, subsample.size))
+            red_mat = U[subsample[subinds_toadapt]] - sparse.csr_matrix(
+                (np.ones(n_inds2adapt), (np.arange(n_inds2adapt), subinds_toadapt)),
+                shape=(n_inds2adapt, subsample.size),
+            )
 
             subinds_2change = np.unique(np.array(red_mat.argmax(axis=1)).flatten())
 
@@ -746,8 +916,7 @@ class LargeMesh():
 
         return U, dist_data_new, per_vertex_rho
 
-
-    def get_data_inds_of_columns_inds_csc(self,indptr, col_inds):
+    def get_data_inds_of_columns_inds_csc(self, indptr, col_inds):
         """
         Given indptr of a csc matrix and indices of columns, return the indices of entries of the columns
         in the list of data of a csc-matrix
@@ -755,14 +924,28 @@ class LargeMesh():
         start_vals = indptr[col_inds]
         n_vals = np.diff(indptr)[col_inds]
 
-        data_inds = np.concatenate([start_vals[i] + np.arange(n_vals[i]) for i in range(len(col_inds))])
+        data_inds = np.concatenate(
+            [start_vals[i] + np.arange(n_vals[i]) for i in range(len(col_inds))]
+        )
 
         return data_inds
 
-
-    def build_red_matrices(self,mesh1, subsample, dist_ratio=3, update_sample=True, interpolation='poly',
-                        correct_dist=True, return_dist=False, adapt_radius=False, self_limit=.1,
-                        batch_size=None, n_jobs=1, n_clusters=4, verbose=False):
+    def build_red_matrices(
+        self,
+        mesh1,
+        subsample,
+        dist_ratio=3,
+        update_sample=True,
+        interpolation="poly",
+        correct_dist=True,
+        return_dist=False,
+        adapt_radius=False,
+        self_limit=0.1,
+        batch_size=None,
+        n_jobs=1,
+        n_clusters=4,
+        verbose=False,
+    ):
         """
         Build matrices U, A_bar; W_bar and distance matrix
 
@@ -790,15 +973,24 @@ class LargeMesh():
         distmat : if return_dist is True, the sparse distance matrix (before applying local function)
         """
         n_samples = len(subsample)
-        avg_radius = np.sqrt(mesh1.area / (np.pi*n_samples))
+        avg_radius = np.sqrt(mesh1.area / (np.pi * n_samples))
         rho = dist_ratio * avg_radius
 
-        result_local = self.build_local_mat_new(mesh1, subsample, rho, update_sample=update_sample,
-                                        interpolation=interpolation, batch_size=batch_size,
-                                        correct_dist=correct_dist, return_dist=return_dist,
-                                        adapt_radius=adapt_radius, self_limit=self_limit,
-                                        n_jobs=n_jobs, n_clusters=n_clusters,
-                                        verbose=verbose)
+        result_local = self.build_local_mat_new(
+            mesh1,
+            subsample,
+            rho,
+            update_sample=update_sample,
+            interpolation=interpolation,
+            batch_size=batch_size,
+            correct_dist=correct_dist,
+            return_dist=return_dist,
+            adapt_radius=adapt_radius,
+            self_limit=self_limit,
+            n_jobs=n_jobs,
+            n_clusters=n_clusters,
+            verbose=verbose,
+        )
 
         if return_dist:
             U, subsample, distmat = result_local
@@ -812,10 +1004,22 @@ class LargeMesh():
             return U, A_bar, W_bar, subsample, distmat
         return U, A_bar, W_bar, subsample
 
-
-    def process_mesh(self,mesh1, n_samples, dist_ratio=3, update_sample=True, interpolation='poly',
-                    correct_dist=True, return_dist=False, batch_size=None, adapt_radius=False,
-                    self_limit=.1, n_jobs=1, n_clusters=4, verbose=False):
+    def process_mesh(
+        self,
+        mesh1,
+        n_samples,
+        dist_ratio=3,
+        update_sample=True,
+        interpolation="poly",
+        correct_dist=True,
+        return_dist=False,
+        batch_size=None,
+        adapt_radius=False,
+        self_limit=0.1,
+        n_jobs=1,
+        n_clusters=4,
+        verbose=False,
+    ):
         """
         Build matrices U, A_bar; W_bar and distance matrix
 
@@ -843,23 +1047,34 @@ class LargeMesh():
         distmat : if return_dist is True, the sparse distance matrix (before applying local function)
         """
         if verbose:
-            print(f'Sampling {n_samples} vertices out of {mesh1.n_vertices}...')
+            print(f"Sampling {n_samples} vertices out of {mesh1.n_vertices}...")
             start_time = time.time()
         vert_sub1 = self.poisson_sample(mesh=mesh1, n_samples=n_samples)
         subsample = np.unique(self.knn_query(mesh1.vertices, vert_sub1))
         if verbose:
-            print(f'\t{subsample.size} samples extracted in {time.time() - start_time:.2f}s')
+            print(
+                f"\t{subsample.size} samples extracted in {time.time() - start_time:.2f}s"
+            )
 
-        result_red = self.build_red_matrices(mesh1, subsample, dist_ratio=dist_ratio,
-                                        update_sample=update_sample, interpolation=interpolation,
-                                        correct_dist=correct_dist, return_dist=return_dist, adapt_radius=adapt_radius,
-                                        self_limit=self_limit, n_jobs=n_jobs, n_clusters=n_clusters,
-                                        batch_size=batch_size, verbose=verbose)
+        result_red = self.build_red_matrices(
+            mesh1,
+            subsample,
+            dist_ratio=dist_ratio,
+            update_sample=update_sample,
+            interpolation=interpolation,
+            correct_dist=correct_dist,
+            return_dist=return_dist,
+            adapt_radius=adapt_radius,
+            self_limit=self_limit,
+            n_jobs=n_jobs,
+            n_clusters=n_clusters,
+            batch_size=batch_size,
+            verbose=verbose,
+        )
 
         return result_red
 
-
-    def get_approx_spectrum(self,Wb, Ab, k=150, verbose=False):
+    def get_approx_spectrum(self, Wb, Ab, k=150, verbose=False):
         """
         Eigendecopositionusing Wbar and Abar
         """
@@ -871,8 +1086,18 @@ class LargeMesh():
             print(f"\tDone in {time.time()-start_time:.2f} s")
         return eigenvalues, eigenvectors
 
-
-    def distances_in_cluster(self,kmeans_labels, vertices, subsample, ball_tree, graph, rho, class_index, real_rho=None, correct_dist=False):
+    def distances_in_cluster(
+        self,
+        kmeans_labels,
+        vertices,
+        subsample,
+        ball_tree,
+        graph,
+        rho,
+        class_index,
+        real_rho=None,
+        correct_dist=False,
+    ):
         """
         Compute local dijkstra in a cluster
 
@@ -894,7 +1119,7 @@ class LargeMesh():
         """
 
         # Find which samples are in the current cluster
-        subsample_sub_test = (kmeans_labels == class_index)  # (m,
+        subsample_sub_test = kmeans_labels == class_index  # (m,
         subsample_sub_inds = np.where(subsample_sub_test)[0]  # (m_curr,)
         subsample_curr = subsample[subsample_sub_test]  # (m_curr,)
 
@@ -902,23 +1127,35 @@ class LargeMesh():
             return [], [], []
 
         # Find vertices at distance rho of the cluster
-        res_test = ball_tree.radius_neighbors(vertices[subsample_curr], return_distance=False)
+        res_test = ball_tree.radius_neighbors(
+            vertices[subsample_curr], return_distance=False
+        )
 
         vertices_2keep = np.unique(np.concatenate(res_test))  # (n_curr, )
 
         # Take subgraph in memory
-        subgraph = graph[np.ix_(vertices_2keep, vertices_2keep)]  # (n_curr, n_curr) sparse
+        subgraph = graph[
+            np.ix_(vertices_2keep, vertices_2keep)
+        ]  # (n_curr, n_curr) sparse
 
         # Find sources in current cluster and compute dijkstra there
-        sources_in_curr = np.where(np.isin(vertices_2keep, subsample_curr, assume_unique=True))[0]
-        dists_curr = sparse.csgraph.dijkstra(subgraph, directed=False, indices=sources_in_curr, limit=rho)  # (m_curr, n_curr) with many np.inf
+        sources_in_curr = np.where(
+            np.isin(vertices_2keep, subsample_curr, assume_unique=True)
+        )[0]
+        dists_curr = sparse.csgraph.dijkstra(
+            subgraph, directed=False, indices=sources_in_curr, limit=rho
+        )  # (m_curr, n_curr) with many np.inf
 
         finite_test = dists_curr < np.inf  # (m_curr, n_curr) with many np.inf
         I, J = np.where(finite_test)
 
         # If needed correct distances
         if correct_dist:
-            V = np.linalg.norm(vertices[vertices_2keep[J]] - vertices[subsample[subsample_sub_inds[I]]], axis=1)
+            V = np.linalg.norm(
+                vertices[vertices_2keep[J]]
+                - vertices[subsample[subsample_sub_inds[I]]],
+                axis=1,
+            )
 
             if real_rho is not None:
                 test_dist = V < real_rho
@@ -936,8 +1173,7 @@ class LargeMesh():
 
         return In, Jn, Vn
 
-
-    def knn_query(self,X, Y, k=1, return_distance=False, n_jobs=1):
+    def knn_query(self, X, Y, k=1, return_distance=False, n_jobs=1):
         """
         Query nearest neighbors.
 
@@ -955,7 +1191,9 @@ class LargeMesh():
         dists   : (n2,k) or (n2,) if k=1 - ONLY if return_distance is False. Nearest neighbor distance.
         matches : (n2,k) or (n2,) if k=1 - nearest neighbor
         """
-        tree = NearestNeighbors(n_neighbors=k, leaf_size=40, algorithm="kd_tree", n_jobs=n_jobs)
+        tree = NearestNeighbors(
+            n_neighbors=k, leaf_size=40, algorithm="kd_tree", n_jobs=n_jobs
+        )
         tree.fit(X)
         dists, matches = tree.kneighbors(Y)
 
