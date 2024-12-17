@@ -12,6 +12,7 @@ from tqdm.notebook import tqdm
 
 import geomfum.linalg as la
 from geomfum.laplacian import LaplacianSpectrumFinder
+from geomfum.sample import NearestNeighborsIndexSampler
 from geomfum.shape.hierarchical import HierarchicalShape
 from geomfum.shape.point_cloud import PointCloud
 
@@ -61,7 +62,7 @@ class ScalableHierarchicalMesh(HierarchicalShape):
 
     References
     ----------
-    .. [M=2023] Robin Magnet, MAks Ovsianikov.
+    .. [MO2023] Robin Magnet, Maks Ovsianikov.
         "Scalable Functional Maps.” arXiv.
     """
 
@@ -86,20 +87,22 @@ class ScalableHierarchicalMesh(HierarchicalShape):
         else:
             self.params = params
 
-        low = self._scalable_fm(mesh, min_n_samples)
+        # TODO: allows sampler to come from outside
+        # TODO: don't think it naming is correct, i.e. not sure min_n_samples
+        # is guaranteed
+        sampler = NearestNeighborsIndexSampler(n_samples=min_n_samples)
+        low = self._scalable_fm(mesh, sampler)
 
         super().__init__(low=low, high=mesh)
 
-    def _scalable_fm(self, mesh, min_n_samples):
+    def _scalable_fm(self, mesh, sampler):
         vertices = mesh.vertices
         faces = mesh.faces
         lmu = LargeMesh()
 
         rhigh = TM(vertices, faces).process(k=0, intrinsic=True)
 
-        U1, Ab1, Wb1, sub1, distmat1 = lmu.process_mesh(
-            rhigh, min_n_samples, **self.params
-        )
+        U1, Ab1, Wb1, sub1, distmat1 = lmu.process_mesh(rhigh, sampler, **self.params)
         evals, evecs = lmu.get_approx_spectrum(Wb1, Ab1, verbose=True)
 
         rlow = PointCloud(vertices[sub1])
@@ -191,46 +194,6 @@ class LargeMesh:
         if return_zeros_indices:
             return newv, ~inds
         return newv
-
-    def poisson_sample(
-        self,
-        path=None,
-        vertices=None,
-        faces=None,
-        mesh=None,
-        n_samples=1000,
-        verbose=False,
-    ):
-        """
-        Compute a sample using poisson disk sampling from several possible format, either:
-        - A path to a mesh file
-        - A set of vertices and list of faces
-        - A pyFM.TriMesh object
-
-        Parameters:
-        ----------------------
-        path      : path to mesh file
-        vertices  : vertices of mesh
-        faces     : list of faces of the mesh
-        mesh      : TriMesh object
-        n_samples : number of samples to target
-
-        Output
-        ----------------------
-        samples : (n_samples, 3) coordinates of samples
-        """
-        ms = pymeshlab.MeshSet()
-        if mesh is not None:
-            ms.add_mesh(
-                pymeshlab.Mesh(vertex_matrix=mesh.vertices, face_matrix=mesh.faces)
-            )
-        elif path is not None:
-            ms.load_new_mesh(path)
-        else:
-            ms.add_mesh(pymeshlab.Mesh(vertex_matrix=vertices, face_matrix=faces))
-
-        ms.generate_sampling_poisson_disk(samplenum=n_samples)
-        return ms.current_mesh().vertex_matrix()
 
     def select_new_inds(self, choices, vert1, rho):
         """
@@ -1007,7 +970,7 @@ class LargeMesh:
     def process_mesh(
         self,
         mesh1,
-        n_samples,
+        sampler,
         dist_ratio=3,
         update_sample=True,
         interpolation="poly",
@@ -1026,7 +989,6 @@ class LargeMesh:
         Parameters:
         ----------------------
         mesh1         : pyFM.TriMesh object with n vertices
-        n_samples     : number of samples
         dist_ratio    : rho = dist_ratio * average_radius
         update_sample : whether to add unseen vertices to the sample
         interpolation : 'poly', 'linear', 'exp' - type of local function
@@ -1047,10 +1009,10 @@ class LargeMesh:
         distmat : if return_dist is True, the sparse distance matrix (before applying local function)
         """
         if verbose:
-            print(f"Sampling {n_samples} vertices out of {mesh1.n_vertices}...")
+            # TODO: use logger instead
+            print(f"Sampling {sampler.n_samples} vertices out of {mesh1.n_vertices}...")
             start_time = time.time()
-        vert_sub1 = self.poisson_sample(mesh=mesh1, n_samples=n_samples)
-        subsample = np.unique(self.knn_query(mesh1.vertices, vert_sub1))
+        subsample = sampler.sample(mesh1)
         if verbose:
             print(
                 f"\t{subsample.size} samples extracted in {time.time() - start_time:.2f}s"
@@ -1172,35 +1134,3 @@ class LargeMesh:
         Vn = V
 
         return In, Jn, Vn
-
-    def knn_query(self, X, Y, k=1, return_distance=False, n_jobs=1):
-        """
-        Query nearest neighbors.
-
-        Parameters
-        -------------------------------
-        X : (n1,p) first collection
-        Y : (n2,p) second collection
-        k : int - number of neighbors to look for
-        return_distance : whether to return the nearest neighbor distance
-        use_ANN         : use Approximate Nearest Neighbors
-        n_jobs          : number of parallel jobs. Set to -1 to use all processes
-
-        Output
-        -------------------------------
-        dists   : (n2,k) or (n2,) if k=1 - ONLY if return_distance is False. Nearest neighbor distance.
-        matches : (n2,k) or (n2,) if k=1 - nearest neighbor
-        """
-        tree = NearestNeighbors(
-            n_neighbors=k, leaf_size=40, algorithm="kd_tree", n_jobs=n_jobs
-        )
-        tree.fit(X)
-        dists, matches = tree.kneighbors(Y)
-
-        if k == 1:
-            dists = dists.squeeze()
-            matches = matches.squeeze()
-
-        if return_distance:
-            return dists, matches
-        return matches

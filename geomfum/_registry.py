@@ -245,6 +245,10 @@ class HierarchicalMeshRegistry(WhichRegistry):
     MAP = {}
 
 
+class PoissonSamplerRegistry(WhichRegistry):
+    MAP = {}
+
+
 def _create_register_funcs(module):
     # create `register_` functions automatically
     for name, method in inspect.getmembers(module):
