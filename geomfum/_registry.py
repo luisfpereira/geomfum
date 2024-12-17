@@ -246,7 +246,15 @@ class HierarchicalMeshRegistry(WhichRegistry):
 
 
 def _create_register_funcs(module):
-    # create `register_` functions automatically
+    """Create ``register`` functions for each class registry in this module.
+
+    Given a ``Registry`` (e.g. ``LaplacianFinderRegistry``),
+    it creates a function ``register_`` by removing ``Registry``
+    from the name and transforming it in snake case
+    (e.g. ``register_laplacian_finder``).
+
+    These functions are widely used within ``geomstats.wrap``.
+    """
     for name, method in inspect.getmembers(module):
         if not (
             hasattr(method, "__bases__")
