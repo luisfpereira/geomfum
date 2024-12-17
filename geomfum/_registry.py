@@ -1,5 +1,7 @@
 import abc
 import inspect
+import re
+import sys
 
 from geomfum._utils import has_package
 
@@ -219,46 +221,47 @@ class LaplacianFinderRegistry(MeshWhichRegistry):
     MAP = {}
 
 
-register_laplacian_finder = LaplacianFinderRegistry.register
-
-
 class HeatKernelSignatureRegistry(WhichRegistry):
     MAP = {}
-
-
-register_heat_kernel_signature = HeatKernelSignatureRegistry.register
 
 
 class WaveKernelSignatureRegistry(WhichRegistry):
     MAP = {}
 
 
-register_wave_kernel_signature = WaveKernelSignatureRegistry.register
-
-
 class FaceValuedGradientRegistry(WhichRegistry):
     MAP = {}
-
-
-register_face_valued_gradient = FaceValuedGradientRegistry.register
 
 
 class FaceDivergenceOperatorRegistry(WhichRegistry):
     MAP = {}
 
 
-register_face_divergence_operator = FaceDivergenceOperatorRegistry.register
-
-
 class FaceOrientationOperatorRegistry(WhichRegistry):
     MAP = {}
-
-
-register_face_orientation_operator = FaceOrientationOperatorRegistry.register
 
 
 class HierarchicalMeshRegistry(WhichRegistry):
     MAP = {}
 
 
-register_hierarchical_mesh = HierarchicalMeshRegistry.register
+def _create_register_funcs(module):
+    # create `register_` functions automatically
+    for name, method in inspect.getmembers(module):
+        if not (
+            hasattr(method, "__bases__")
+            and abc.ABC not in method.__bases__
+            and name.endswith("Registry")
+        ):
+            continue
+
+        # upper case split
+        name_ls = ["register"] + [
+            word.lower() for word in re.findall("[A-Z][^A-Z]*", name)[:-1]
+        ]
+        new_name = "_".join(name_ls)
+
+        setattr(module, new_name, method.register)
+
+
+_create_register_funcs(sys.modules[__name__])
