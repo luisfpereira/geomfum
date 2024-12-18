@@ -3,6 +3,9 @@
 import numpy as np
 import scipy
 
+# TODO: remove ASAP
+from pyFM.mesh.geometry import edges_from_faces
+
 from geomfum.io import load_mesh
 from geomfum.operator import (
     FaceDivergenceOperator,
@@ -29,6 +32,7 @@ class TriangleMesh(Shape):
         self.vertices = vertices
         self.faces = faces
 
+        self._edges = None
         self._face_normals = None
         self._face_areas = None
         self._vertex_areas = None
@@ -77,6 +81,18 @@ class TriangleMesh(Shape):
         n_faces : int
         """
         return self.faces.shape[0]
+
+    @property
+    def edges(self):
+        """Edges of the mesh.
+
+        Returns
+        -------
+        edges : array-like, shape=[n_edges, 2]
+        """
+        if self._edges is None:
+            self._edges = edges_from_faces(self.faces)
+        return self._edges
 
     @property
     def face_normals(self):
