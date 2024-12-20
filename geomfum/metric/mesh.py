@@ -71,6 +71,16 @@ class EuclideanMetric(BaseMetric):
 
 
 class SingleSourceDijkstra(BaseMetric):
+    """Shortest path on edge graph of mesh with single source Dijkstra.
+
+    Parameters
+    ----------
+    shape : Shape
+        Shape.
+    cutoff : float
+        Length (sum of edge weights) at which the search is stopped.
+    """
+
     def __init__(self, shape, cutoff=None):
         self.cutoff = cutoff
 
@@ -135,14 +145,12 @@ class SingleSourceDijkstra(BaseMetric):
         dist : numeric
             Distance.
         """
-        # TODO: reconsider behavior with inf
-
         try:
             dist, _ = nx.single_source_dijkstra(
                 self._graph,
                 point_a,
                 target=point_b,
-                cutoff=self.cutoff,
+                cutoff=None,
                 weight="weight",
             )
         except nx.NetworkXNoPath:
@@ -199,7 +207,7 @@ class SingleSourceDijkstra(BaseMetric):
 
 
 class FixedNeighborsSingleSourceDijkstra(SingleSourceDijkstra):
-    """Shortest path with single source Dijkstra.
+    """Shortest path on edge graph of mesh with single source Dijkstra.
 
     Parameters
     ----------
