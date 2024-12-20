@@ -6,8 +6,7 @@ import numpy as np
 
 def to_nx_edge_graph(shape):
     # TODO: move to utils? circular imports
-    edges = shape.edges
-    vertex_a, vertex_b = edges.T
+    vertex_a, vertex_b = shape.edges.T
     lengths = EuclideanMetric(shape).dist(vertex_a, vertex_b)
 
     weighted_edges = [
@@ -72,8 +71,6 @@ class EuclideanMetric(BaseMetric):
 
 
 class SingleSourceDijkstra(BaseMetric):
-    # TODO: fixed n_neighbors distance
-    # TODO: use two random points to check initial cutoff
     def __init__(self, shape, cutoff=None):
         self.cutoff = cutoff
 
@@ -199,3 +196,69 @@ class SingleSourceDijkstra(BaseMetric):
             return self._dist_no_target(point_a)
 
         return self._dist_target(point_a, point_b)
+
+
+class FixedNeighborsSingleSourceDijkstra(SingleSourceDijkstra):
+    """Shortest path with single source Dijkstra.
+
+    Parameters
+    ----------
+    shape : Shape
+        Shape.
+    n_neighbors : int
+        Number of neighbors to return when ``point_b is None``.
+    neighbors_ratio : float
+        Neighbors ratio to use to consider decreasing cuttoff.
+    cutoff_decr_ratio : float
+        Ratio to consider to proceed with cuttoff decrease.
+    cutoff_incr_ratio : float
+        Ratio use to update cutoff when not enough neighbors.
+    """
+
+    def __init__(
+        self,
+        shape,
+        n_neighbors=5,
+        neighbors_ratio=5,
+        cutoff_decr_ratio=0.9,
+        cutoff_incr_ratio=2.0,
+    ):
+        super().__init__(shape, cutoff=self._initial_cuttoff(shape, n_neighbors))
+
+        self.n_neighbors = n_neighbors
+        self.neighbors_ratio = neighbors_ratio
+        self.cutoff_decr_ratio = cutoff_decr_ratio
+        self.cutoff_incr_ratio = cutoff_incr_ratio
+
+    @staticmethod
+    def _initial_cuttoff(shape, n_neighbors):
+        index_a, index_b = np.random.randint(0, high=shape.n_vertices, size=2)
+        dist = EuclideanMetric(shape).dist(index_a, index_b)
+
+        ratio = np.pow(n_neighbors / shape.n_vertices, 1 / 2.2)
+        return ratio * dist
+
+    def _dist_no_target_single(self, source_point):
+        """Distance between mesh vertices.
+
+        Parameters
+        ----------
+        source_point : array-like, shape=()
+            Index of source point.
+
+        Returns
+        -------
+        dist : array-like, shape=[n_neighbors]
+            Distance.
+        target_point : array-like, shape=[n_neighors,]
+            Target index.
+        """
+        while True:
+            dist, target = super()._dist_no_target_single(source_point)
+            if target.size > self.n_neighbors:
+                if target.size > round(self.n_neighbors * self.neighbors_ratio):
+                    self.cutoff *= self.cutoff_decr_ratio
+
+                return dist[: self.n_neighbors], target[: self.n_neighbors]
+
+            self.cutoff *= self.cutoff_incr_ratio
