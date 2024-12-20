@@ -8,12 +8,12 @@ class PymeshlabPoissonSampler(BaseSampler):
 
     Parameters
     ----------
-    n_samples : int
-        Number of samples to target.
+    min_n_samples : int
+        Minimum number of samples to target.
     """
 
-    def __init__(self, n_samples):
-        self.n_samples = n_samples
+    def __init__(self, min_n_samples):
+        self.min_n_samples = min_n_samples
 
     def sample(self, shape):
         """Sample using Poisson disk sampling.
@@ -33,6 +33,6 @@ class PymeshlabPoissonSampler(BaseSampler):
             pymeshlab.Mesh(vertex_matrix=shape.vertices, face_matrix=shape.faces)
         )
 
-        ms.generate_sampling_poisson_disk(samplenum=self.n_samples)
+        ms.generate_sampling_poisson_disk(samplenum=self.min_n_samples)
 
         return ms.current_mesh().vertex_matrix()

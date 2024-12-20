@@ -18,15 +18,23 @@ class PoissonSampler(WhichRegistryMixins):
 
 
 class NearestNeighborsIndexSampler(BaseSampler):
+    """
+
+    Parameters
+    ----------
+    min_n_samples : int
+        Minimum number of samples to target.
+        Ignored if ``sampler is not None``.
+    """
+
     # uses nearest neighbor to get indices of sample coordinates
     # resulting from another sampler
 
     # TODO: find better naming as this is confusing
 
-    def __init__(self, n_samples=None, sampler=None, neighbor_finder=None):
-        # n_samples are ignored if sampler is not None
+    def __init__(self, min_n_samples=100, sampler=None, neighbor_finder=None):
         if sampler is None:
-            sampler = PoissonSampler.from_registry(n_samples=n_samples)
+            sampler = PoissonSampler.from_registry(min_n_samples=min_n_samples)
 
         if neighbor_finder is None:
             neighbor_finder = NearestNeighbors(
@@ -37,12 +45,6 @@ class NearestNeighborsIndexSampler(BaseSampler):
 
         self.neighbor_finder = neighbor_finder
         self.sampler = sampler
-
-    @property
-    def n_samples(self):
-        # TODO: this assumption may be too restrictive (only for logging...)
-        # TODO: add logger instead in main code and remove here
-        return self.sampler.n_samples
 
     def sample(self, shape):
         # returns array[index]
