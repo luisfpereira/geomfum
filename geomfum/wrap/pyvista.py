@@ -5,8 +5,9 @@ import numpy as np
 
 class PyvistaMeshPlotter(ShapePlotter):
 
-    def plot(self, vertices, faces):
-
+    def plot(self, mesh):
+        vertices=mesh.vertices
+        faces=mesh.faces
         faces_formatted = np.hstack([[len(face), *face] for face in faces])
         mesh = pv.PolyData(vertices, faces_formatted)
         plotter = pv.Plotter()

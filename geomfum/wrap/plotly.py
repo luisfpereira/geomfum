@@ -4,7 +4,9 @@ from geomfum.plot import ShapePlotter
 
 class PlotlyMeshPlotter(ShapePlotter):
 
-    def plot(self,vertices, faces):
+    def plot(self,mesh):
+        vertices=mesh.vertices
+        faces=mesh.faces
         x, y, z = vertices[:,0], vertices[:,1], vertices[:,2]
         f1,f2,f3= faces[:,0], faces[:,1], faces[:,2]
         #project the error on the lbo basis

@@ -8,7 +8,7 @@ Since each plotting library has its own method of plotting, we define general fu
 '''
 
 class ShapePlotter(abc.ABC):
-    def plot(self, vertices, faces):
+    def plot(self, mesh):
         raise NotImplementedError("This method should be overridden by subclasses")
 
 class MeshPlotter(WhichRegistryMixins, ShapePlotter):
