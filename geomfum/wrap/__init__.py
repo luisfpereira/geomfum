@@ -53,7 +53,6 @@ register_face_orientation_operator(
     "pyfm", "PyFmFaceOrientationOperator", requires="pyFM", as_default=True
 )
 
-
 register_hierarchical_mesh(
     "pyrmt", "PyrmtHierarchicalMesh", requires="PyRMT", as_default=True
 )
@@ -62,6 +61,6 @@ register_mesh_plotter(
     "plotly", "PlotlyMeshPlotter", requires="plotly", as_default=True
 )
 register_mesh_plotter(
-    "pyvista", "PyvistaMeshPlotter", requires="pyvista", as_default=True
+    "pyvista", "PyvistaMeshPlotter", requires="pyvista", as_default=False
 )
 
