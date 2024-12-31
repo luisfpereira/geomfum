@@ -19,7 +19,4 @@ def to_pv_polydata(mesh):
     """
     Convert a TriangleMesh object to a PyVista PolyData object.
     """
-    # PyVista expects faces in a specific format: [n, v1, v2, v3, ...]
-    faces_formatted = np.hstack([[len(face), *face] for face in mesh.faces])
-    
-    return pv.PolyData(mesh.vertices, faces_formatted)
+    return pv.PolyData.from_regular_faces(points=mesh.vertices, faces=mesh.faces)
