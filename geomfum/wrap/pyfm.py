@@ -454,7 +454,7 @@ class PyfmFpSampler(BaseSampler):
         self.min_n_samples = min_n_samples
 
     def sample(self, shape):
-        """Sample using Poisson disk sampling.
+        """Sample using Farthest point sampling.
 
         Parameters
         ----------
