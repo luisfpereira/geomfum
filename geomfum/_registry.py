@@ -248,6 +248,8 @@ class HierarchicalMeshRegistry(WhichRegistry):
 class PoissonSamplerRegistry(WhichRegistry):
     MAP = {}
 
+class FpSamplerRegistry(WhichRegistry):
+    MAP = {}
 
 def _create_register_funcs(module):
     """Create ``register`` functions for each class registry in this module.

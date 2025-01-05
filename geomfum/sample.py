@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 
 import geomfum.wrap as _wrap  # noqa (for register)
-from geomfum._registry import PoissonSamplerRegistry, WhichRegistryMixins
+from geomfum._registry import PoissonSamplerRegistry, FpSamplerRegistry, WhichRegistryMixins
 
 
 class BaseSampler(abc.ABC):
@@ -16,6 +16,8 @@ class BaseSampler(abc.ABC):
 class PoissonSampler(WhichRegistryMixins):
     _Registry = PoissonSamplerRegistry
 
+class FpSampler(BaseSampler):
+    _Registry= FpSamplerRegistry
 
 class NearestNeighborsIndexSampler(BaseSampler):
     """
@@ -54,3 +56,14 @@ class NearestNeighborsIndexSampler(BaseSampler):
         _, neighbor_indices = self.neighbor_finder.kneighbors(sampled_points)
 
         return np.unique(neighbor_indices)
+
+class FarthestPointSampler(BaseSampler):
+    def __init__(self, n_samples=100):
+        self.n_samples = n_samples
+        self.sampler = FpSampler.from_registry(min_n_samples=n_samples)
+
+    def sample(self, shape):
+        # returns array[index]
+        sampled_points = self.sampler.sample(shape)
+        
+        return np.unique(sampled_points)
