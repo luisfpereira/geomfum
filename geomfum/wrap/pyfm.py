@@ -2,12 +2,14 @@
 
 import numpy as np
 import pyFM.mesh
+import pyFM.mesh.geometry
 import pyFM.signatures
 import scipy
 
 from geomfum.descriptor._base import SpectralDescriptor
 from geomfum.laplacian import BaseLaplacianFinder
 from geomfum.operator import FunctionalOperator, VectorFieldOperator
+from geomfum.sample import BaseSampler
 
 
 class PyfmMeshLaplacianFinder(BaseLaplacianFinder):
@@ -438,3 +440,35 @@ def get_orientation_op(
         out.append(inv_area @ W)
 
     return out
+
+class PyfmFpSampler(BaseSampler):
+    """Poisson disk sampling.
+
+    Parameters
+    ----------
+    min_n_samples : int
+        Minimum number of samples to target.
+    """
+
+    def __init__(self, min_n_samples):
+        self.min_n_samples = min_n_samples
+
+    def sample(self, shape):
+        """Sample using Poisson disk sampling.
+
+        Parameters
+        ----------
+        shape : TriangleMesh
+            Mesh.
+
+        Returns
+        -------
+        samples : array-like, shape=[n_samples, 3]
+            Coordinates of samples.
+        """
+        def dist_func(i):
+                        return np.linalg.norm(shape.vertices - shape.vertices[i,None,:], axis=1)
+
+        fps = pyFM.mesh.geometry.farthest_point_sampling_call(dist_func, self.min_n_samples, n_points=shape.vertices.shape[0], verbose=False)
+
+        return fps
