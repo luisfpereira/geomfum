@@ -4,6 +4,8 @@ from geomfum.plot import ShapePlotter
 from geomfum.shape.convert import to_go_mesh3d
 
 
+#TODO: add pointcloud alternatives/ enable to plot pointclouds
+
 class PlotlyMeshPlotter(ShapePlotter):
     
     def __init__(self, colormap='viridis'):
@@ -31,6 +33,13 @@ class PlotlyMeshPlotter(ShapePlotter):
                                         colorscale  = self.colormap,   
         )])
         
+        return self.fig
+
+    def pick_points(self,mesh):
+        
+        fig=self.plot(mesh)
+        hover_text = [f'Index: {index}' for index in range(len(mesh.vertices))]
+        fig.data[0]['text'] = hover_text
         return self.fig
 
     def show(self):

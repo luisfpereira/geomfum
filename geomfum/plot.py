@@ -29,6 +29,11 @@ class ShapePlotter(abc.ABC):
         Function to display the plot
         """
         raise NotImplementedError("This method should be overridden by subclasses")
+    def pick_points(self):  
+        """
+        Function to select landmarks indices
+        """
+        raise NotImplementedError("This method should be overridden by subclasses")
 
 class MeshPlotter(WhichRegistryMixins, ShapePlotter):
     _Registry = MeshPlotterRegistry
