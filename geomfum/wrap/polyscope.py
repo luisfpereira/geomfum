@@ -14,7 +14,7 @@ class PolyscopeMeshPlotter(ShapePlotter):
         Plot the mesh using Polyscope.
         """
         ps_mesh = ps.register_surface_mesh(self.name,mesh.vertices,mesh.faces)
-        self.fig = ps
+        self.fig = ps_mesh
         return self.fig
 
     def plot_function(self, mesh, function):
@@ -28,7 +28,7 @@ class PolyscopeMeshPlotter(ShapePlotter):
         )
         ps_mesh.add_scalar_quantity("my_scalar", function, defined_on='vertices', cmap=self.colormap)
 
-        self.fig = ps
+        self.fig = ps_mesh
         return self.fig
 
     def show(self):
