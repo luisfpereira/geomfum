@@ -9,18 +9,12 @@ class PolyscopeMeshPlotter(ShapePlotter):
         self.name=name
 
     def plot(self, mesh):
-        """
-        Plot the mesh using Polyscope.
-        """
         ps.init()
         ps.register_surface_mesh(self.name,mesh.vertices,mesh.faces)
         self.fig = ps
         return self.fig
 
     def plot_function(self, mesh, function):
-        """
-        Plot the mesh with a scalar function using Polyscope.
-        """
         ps.init()
         ps.register_surface_mesh(
             self.name,
@@ -33,7 +27,4 @@ class PolyscopeMeshPlotter(ShapePlotter):
         return self.fig
 
     def show(self):
-        """
-        Show the Polyscope visualization.
-        """
         self.fig.show()
