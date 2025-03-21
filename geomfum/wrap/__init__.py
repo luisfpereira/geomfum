@@ -64,3 +64,7 @@ register_mesh_plotter(
     "pyvista", "PyvistaMeshPlotter", requires="pyvista", as_default=False
 )
 
+register_mesh_plotter(
+    "polyscope", "PolyscopeMeshPlotter", requires="polyscope", as_default=False
+)
+
