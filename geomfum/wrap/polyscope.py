@@ -3,22 +3,17 @@ from geomfum.plot import ShapePlotter
 
 class PolyscopeMeshPlotter(ShapePlotter):
 
-    def __init__(self, colormap='viridis'):
+    def __init__(self,colormap='viridis',name='Mymesh'):
         self.colormap = colormap
         self.fig = None
+        self.name=name
         ps.init()
 
     def plot(self, mesh):
         """
         Plot the mesh using Polyscope.
         """
-        ps_mesh = ps.register_surface_mesh(
-            "Mesh",
-            mesh.vertices,
-            mesh.faces,
-            color=(0.5, 0.5, 0.5),  # Default gray color
-        )
-        ps_mesh.set_color_map(self.colormap)
+        ps_mesh = ps.register_surface_mesh(self.name,mesh.vertices,mesh.faces)
         self.fig = ps
         return self.fig
 
@@ -27,12 +22,12 @@ class PolyscopeMeshPlotter(ShapePlotter):
         Plot the mesh with a scalar function using Polyscope.
         """
         ps_mesh = ps.register_surface_mesh(
-            "Mesh with Function",
+            self.name,
             mesh.vertices,
             mesh.faces,
-            scalar_function=function,
         )
-        ps_mesh.set_color_map(self.colormap)
+        ps_mesh.add_scalar_quantity("my_scalar", function, defined_on='vertices', cmap=self.colormap)
+
         self.fig = ps
         return self.fig
 
