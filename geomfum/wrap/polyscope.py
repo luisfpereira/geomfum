@@ -27,7 +27,7 @@ class PolyscopeMeshPlotter(ShapePlotter):
             mesh.vertices,
             mesh.faces,
         )
-        ps.get_surface_mesh(self.name).add_scalar_quantity("my_scalar", function, defined_on='vertices', cmap=self.colormap)
+        ps.get_surface_mesh(self.name).add_scalar_quantity("function", function, defined_on='vertices', cmap=self.colormap, enabled=True)
 
         self.fig = ps
         return self.fig
