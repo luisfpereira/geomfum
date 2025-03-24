@@ -442,7 +442,7 @@ def get_orientation_op(
     return out
 
 class PyfmFpSampler(BaseSampler):
-    """Poisson disk sampling.
+    """Farthest point euclidean sampling.
 
     Parameters
     ----------

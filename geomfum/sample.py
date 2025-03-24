@@ -16,7 +16,7 @@ class BaseSampler(abc.ABC):
 class PoissonSampler(WhichRegistryMixins):
     _Registry = PoissonSamplerRegistry
 
-class FpSampler(BaseSampler):
+class FpSampler(WhichRegistryMixins):
     _Registry= FpSamplerRegistry
 
 class NearestNeighborsIndexSampler(BaseSampler):
