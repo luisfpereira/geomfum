@@ -1,4 +1,6 @@
-
+"""
+This is the wrap to implement plotly functions
+"""
 import plotly.graph_objects as go
 from geomfum.plot import ShapePlotter
 from geomfum.shape.convert import to_go_mesh3d
@@ -18,6 +20,9 @@ class PlotlyMeshPlotter(ShapePlotter):
         layout = go.Layout(scene=dict(aspectmode="data"))
         mesh3d.update(colorscale=self.colormap)
         self.fig = go.Figure(data=[mesh3d],layout=layout,)
+        
+        hover_text = [f'Index: {index}' for index in range(len(mesh.vertices))]
+        self.fig.data[0]['text'] = hover_text
 
         return self.fig
 
@@ -37,12 +42,6 @@ class PlotlyMeshPlotter(ShapePlotter):
         
         return self.fig
 
-    def pick_points(self,mesh):
-        
-        fig=self.plot(mesh)
-        hover_text = [f'Index: {index}' for index in range(len(mesh.vertices))]
-        fig.data[0]['text'] = hover_text
-        return self.fig
 
     def show(self):
         self.fig.show()    

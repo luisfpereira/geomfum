@@ -1,3 +1,7 @@
+
+"""
+This is the wrap to implement polyscope functions
+"""
 import polyscope as ps
 from geomfum.plot import ShapePlotter
 
