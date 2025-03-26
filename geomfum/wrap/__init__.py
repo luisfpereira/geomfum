@@ -5,6 +5,8 @@ from geomfum._registry import (
     register_heat_kernel_signature,
     register_hierarchical_mesh,
     register_laplacian_finder,
+    register_poisson_sampler,
+    register_fp_sampler,
     register_wave_kernel_signature,
 )
 from geomfum._utils import has_package
@@ -55,4 +57,13 @@ register_face_orientation_operator(
 
 register_hierarchical_mesh(
     "pyrmt", "PyrmtHierarchicalMesh", requires="PyRMT", as_default=True
+)
+
+
+register_poisson_sampler(
+    "pymeshlab", "PymeshlabPoissonSampler", requires="pymeshlab", as_default=True
+)
+
+register_fp_sampler(
+    "pyfm", "PyfmFpSampler", requires="pyFM", as_default=True
 )
