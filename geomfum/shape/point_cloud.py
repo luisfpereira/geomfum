@@ -23,15 +23,15 @@ class PointCloud(Shape):
 
         Returns
         -------
-        mesh : TriangleMesh
-            A triangle mesh.
+        mesh : PointCloud
+            A point cloud.
         """
         vertices, _ = load_mesh(filename)
         return cls(vertices)
 
     @property
     def n_vertices(self):
-        """Number of vertices.
+        """Number of points.
 
         Returns
         -------
