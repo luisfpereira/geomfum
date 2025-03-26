@@ -112,8 +112,19 @@ def matvecmul(mat, vec):
     """
     if vec.ndim == 1:
         return mat @ vec
-    if mat.ndim == 2 and vec.ndim == 2:
-        return (mat @ vec.T).T
+
+    if mat.ndim == 2:
+        reshape_out = False
+        if vec.ndim > 2:  # to handle sparse matrices
+            reshape_out = True
+            batch_shape = vec.shape[:-1]
+            vec = vec.reshape(-1, vec.shape[-1])
+
+        out = (mat @ vec.T).T
+        if reshape_out:
+            return out.reshape(batch_shape + mat.shape[:1])
+
+        return out
 
     return np.einsum("...ij,...j->...i", mat, vec)
 
