@@ -6,6 +6,7 @@ from geomfum._registry import (
     register_hierarchical_mesh,
     register_laplacian_finder,
     register_wave_kernel_signature,
+    register_mesh_plotter,
 )
 from geomfum._utils import has_package
 
@@ -52,7 +53,18 @@ register_face_orientation_operator(
     "pyfm", "PyFmFaceOrientationOperator", requires="pyFM", as_default=True
 )
 
-
 register_hierarchical_mesh(
     "pyrmt", "PyrmtHierarchicalMesh", requires="PyRMT", as_default=True
 )
+
+register_mesh_plotter(
+    "plotly", "PlotlyMeshPlotter", requires="plotly", as_default=True
+)
+register_mesh_plotter(
+    "pyvista", "PyvistaMeshPlotter", requires="pyvista", as_default=False
+)
+
+register_mesh_plotter(
+    "polyscope", "PolyscopeMeshPlotter", requires="polyscope", as_default=False
+)
+
