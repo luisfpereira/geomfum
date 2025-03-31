@@ -20,7 +20,7 @@ def load_mesh(filename):
 
 
 def load_pointcloud(filename):
-    """Load a mesh from a file.
+    """Load a point cloud from a file.
 
     Parameters
     ----------
@@ -30,7 +30,6 @@ def load_pointcloud(filename):
     Returns
     -------
     vertices : array-like, shape=[n_vertices, 3]
-    faces : array_like, shape=[n_faces, 3]
     """
-    mesh = meshio.read(filename)
-    return mesh.points
+    point_cloud = meshio.read(filename)
+    return point_cloud.points
