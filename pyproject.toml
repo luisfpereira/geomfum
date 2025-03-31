@@ -50,6 +50,10 @@ pyvista = [
     "vtk",  
 ]
 
+polyscope = [
+    "polyscope",
+]
+
 
 
 
