@@ -2,7 +2,7 @@
 
 import numpy as np
 import scipy
-
+import torch
 from geomfum.io import load_mesh
 from geomfum.operator import (
     FaceDivergenceOperator,
@@ -141,3 +141,14 @@ class TriangleMesh(Shape):
             ).flatten()
 
         return self._vertex_areas
+
+
+    def to_torch(self,device='cpu'):
+        """Convert to torch tensors."""
+        self.device=device
+        self.vertices = torch.tensor(self.vertices).to(device)
+        self.faces = torch.tensor(self.faces).to(device)
+    def to_numpy(self):
+        """Convert to numpy array."""
+        self.vertices = self.vertices.cpu().numpy()
+        self.faces = self.faces.cpu().numpy()
