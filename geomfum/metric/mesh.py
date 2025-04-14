@@ -36,9 +36,9 @@ class BaseMetric(abc.ABC):
         Parameters
         ----------
         point_a : array-like, shape=[...]
-            Point.
+            Index Point.
         point_b : array-like, shape=[...]
-            Other point.
+            Index Point.
 
         Returns
         -------
@@ -68,6 +68,21 @@ class EuclideanMetric(BaseMetric):
         vertices = self._shape.vertices
         diff = vertices[point_a] - vertices[point_b]
         return np.linalg.norm(diff, axis=diff.ndim - 1)
+
+    def dist_matrix(self):
+        """Distance between mesh vertices.
+        
+        Returns
+        -------
+        dist_matrix : array-like, shape=[n_vertices, n_vertices]
+            Distance matrix.
+        """
+        
+        vertices = self._shape.vertices
+        dist_matrix = np.sqrt(np.sum((vertices[:, np.newaxis, :] - 
+                                vertices[np.newaxis, :, :]) ** 2, axis=2))
+
+        return dist_matrix
 
 
 class SingleSourceDijkstra(BaseMetric):
@@ -202,9 +217,7 @@ class SingleSourceDijkstra(BaseMetric):
         """
         if point_b is None:
             return self._dist_no_target(point_a)
-
         return self._dist_target(point_a, point_b)
-
 
 class FixedNeighborsSingleSourceDijkstra(SingleSourceDijkstra):
     """Shortest path on edge graph of mesh with single source Dijkstra.
