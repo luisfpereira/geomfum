@@ -48,7 +48,7 @@ class BaseMetric(abc.ABC):
 
 
 class EuclideanMetric(BaseMetric):
-    def dist(self, point_a, point_b):
+    def dist(self, point_a, point_b=None):
         """Distance between mesh vertices.
 
         Parameters
@@ -63,11 +63,15 @@ class EuclideanMetric(BaseMetric):
         dist : array-like, shape=[...,]
             Distance.
         """
-        # TODO: do against all if target index is None?
         # TODO: add euclidean with cutoff
         vertices = self._shape.vertices
-        diff = vertices[point_a] - vertices[point_b]
-        return np.linalg.norm(diff, axis=diff.ndim - 1)
+    
+        if point_b is None:
+            diff = vertices[point_a][:,np.newaxis,:] - vertices[np.newaxis, :, :]
+            return np.linalg.norm(diff, axis=diff.ndim - 1), np.arange(self._shape.n_vertices)
+        else:
+            diff = vertices[point_a] - vertices[point_b]
+            return np.linalg.norm(diff, axis=diff.ndim - 1)        
 
     def dist_matrix(self):
         """Distance between mesh vertices.
@@ -77,13 +81,7 @@ class EuclideanMetric(BaseMetric):
         dist_matrix : array-like, shape=[n_vertices, n_vertices]
             Distance matrix.
         """
-        
-        vertices = self._shape.vertices
-        dist_matrix = np.sqrt(np.sum((vertices[:, np.newaxis, :] - 
-                                vertices[np.newaxis, :, :]) ** 2, axis=2))
-
-        return dist_matrix
-
+        return self.dist(np.arange(self._shape.n_vertices))[0]
 
 class SingleSourceDijkstra(BaseMetric):
     """Shortest path on edge graph of mesh with single source Dijkstra.
@@ -218,6 +216,20 @@ class SingleSourceDijkstra(BaseMetric):
         if point_b is None:
             return self._dist_no_target(point_a)
         return self._dist_target(point_a, point_b)
+
+    def dist_matrix(self):
+        """Distance between mesh vertices.
+
+        Returns
+        -------
+        dist_matrix : array-like, shape=[n_vertices, n_vertices]
+            Distance matrix.
+        """
+        #TODO: this is really not efficient because it computes the distance for all pairs of vertices
+        dist_matrix = np.array(self.dist(np.arange(self._shape.n_vertices), None)[0])
+        return dist_matrix.reshape(self._shape.n_vertices, self._shape.n_vertices)
+
+
 
 class FixedNeighborsSingleSourceDijkstra(SingleSourceDijkstra):
     """Shortest path on edge graph of mesh with single source Dijkstra.
