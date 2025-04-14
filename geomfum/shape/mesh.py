@@ -3,9 +3,6 @@
 import numpy as np
 import scipy
 
-# TODO: remove ASAP
-from pyFM.mesh.geometry import edges_from_faces
-
 from geomfum.io import load_mesh
 from geomfum.operator import (
     FaceDivergenceOperator,
@@ -90,8 +87,24 @@ class TriangleMesh(Shape):
         -------
         edges : array-like, shape=[n_edges, 2]
         """
+        #TO DO: avoid using numpy (torch alternative?)
         if self._edges is None:
-            self._edges = edges_from_faces(self.faces)
+            
+            I = np.concatenate([self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]])
+            J = np.concatenate([self.faces[:, 1], self.faces[:, 2], self.faces[:, 0]])
+
+            In = np.concatenate([I, J])
+            Jn = np.concatenate([J, I])
+            Vn = np.ones_like(In)
+
+            M = scipy.sparse.csr_matrix((Vn, (In, Jn)), shape=(self.n_vertices, self.n_vertices)).tocoo()
+
+            edges0 = M.row
+            edges1 = M.col
+
+            indices = M.col > M.row
+
+            self._edges = np.concatenate([edges0[indices, None], edges1[indices, None]], axis=1)
         return self._edges
 
     @property
