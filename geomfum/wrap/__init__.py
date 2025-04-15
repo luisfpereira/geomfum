@@ -7,6 +7,7 @@ from geomfum._registry import (
     register_laplacian_finder,
     register_wave_kernel_signature,
     register_mesh_plotter,
+    register_learned_descriptors,
 )
 from geomfum._utils import has_package
 
@@ -67,4 +68,13 @@ register_mesh_plotter(
 register_mesh_plotter(
     "polyscope", "PolyscopeMeshPlotter", requires="polyscope", as_default=False
 )
+
+register_learned_descriptors(
+    "diffusion_net", "DiffusionNetDescriptor", requires="torch", as_default=True
+)
+
+register_learned_descriptors(
+    "point_net", "PointNetDescriptor", requires="torch", as_default=True
+)
+
 
