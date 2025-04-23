@@ -93,7 +93,7 @@ class EuclideanMetric(BaseMetric):
         return self.dist(np.arange(self._shape.n_vertices))[0]
 
 
-class Dijkstra(BaseMetric):
+class DijkstraMetric(BaseMetric):
     """Shortest path on edge graph of mesh with single source Dijkstra.
 
     Parameters
@@ -243,7 +243,7 @@ class Dijkstra(BaseMetric):
 
 
 
-class FixedNeighborsDijkstra(Dijkstra):
+class FixedNeighborsDijkstra(DijkstraMetric):
     """Shortest path on edge graph of mesh with Dijkstra.
 
     Parameters
