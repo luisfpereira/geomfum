@@ -2,6 +2,7 @@ import abc
 
 import networkx as nx
 import numpy as np
+from scipy.sparse.csgraph import shortest_path
 
 
 def to_nx_edge_graph(shape):
@@ -45,7 +46,15 @@ class BaseMetric(abc.ABC):
         dist : array-like, shape=[...,]
             Distance.
         """
+    @abc.abstractmethod
+    def dist_matrix(self):
+        """Distance between all the points of a shape.
 
+        Returns
+        -------
+        dist_matrix : array-like, shape=[n_vertices, n_vertices]
+            Distance matrix.
+        """
 
 class EuclideanMetric(BaseMetric):
     def dist(self, point_a, point_b=None):
@@ -83,7 +92,8 @@ class EuclideanMetric(BaseMetric):
         """
         return self.dist(np.arange(self._shape.n_vertices))[0]
 
-class SingleSourceDijkstra(BaseMetric):
+
+class Dijkstra(BaseMetric):
     """Shortest path on edge graph of mesh with single source Dijkstra.
 
     Parameters
@@ -225,14 +235,16 @@ class SingleSourceDijkstra(BaseMetric):
         dist_matrix : array-like, shape=[n_vertices, n_vertices]
             Distance matrix.
         """
-        #TODO: this is really not efficient because it computes the distance for all pairs of vertices
-        dist_matrix = np.array(self.dist(np.arange(self._shape.n_vertices), None)[0])
-        return dist_matrix.reshape(self._shape.n_vertices, self._shape.n_vertices)
+        adj_matrix = nx.to_scipy_sparse_array(self._graph, weight='weight', format='csr')
+
+        adj_matrix=adj_matrix.tolil()
+        
+        return shortest_path(adj_matrix, directed=False)
 
 
 
-class FixedNeighborsSingleSourceDijkstra(SingleSourceDijkstra):
-    """Shortest path on edge graph of mesh with single source Dijkstra.
+class FixedNeighborsDijkstra(Dijkstra):
+    """Shortest path on edge graph of mesh with Dijkstra.
 
     Parameters
     ----------
