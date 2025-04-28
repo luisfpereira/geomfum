@@ -18,7 +18,6 @@ def load_mesh(filename):
     return mesh.points, mesh.cells[0].data
 
 
-
 def load_pointcloud(filename):
     """Load a point cloud from a file.
 

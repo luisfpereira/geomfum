@@ -1,6 +1,7 @@
 """Definition of point cloud."""
 
 from geomfum.io import load_pointcloud
+
 from ._base import Shape
 
 
@@ -26,7 +27,7 @@ class PointCloud(Shape):
         mesh : PointCloud
             A point cloud.
         """
-        vertices= load_pointcloud(filename)
+        vertices = load_pointcloud(filename)
         return cls(vertices)
 
     @property
