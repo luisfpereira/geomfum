@@ -37,6 +37,24 @@ test = [
     "geomfum[opt]",
 ]
 
+plotly = [
+    "plotly",
+    "nbformat",
+]
+
+pyvista = [
+    "pyvista",
+    "trame",
+    "vtk",  
+]
+
+polyscope = [
+    "polyscope",
+]
+
+
+
+
 [project.urls]
 repository = "http://github.com/luisfpereira/geomfum"
 
