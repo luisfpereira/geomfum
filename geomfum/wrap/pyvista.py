@@ -1,27 +1,62 @@
-"""
-This is the wrap to implement pyvista functions
-"""
-
+"""Wraps pyvista functions."""
 
 import pyvista as pv
+
 from geomfum.plot import ShapePlotter
-import numpy as np
 from geomfum.shape.convert import to_pv_polydata
 
 
+class PvMeshPlotter(ShapePlotter):
+    """Plotting object to display meshes."""
 
-class PyvistaMeshPlotter(ShapePlotter):
+    # NB: for now assumes only one mesh is plotted
 
-    def __init__(self, colormap='viridis'):
+    def __init__(self, colormap="viridis", **kwargs):
         self.colormap = colormap
-        self.fig=None
-    def plot(self, mesh):
 
-        # here i call the plotter fig to be consistent with the plotly plotter
-        mesh_polydata = to_pv_polydata(mesh)
-        self.fig = pv.Plotter()
-        self.fig.add_mesh(mesh_polydata, cmap=self.colormap, show_edges=False)
-        return self.fig
+        self._plotter = pv.Plotter(**kwargs)
+        self._mesh = None
+        self._add_mesh = None
+
+    def __getattr__(self, name):
+        """Get attribute.
+
+        It is only called when ``__getattribute__`` fails.
+        Delegates attribute calling to plotter.
+        """
+        return getattr(self._plotter, name)
+
+    def add_mesh(self, mesh, **kwargs):
+        """Add mesh to plot.
+
+        Parameters
+        ----------
+        mesh : TriangleMesh
+            Mesh to be plotted.
+        """
+        self._mesh = to_pv_polydata(mesh)
+
+        self._add_mesh = lambda mesh: self._plotter.add_mesh(
+            mesh, cmap=self.colormap, **kwargs
+        )
+
+        return self
+
+    def set_vertex_scalars(self, scalars, name="scalars"):
+        """Set vertex scalars on mesh.
+
+        Parameters
+        ----------
+        scalars : array-like
+            Value at each vertex.
+        name : str
+            Scalar field name.
+        """
+        self._mesh.point_data.set_scalars(scalars, name=name)
+
+        return self
 
     def show(self):
-        self.fig.show()
+        """Display plot."""
+        self._add_mesh(self._mesh)
+        self._plotter.show()

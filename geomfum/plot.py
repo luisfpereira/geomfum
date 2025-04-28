@@ -1,33 +1,36 @@
+"""Plotting functions.
+
+In this file we define the plotting logic.
+Since each plotting library has its own method of plotting,
+we define general functions that works with any library implemented
+"""
+
 import abc
+
 from geomfum._registry import MeshPlotterRegistry, WhichRegistryMixins
 
-"""
-In this file we define the plotting logic used in geomfum
-Since each plotting library has its own method of plotting, we define general functions that works with any library implemented 
-
-"""
 
 class ShapePlotter(abc.ABC):
+    """Plotting object.
+
+    Primitive clas to plot meshes, pointclouds or specific useful informations
+    (scalar functions, landmarks, etc..)
     """
-    Primitive Calss to plot meshes, pointclouds or specific useful informations (scalar functions, landmarks, etc..)
-    """
-    def plot(self, mesh):
-        
-        """
-        Function to plot a mesh
-        """
-        raise NotImplementedError("This method should be overridden by subclasses")
-    
-    def plot_function(self, mesh, function):  
-        """
-        Function to plot a function defined on a mesh
-        """
-        raise NotImplementedError("This method should be overridden by subclasses")
-    def show(self):  
-        """
-        Function to display the plot
-        """
-        raise NotImplementedError("This method should be overridden by subclasses")
+
+    @abc.abstractmethod
+    def add_mesh(self, mesh):
+        """Add mesh to plot."""
+
+    @abc.abstractmethod
+    def show(self):
+        """Display plot."""
+
+    def set_vertex_scalars(self, scalars):
+        """Set vertex scalars on mesh."""
+        raise NotImplementedError("Not implemented for this plotter.")
+
 
 class MeshPlotter(WhichRegistryMixins, ShapePlotter):
+    """Plotting object to display meshes."""
+
     _Registry = MeshPlotterRegistry

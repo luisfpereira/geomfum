@@ -1,48 +1,62 @@
-"""
-This is the wrap to implement plotly functions
-"""
+"""Wraps plotly functions."""
+
 import plotly.graph_objects as go
+
 from geomfum.plot import ShapePlotter
 from geomfum.shape.convert import to_go_mesh3d
 
+# TODO: add pointcloud alternatives/ enable to plot pointclouds
 
-#TODO: add pointcloud alternatives/ enable to plot pointclouds
 
 class PlotlyMeshPlotter(ShapePlotter):
-    
-    def __init__(self, colormap='viridis'):
+    """Plotting object to display meshes."""
+
+    # NB: for now assumes only one mesh is plotted
+
+    def __init__(self, colormap="viridis"):
         self.colormap = colormap
-        self.fig = None
 
-    def plot(self, mesh):
-
-        mesh3d= to_go_mesh3d(mesh)
-        layout = go.Layout(scene=dict(aspectmode="data"))
-        mesh3d.update(colorscale=self.colormap)
-        self.fig = go.Figure(data=[mesh3d],layout=layout,)
-        
-        hover_text = [f'Index: {index}' for index in range(len(mesh.vertices))]
-        self.fig.data[0]['text'] = hover_text
-
-        return self.fig
-
-    def plot_function(self, mesh, function):
-        
-
-        vertices=mesh.vertices
-        faces=mesh.faces
-        x, y, z = vertices[:,0], vertices[:,1], vertices[:,2]
-        f1,f2,f3= faces[:,0], faces[:,1], faces[:,2]
-        layout = go.Layout(scene=dict(aspectmode="data"))
-        self.fig = go.Figure(data=[go.Mesh3d(x=x,y=y,z=z, i=f1, j=f2, k=f3,
-                                        intensity = function, 
-                                        colorscale  = self.colormap,)],
-                                        layout=layout,   
+        self._plotter = self.fig = go.Figure(
+            data=[],
+            layout=go.Layout(scene=dict(aspectmode="data")),
         )
-        
-        return self.fig
 
+    def add_mesh(self, mesh, **kwargs):
+        """Add mesh to plot.
+
+        Parameters
+        ----------
+        mesh : TriangleMesh
+            Mesh to be plotted.
+        """
+        mesh3d = to_go_mesh3d(mesh)
+        mesh3d.update(colorscale=self.colormap, **kwargs)
+
+        self._plotter.update(data=[mesh3d])
+
+        hover_text = [f"Index: {index}" for index in range(len(mesh.vertices))]
+        self._plotter.data[0]["text"] = hover_text
+
+        return self
+
+    def set_vertex_scalars(self, scalars, name="scalars"):
+        """Set vertex scalars on mesh.
+
+        Parameters
+        ----------
+        scalars : array-like
+            Value at each vertex.
+        name : str
+            Ignored.
+        """
+        data = self._plotter.data[0]
+        data["intensity"] = scalars
+        data["colorscale"] = self.colormap
+
+        self._plotter.update(data=[data])
+
+        return self
 
     def show(self):
-        self.fig.show()    
-
+        """Display plot."""
+        self._plotter.show()

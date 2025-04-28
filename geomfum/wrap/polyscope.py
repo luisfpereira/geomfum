@@ -1,34 +1,55 @@
+"""Wraps polyscope functions."""
 
-"""
-This is the wrap to implement polyscope functions
-"""
 import polyscope as ps
+
 from geomfum.plot import ShapePlotter
 
-class PolyscopeMeshPlotter(ShapePlotter):
 
-    def __init__(self,colormap='viridis',name='Mymesh'):
+class PsMeshPlotter(ShapePlotter):
+    """Plotting object to display meshes."""
+
+    # NB: for now assumes only one mesh is plotted
+
+    def __init__(self, colormap="viridis", backend=""):
+        super().__init__()
+
         self.colormap = colormap
-        self.fig = None
-        self.name=name
 
-    def plot(self, mesh):
-        ps.init()
-        ps.register_surface_mesh(self.name,mesh.vertices,mesh.faces)
-        self.fig = ps
-        return self.fig
+        self._plotter = ps
+        self._name = "Mymesh"
 
-    def plot_function(self, mesh, function):
-        ps.init()
-        ps.register_surface_mesh(
-            self.name,
-            mesh.vertices,
-            mesh.faces,
+        self._plotter.init(backend)
+
+    def add_mesh(self, mesh):
+        """Add mesh to plot.
+
+        Parameters
+        ----------
+        mesh : TriangleMesh
+            Mesh to be plotted.
+        """
+        self._plotter.register_surface_mesh(self._name, mesh.vertices, mesh.faces)
+        return self
+
+    def set_vertex_scalars(self, scalars, name="scalars"):
+        """Set vertex scalars on mesh.
+
+        Parameters
+        ----------
+        scalars : array-like
+            Value at each vertex.
+        name : str
+            Scalar field name.
+        """
+        ps.get_surface_mesh(self._name).add_scalar_quantity(
+            name,
+            scalars,
+            defined_on="vertices",
+            cmap=self.colormap,
+            enabled=True,
         )
-        ps.get_surface_mesh(self.name).add_scalar_quantity("function", function, defined_on='vertices', cmap=self.colormap, enabled=True)
-
-        self.fig = ps
-        return self.fig
+        return self
 
     def show(self):
-        self.fig.show()
+        """Display plot."""
+        self._plotter.show()
