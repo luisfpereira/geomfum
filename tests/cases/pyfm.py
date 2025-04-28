@@ -14,7 +14,7 @@ class SpectralDescriptorCmpCase(TestCase):
     # TODO: add also descriptor batch?
 
     def test_descriptor_cmp(self, shape, pyfm_shape, atol, domain=None):
-        descr = self.descriptor(shape.basis, domain=domain)
+        descr = self.descriptor(shape, domain=domain)
         pyfm_descr = self.pyfm_descriptor(pyfm_shape, domain=domain)
 
         self.assertAllClose(descr, pyfm_descr.T, atol=atol)

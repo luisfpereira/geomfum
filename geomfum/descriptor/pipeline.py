@@ -70,10 +70,7 @@ class DescriptorPipeline:
     def apply(self, shape):
         descr = None
         for step in self.steps:
-            if isinstance(step, SpectralDescriptor):
-                descr = self._update_descr(descr, step(shape.basis))
-
-            elif isinstance(step, Descriptor):
+            if isinstance(step, Descriptor):
                 descr = self._update_descr(descr, step(shape))
 
             elif isinstance(step, Subsampler):
@@ -83,6 +80,6 @@ class DescriptorPipeline:
                 descr = step(shape, descr)
 
             else:
-                raise ValueError("Unkown step type.")
+                raise ValueError("Unknown step type.")
 
         return descr
