@@ -27,13 +27,13 @@ class SpectralDescriptor(Descriptor, abc.ABC):
         self.use_landmarks = use_landmarks
 
     @abc.abstractmethod
-    def __call__(self, basis, domain=None):
+    def __call__(self, shape, domain=None):
         """Compute descriptor.
 
         Parameters
         ----------
-        basis : Eigenbasis.
-            Basis.
+        shape : Shape.
+            Shape.
         domain : array-like, shape=[n_domain]
             Domain points for computation.
         """
