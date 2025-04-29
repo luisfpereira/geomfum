@@ -29,6 +29,7 @@ class TriangleMesh(Shape):
         self.vertices = vertices
         self.faces = faces
 
+        self._edges = None
         self._face_normals = None
         self._face_areas = None
         self._vertex_areas = None
@@ -77,6 +78,36 @@ class TriangleMesh(Shape):
         n_faces : int
         """
         return self.faces.shape[0]
+
+    @property
+    def edges(self):
+        """Edges of the mesh.
+
+        Returns
+        -------
+        edges : array-like, shape=[n_edges, 2]
+        """
+        if self._edges is None:
+            I = np.concatenate([self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]])
+            J = np.concatenate([self.faces[:, 1], self.faces[:, 2], self.faces[:, 0]])
+
+            In = np.concatenate([I, J])
+            Jn = np.concatenate([J, I])
+            Vn = np.ones_like(In)
+
+            M = scipy.sparse.csr_matrix(
+                (Vn, (In, Jn)), shape=(self.n_vertices, self.n_vertices)
+            ).tocoo()
+
+            edges0 = M.row
+            edges1 = M.col
+
+            indices = M.col > M.row
+
+            self._edges = np.concatenate(
+                [edges0[indices, None], edges1[indices, None]], axis=1
+            )
+        return self._edges
 
     @property
     def face_normals(self):
