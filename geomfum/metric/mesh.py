@@ -2,16 +2,17 @@ import abc
 
 import networkx as nx
 import numpy as np
-from scipy.sparse.csgraph import shortest_path
+
+from geomfum.numerics.graph import single_source_partial_dijkstra_path_length
 
 
 def to_nx_edge_graph(shape):
     # TODO: move to utils? circular imports
     vertex_a, vertex_b = shape.edges.T
-    lengths = EuclideanMetric(shape).dist(vertex_a, vertex_b)
+    lengths = VertexEuclideanMetric(shape).dist(vertex_a, vertex_b)
 
     weighted_edges = [
-        (int(vertex_a_), int(vertex_b_), length)
+        (vertex_a_, vertex_b_, length)
         for vertex_a_, vertex_b_, length in zip(vertex_a, vertex_b, lengths)
     ]
 
@@ -21,12 +22,15 @@ def to_nx_edge_graph(shape):
     return graph
 
 
-def _is_single_index(index):
-    return isinstance(index, int) or index.ndim == 0
+class Metric(abc.ABC):
+    """Metric.
 
+    Parameters
+    ----------
+    shape : Shape
+        Considered as a manifold.
+    """
 
-class BaseMetric(abc.ABC):
-    # TODO: may need to do intermediate abstractions
     def __init__(self, shape):
         self._shape = shape
 
@@ -46,6 +50,11 @@ class BaseMetric(abc.ABC):
         dist : array-like, shape=[...,]
             Distance.
         """
+
+
+class FinitePointSetMetric(Metric, abc.ABC):
+    """Metric on a finite set of indexed points."""
+
     @abc.abstractmethod
     def dist_matrix(self):
         """Distance between all the points of a shape.
@@ -56,8 +65,93 @@ class BaseMetric(abc.ABC):
             Distance matrix.
         """
 
-class EuclideanMetric(BaseMetric):
-    def dist(self, point_a, point_b=None):
+    @abc.abstractmethod
+    def dist_from_source(self, source_point):
+        """Distance from source point.
+
+        Parameters
+        ----------
+        source_point : array-like, shape=[...]
+            Index of source point.
+
+        Returns
+        -------
+        dist : array-like, shape=[...] or list-like[array-like]
+            Distance.
+        target_point : array-like, shape=[n_targets] or list-like[array-like]
+            Target index.
+        """
+
+
+class VertexEuclideanMetric(FinitePointSetMetric):
+    """Euclidean metric between vertices of a mesh."""
+
+    def dist(self, point_a, point_b):
+        """Distance between mesh vertices.
+
+        Parameters
+        ----------
+        point_a : array-like, shape=[...]
+            Index of source point.
+        point_b : array-like, shape=[...]
+            Index of target point.
+
+        Returns
+        -------
+        dist : array-like, shape=[...]
+            Distance.
+        """
+        vertices = self._shape.vertices
+
+        diff = vertices[point_a] - vertices[point_b]
+        return np.linalg.norm(diff, axis=diff.ndim - 1)
+
+    def dist_from_source(self, source_point):
+        """Distance from source point.
+
+        Parameters
+        ----------
+        source_point : array-like, shape=[...]
+            Index of source point.
+
+        Returns
+        -------
+        dist : array-like, shape=[...] or array-like[array-like]
+            Distance.
+        target_point : array-like, shape=[n_targets] or array-like[array-like]
+            Target index.
+        """
+        vertices = self._shape.vertices
+
+        source_vertices = vertices[source_point]
+        if source_vertices.ndim > 1:
+            source_vertices = np.expand_dims(source_vertices, 1)
+
+        diff = source_vertices - vertices
+
+        dist = np.linalg.norm(diff, axis=diff.ndim - 1)
+
+        target_point = np.arange(self._shape.n_vertices)
+        if diff.ndim > 1:
+            target_point = np.broadcast_to(
+                target_point, dist.shape[:-1] + target_point.shape
+            )
+
+        return dist, target_point
+
+    def dist_matrix(self):
+        """Distance between mesh vertices.
+
+        Returns
+        -------
+        dist_matrix : array-like, shape=[n_vertices, n_vertices]
+            Distance matrix.
+        """
+        return self.dist_from_source(np.arange(self._shape.n_vertices))[0]
+
+
+class _SingleDispatchMixins:
+    def dist(self, point_a, point_b):
         """Distance between mesh vertices.
 
         Parameters
@@ -72,65 +166,21 @@ class EuclideanMetric(BaseMetric):
         dist : array-like, shape=[...,]
             Distance.
         """
-        # TODO: add euclidean with cutoff
-        vertices = self._shape.vertices
-    
-        if point_b is None:
-            diff = vertices[point_a][:,np.newaxis,:] - vertices[np.newaxis, :, :]
-            return np.linalg.norm(diff, axis=diff.ndim - 1), np.arange(self._shape.n_vertices)
-        else:
-            diff = vertices[point_a] - vertices[point_b]
-            return np.linalg.norm(diff, axis=diff.ndim - 1)        
+        point_a = np.asarray(point_a)
+        point_b = np.asarray(point_b)
 
-    def dist_matrix(self):
-        """Distance between mesh vertices.
-        
-        Returns
-        -------
-        dist_matrix : array-like, shape=[n_vertices, n_vertices]
-            Distance matrix.
-        """
-        return self.dist(np.arange(self._shape.n_vertices))[0]
+        if point_a.ndim == 0 and point_b.ndim == 0:
+            return self._dist_single(point_a, point_b)
 
-
-class DijkstraMetric(BaseMetric):
-    """Shortest path on edge graph of mesh with single source Dijkstra.
-
-    Parameters
-    ----------
-    shape : Shape
-        Shape.
-    cutoff : float
-        Length (sum of edge weights) at which the search is stopped.
-    """
-
-    def __init__(self, shape, cutoff=None):
-        self.cutoff = cutoff
-
-        super().__init__(shape)
-        self._graph = to_nx_edge_graph(shape)
-
-    def _dist_no_target_single(self, source_point):
-        """Distance between mesh vertices.
-
-        Parameters
-        ----------
-        source_point : array-like, shape=()
-            Index of source point.
-
-        Returns
-        -------
-        dist : array-like, shape=[n_targets]
-            Distance.
-        target_point : array-like, shape=[n_targets,]
-            Target index.
-        """
-        dist_dict = nx.single_source_dijkstra_path_length(
-            self._graph, source_point, cutoff=self.cutoff, weight="weight"
+        point_a, point_b = np.broadcast_arrays(point_a, point_b)
+        return np.stack(
+            [
+                self._dist_single(point_a_, point_b_)
+                for point_a_, point_b_ in zip(point_a, point_b)
+            ]
         )
-        return np.array(list(dist_dict.values())), np.array(list(dist_dict.keys()))
 
-    def _dist_no_target(self, source_point):
+    def dist_from_source(self, source_point):
         """Distance between mesh vertices.
 
         Parameters
@@ -145,15 +195,51 @@ class DijkstraMetric(BaseMetric):
         target_point : array-like, shape=[n_targets,] or list[array-like]
             Target index.
         """
-        if _is_single_index(source_point):
-            return self._dist_no_target_single(source_point)
+        source_point = np.asarray(source_point)
+        if source_point.ndim == 0:
+            return self._dist_from_source_single(source_point)
 
         out = [
-            self._dist_no_target_single(source_index_) for source_index_ in source_point
+            self._dist_from_source_single(source_index_)
+            for source_index_ in source_point
         ]
         return list(zip(*out))
 
-    def _dist_target_single(self, point_a, point_b):
+    @abc.abstractmethod
+    def _dist_from_source_single(self, source_point):
+        pass
+
+    @abc.abstractmethod
+    def _dist_single(self, point_a, point_b):
+        pass
+
+
+class _NxDijkstraMixins(_SingleDispatchMixins):
+    def dist_matrix(self):
+        """Distance between mesh vertices.
+
+        Returns
+        -------
+        dist_matrix : array-like, shape=[n_vertices, n_vertices]
+            Distance matrix.
+
+        Notes
+        -----
+        * infinitely slow
+        """
+        all_pairs = nx.all_pairs_dijkstra_path_length(self._graph)
+
+        n_vertices = self._shape.n_vertices
+        dist_mat = np.empty((n_vertices, n_vertices))
+
+        for node_index, all_dict in all_pairs:
+            dists = np.array(list(all_dict.values()))
+            indices = np.array(list(all_dict.keys()))
+            dist_mat[node_index, indices] = dists
+
+        return dist_mat
+
+    def _dist_single(self, point_a, point_b):
         """Distance between mesh vertices.
 
         Parameters
@@ -171,8 +257,8 @@ class DijkstraMetric(BaseMetric):
         try:
             dist, _ = nx.single_source_dijkstra(
                 self._graph,
-                point_a,
-                target=point_b,
+                point_a.item(),
+                target=point_b.item(),
                 cutoff=None,
                 weight="weight",
             )
@@ -180,110 +266,27 @@ class DijkstraMetric(BaseMetric):
             dist = np.inf
         return dist
 
-    def _dist_target(self, point_a, point_b):
-        """Distance between mesh vertices.
 
-        Parameters
-        ----------
-        point_a : array-like, shape=[...]
-            Index of source point.
-        point_b : array-like, shape=[...]
-            Index of target point.
-
-        Returns
-        -------
-        dist : array-like, shape=[...,]
-            Distance.
-        """
-        if _is_single_index(point_a) and _is_single_index(point_b):
-            return self._dist_target_single(point_a, point_b)
-
-        point_a, point_b = np.broadcast_arrays(point_a, point_b)
-        return np.stack(
-            [
-                self._dist_target_single(point_a_, point_b_)
-                for point_a_, point_b_ in zip(point_a, point_b)
-            ]
-        )
-
-    def dist(self, point_a, point_b=None):
-        """Distance between mesh vertices.
-
-        Parameters
-        ----------
-        point_a : array-like, shape=[...]
-            Index of source point.
-        point_b : array-like, shape=[...]
-            Index of target point.
-
-        Returns
-        -------
-        dist : array-like, shape=[...,] or list[array-like]
-            Distance.
-        point_b : array-like, shape=[n_targets,] or list[array-like]
-            Target index. If `point_b` is None.
-        """
-        if point_b is None:
-            return self._dist_no_target(point_a)
-        return self._dist_target(point_a, point_b)
-
-    def dist_matrix(self):
-        """Distance between mesh vertices.
-
-        Returns
-        -------
-        dist_matrix : array-like, shape=[n_vertices, n_vertices]
-            Distance matrix.
-        """
-        adj_matrix = nx.to_scipy_sparse_array(self._graph, weight='weight', format='csr')
-
-        adj_matrix=adj_matrix.tolil()
-        
-        return shortest_path(adj_matrix, directed=False)
-
-
-
-class FixedNeighborsDijkstra(DijkstraMetric):
-    """Shortest path on edge graph of mesh with Dijkstra.
+class GraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
+    """Shortest path on edge graph of mesh with single source Dijkstra.
 
     Parameters
     ----------
     shape : Shape
         Shape.
-    n_neighbors : int
-        Number of neighbors to return when ``point_b is None``.
-    neighbors_ratio : float
-        Neighbors ratio to use to consider decreasing cuttoff.
-    cutoff_decr_ratio : float
-        Ratio to consider to proceed with cuttoff decrease.
-    cutoff_incr_ratio : float
-        Ratio use to update cutoff when not enough neighbors.
+    cutoff : float
+        Length (sum of edge weights) at which the search is stopped.
     """
 
-    def __init__(
-        self,
-        shape,
-        n_neighbors=5,
-        neighbors_ratio=5,
-        cutoff_decr_ratio=0.9,
-        cutoff_incr_ratio=2.0,
-    ):
-        super().__init__(shape, cutoff=self._initial_cuttoff(shape, n_neighbors))
+    # TODO: add scipy-based implementation?
 
-        self.n_neighbors = n_neighbors
-        self.neighbors_ratio = neighbors_ratio
-        self.cutoff_decr_ratio = cutoff_decr_ratio
-        self.cutoff_incr_ratio = cutoff_incr_ratio
+    def __init__(self, shape, cutoff=None):
+        self.cutoff = cutoff
 
-    @staticmethod
-    def _initial_cuttoff(shape, n_neighbors):
-        index_a, index_b = np.random.randint(0, high=shape.n_vertices, size=2)
-        dist = EuclideanMetric(shape).dist(index_a, index_b)
+        super().__init__(shape)
+        self._graph = to_nx_edge_graph(shape)
 
-        ratio = np.pow(n_neighbors / shape.n_vertices, 1 / 2.2)
-        return ratio * dist
-
-    def _dist_no_target_single(self, source_point):
+    def _dist_from_source_single(self, source_point):
         """Distance between mesh vertices.
 
         Parameters
@@ -293,17 +296,50 @@ class FixedNeighborsDijkstra(DijkstraMetric):
 
         Returns
         -------
-        dist : array-like, shape=[n_neighbors]
+        dist : array-like, shape=[n_targets]
             Distance.
-        target_point : array-like, shape=[n_neighors,]
+        target_point : array-like, shape=[n_targets]
             Target index.
         """
-        while True:
-            dist, target = super()._dist_no_target_single(source_point)
-            if target.size > self.n_neighbors:
-                if target.size > round(self.n_neighbors * self.neighbors_ratio):
-                    self.cutoff *= self.cutoff_decr_ratio
+        dist_dict = nx.single_source_dijkstra_path_length(
+            self._graph, source_point.item(), cutoff=self.cutoff, weight="weight"
+        )
+        return np.array(list(dist_dict.values())), np.array(list(dist_dict.keys()))
 
-                return dist[: self.n_neighbors], target[: self.n_neighbors]
 
-            self.cutoff *= self.cutoff_incr_ratio
+class KClosestGraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
+    """Shortest path on edge graph of mesh with Dijkstra.
+
+    Parameters
+    ----------
+    shape : Shape
+        Shape.
+    k_closest : int
+        Number of nodes to find distances to (including the source itself).
+    """
+
+    def __init__(self, shape, k_closest=5):
+        self.k_closest = k_closest
+
+        super().__init__(shape)
+        self._graph = to_nx_edge_graph(shape)
+
+    def _dist_from_source_single(self, source_point):
+        """Distance between mesh vertices.
+
+        Parameters
+        ----------
+        source_point : array-like, shape=()
+            Index of source point.
+
+        Returns
+        -------
+        dist : array-like, shape=[n_closest]
+            Distance.
+        target_point : array-like, shape=[n_closest,]
+            Target index.
+        """
+        dist_dict = single_source_partial_dijkstra_path_length(
+            self._graph, source_point.item(), self.k_closest, weight="weight"
+        )
+        return np.array(list(dist_dict.values())), np.array(list(dist_dict.keys()))

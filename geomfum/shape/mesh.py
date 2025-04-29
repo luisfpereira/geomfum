@@ -87,9 +87,7 @@ class TriangleMesh(Shape):
         -------
         edges : array-like, shape=[n_edges, 2]
         """
-        #TO DO: avoid using numpy (torch alternative?)
         if self._edges is None:
-            
             I = np.concatenate([self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]])
             J = np.concatenate([self.faces[:, 1], self.faces[:, 2], self.faces[:, 0]])
 
@@ -97,14 +95,18 @@ class TriangleMesh(Shape):
             Jn = np.concatenate([J, I])
             Vn = np.ones_like(In)
 
-            M = scipy.sparse.csr_matrix((Vn, (In, Jn)), shape=(self.n_vertices, self.n_vertices)).tocoo()
+            M = scipy.sparse.csr_matrix(
+                (Vn, (In, Jn)), shape=(self.n_vertices, self.n_vertices)
+            ).tocoo()
 
             edges0 = M.row
             edges1 = M.col
 
             indices = M.col > M.row
 
-            self._edges = np.concatenate([edges0[indices, None], edges1[indices, None]], axis=1)
+            self._edges = np.concatenate(
+                [edges0[indices, None], edges1[indices, None]], axis=1
+            )
         return self._edges
 
     @property
