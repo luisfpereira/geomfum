@@ -4,37 +4,57 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 
 import geomfum.wrap as _wrap  # noqa (for register)
-from geomfum._registry import PoissonSamplerRegistry, FpSamplerRegistry, WhichRegistryMixins
+from geomfum._registry import (
+    FarthestPointSamplerRegistry,
+    PoissonSamplerRegistry,
+    WhichRegistryMixins,
+)
 
 
 class BaseSampler(abc.ABC):
+    """Sampler."""
+
     @abc.abstractmethod
     def sample(self, shape):
-        pass
+        """Sample shape."""
 
 
 class PoissonSampler(WhichRegistryMixins):
+    """Poisson disk sampling."""
+
     _Registry = PoissonSamplerRegistry
 
-class FpSampler(WhichRegistryMixins):
-    _Registry= FpSamplerRegistry
 
-class NearestNeighborsIndexSampler(BaseSampler):
-    """
+class FarthestPointSampler(WhichRegistryMixins):
+    """Farthest point Euclidean sampling."""
+
+    _Registry = FarthestPointSamplerRegistry
+
+
+class VertexProjectionSampler(BaseSampler):
+    """Sample by projecting samples to the closest vertex.
+
+    Uses nearest neighbor to get indices of sample coordinates
+    resulting from another sampler.
 
     Parameters
     ----------
     min_n_samples : int
         Minimum number of samples to target.
-        Ignored if ``sampler is not None``.
+        Ignored if ``sampler`` is not None.
+        Not guaranteed if ``unique`` is True.
+    sampler : BaseSampler
+        Coordinates sampler.
+    neighbor_finder : sklearn.NearestNeighbors
+        Nearest neighbors finder.
+    unique : bool
+        Whether to remove duplicates.
     """
 
-    # uses nearest neighbor to get indices of sample coordinates
-    # resulting from another sampler
-
-    # TODO: find better naming as this is confusing
-
-    def __init__(self, min_n_samples=100, sampler=None, neighbor_finder=None):
+    def __init__(
+        self, min_n_samples=100, sampler=None, neighbor_finder=None, unique=False
+    ):
+        super().__init__()
         if sampler is None:
             sampler = PoissonSampler.from_registry(min_n_samples=min_n_samples)
 
@@ -47,23 +67,27 @@ class NearestNeighborsIndexSampler(BaseSampler):
 
         self.neighbor_finder = neighbor_finder
         self.sampler = sampler
+        self.unique = unique
 
     def sample(self, shape):
-        # returns array[index]
+        """Sample using Poisson disk sampling.
+
+        Parameters
+        ----------
+        shape : Shape
+            Shape to be sampled.
+
+        Returns
+        -------
+        samples : array-like, shape=[n_samples]
+            Vertex indices of samples.
+        """
         sampled_points = self.sampler.sample(shape)
 
         self.neighbor_finder.fit(shape.vertices)
         _, neighbor_indices = self.neighbor_finder.kneighbors(sampled_points)
 
-        return np.unique(neighbor_indices)
+        if self.unique:
+            return np.unique(neighbor_indices)
 
-class FarthestPointSampler(BaseSampler):
-    def __init__(self, n_samples=100):
-        self.n_samples = n_samples
-        self.sampler = FpSampler.from_registry(min_n_samples=n_samples)
-
-    def sample(self, shape):
-        # returns array[index]
-        sampled_points = self.sampler.sample(shape)
-        
-        return np.unique(sampled_points)
+        return np.squeeze(neighbor_indices)

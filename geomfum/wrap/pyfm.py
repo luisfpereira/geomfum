@@ -441,8 +441,9 @@ def get_orientation_op(
 
     return out
 
-class PyfmFpSampler(BaseSampler):
-    """Farthest point euclidean sampling.
+
+class PyfmEuclideanFarthestVertexSampler(BaseSampler):
+    """Farthest point Euclidean sampling.
 
     Parameters
     ----------
@@ -451,10 +452,11 @@ class PyfmFpSampler(BaseSampler):
     """
 
     def __init__(self, min_n_samples):
+        super().__init__()
         self.min_n_samples = min_n_samples
 
     def sample(self, shape):
-        """Sample using Farthest point sampling.
+        """Sample using farthest point sampling.
 
         Parameters
         ----------
@@ -466,9 +468,13 @@ class PyfmFpSampler(BaseSampler):
         samples : array-like, shape=[n_samples, 3]
             Coordinates of samples.
         """
+
         def dist_func(i):
-                        return np.linalg.norm(shape.vertices - shape.vertices[i,None,:], axis=1)
+            return np.linalg.norm(shape.vertices - shape.vertices[i, None, :], axis=1)
 
-        fps = pyFM.mesh.geometry.farthest_point_sampling_call(dist_func, self.min_n_samples, n_points=shape.vertices.shape[0], verbose=False)
-
-        return fps
+        return pyFM.mesh.geometry.farthest_point_sampling_call(
+            dist_func,
+            self.min_n_samples,
+            n_points=shape.n_vertices,
+            verbose=False,
+        )

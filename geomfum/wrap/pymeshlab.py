@@ -1,3 +1,5 @@
+"""pymeshlab wrapper."""
+
 import pymeshlab
 
 from geomfum.sample import BaseSampler
@@ -13,6 +15,7 @@ class PymeshlabPoissonSampler(BaseSampler):
     """
 
     def __init__(self, min_n_samples):
+        super().__init__()
         self.min_n_samples = min_n_samples
 
     def sample(self, shape):
