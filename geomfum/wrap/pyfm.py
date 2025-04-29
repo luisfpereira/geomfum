@@ -7,6 +7,7 @@ import pyFM.signatures
 import scipy
 
 from geomfum.descriptor._base import SpectralDescriptor
+from geomfum.descriptor.spectral import hks_default_domain
 from geomfum.laplacian import BaseLaplacianFinder
 from geomfum.operator import FunctionalOperator, VectorFieldOperator
 from geomfum.sample import BaseSampler
@@ -46,7 +47,7 @@ class PyfmHeatKernelSignature(SpectralDescriptor):
     n_domain : int
         Number of time points. Ignored if ``domain`` is not a callable.
     domain : callable or array-like, shape=[n_domain]
-        Method to compute time points (``f(basis, n_domain)``) or
+        Method to compute time points (``f(shape, n_domain)``) or
         time points.
     use_landmarks : bool
         Whether to use landmarks.
@@ -54,30 +55,9 @@ class PyfmHeatKernelSignature(SpectralDescriptor):
 
     def __init__(self, scaled=True, n_domain=3, domain=None, use_landmarks=False):
         super().__init__(
-            n_domain, domain or self.default_domain, use_landmarks=use_landmarks
+            n_domain, domain or hks_default_domain, use_landmarks=use_landmarks
         )
         self.scaled = scaled
-
-    def default_domain(self, shape, n_domain):
-        """Compute default domain.
-
-        Parameters
-        ----------
-        shape : Shape.
-            Shape with basis.
-        n_domain : int
-            Number of time points.
-
-        Returns
-        -------
-        domain : array-like, shape=[n_domain]
-            Time points.
-        """
-        abs_ev = np.sort(np.abs(shape.basis.vals))
-        index = 1 if np.isclose(abs_ev[0], 0.0) else 0
-        return np.geomspace(
-            4 * np.log(10) / abs_ev[-1], 4 * np.log(10) / abs_ev[index], n_domain
-        )
 
     def __call__(self, shape, domain=None):
         """Compute descriptor.

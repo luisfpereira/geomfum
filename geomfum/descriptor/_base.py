@@ -19,9 +19,8 @@ class SpectralDescriptor(Descriptor, abc.ABC):
         Whether to use landmarks.
     """
 
-    # TODO: make general implementation
-
     def __init__(self, n_domain, domain, use_landmarks=False):
+        super().__init__()
         self.n_domain = n_domain
         self.domain = domain
         self.use_landmarks = use_landmarks
