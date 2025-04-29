@@ -245,6 +245,14 @@ class HierarchicalMeshRegistry(WhichRegistry):
     MAP = {}
 
 
+class PoissonSamplerRegistry(WhichRegistry):
+    MAP = {}
+
+
+class FarthestPointSamplerRegistry(WhichRegistry):
+    MAP = {}
+
+
 class MeshPlotterRegistry(WhichRegistry):
     MAP = {}
 

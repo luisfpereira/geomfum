@@ -21,7 +21,8 @@ requires-python = ">= 3.9"
 dependencies = ["numpy", "scipy", "scikit-learn", "meshio"]
 
 [project.optional-dependencies]
-opt = ["pyfmaps", "robust-laplacian", "libigl==2.5.4.dev0"]
+opt = ["pyfmaps", "robust-laplacian", "libigl==2.5.4.dev0", "pymeshlab"]
+sampling = ["pyfmaps", "pymeshlab"]
 rematching = [
     "Rematching@git+https://github.com/filthynobleman/rematching.git@python-binding",
 ]
@@ -36,24 +37,10 @@ test = [
     "ipykernel",
     "geomfum[opt]",
 ]
-
-plotly = [
-    "plotly",
-    "nbformat",
-]
-
-pyvista = [
-    "pyvista",
-    "trame",
-    "vtk",  
-]
-
-polyscope = [
-    "polyscope",
-]
-
-
-
+plotly = ["plotly", "nbformat"]
+pyvista = ["pyvista", "trame", "vtk"]
+polyscope = ["polyscope"]
+plotting-all = ["geomfum[plotly]", "geomfum[pyvista]", "geomfum[polyscope]"]
 
 [project.urls]
 repository = "http://github.com/luisfpereira/geomfum"
