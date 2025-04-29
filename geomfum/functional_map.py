@@ -219,7 +219,7 @@ class OperatorCommutativityEnforcing(WeightedFactor):
         -------
         operators : array-like, shape=[..., spectrum_size, spectrum_size]
         """
-        return basis.pinv @ la.columnwise_scaling(descr, basis.vecs)
+        return basis.pinv @ la.rowwise_scaling(descr, basis.vecs)
 
     @staticmethod
     def compute_orientation_operator(shape, descr, reversing=False, normalize=False):

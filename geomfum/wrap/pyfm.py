@@ -58,13 +58,13 @@ class PyfmHeatKernelSignature(SpectralDescriptor):
         )
         self.scaled = scaled
 
-    def default_domain(self, basis, n_domain):
+    def default_domain(self, shape, n_domain):
         """Compute default domain.
 
         Parameters
         ----------
-        basis : Eigenbasis.
-            Basis.
+        shape : Shape.
+            Shape with basis.
         n_domain : int
             Number of time points.
 
@@ -73,19 +73,19 @@ class PyfmHeatKernelSignature(SpectralDescriptor):
         domain : array-like, shape=[n_domain]
             Time points.
         """
-        abs_ev = np.sort(np.abs(basis.vals))
+        abs_ev = np.sort(np.abs(shape.basis.vals))
         index = 1 if np.isclose(abs_ev[0], 0.0) else 0
         return np.geomspace(
             4 * np.log(10) / abs_ev[-1], 4 * np.log(10) / abs_ev[index], n_domain
         )
 
-    def __call__(self, basis, domain=None):
+    def __call__(self, shape, domain=None):
         """Compute descriptor.
 
         Parameters
         ----------
-        basis : Eigenbasis.
-            Basis.
+        shape : Shape.
+            Shape with basis.
         domain : array-like, shape=[n_domain]
             Time points.
 
@@ -96,21 +96,23 @@ class PyfmHeatKernelSignature(SpectralDescriptor):
         """
         if domain is None:
             domain = (
-                self.domain(basis, self.n_domain)
+                self.domain(shape, self.n_domain)
                 if callable(self.domain)
                 else self.domain
             )
 
         if self.use_landmarks:
             return pyFM.signatures.lm_HKS(
-                basis.vals,
-                basis.vecs,
-                basis.landmark_indices,
+                shape.basis.vals,
+                shape.basis.vecs,
+                shape.landmark_indices,
                 domain,
                 scaled=self.scaled,
             ).T
 
-        return pyFM.signatures.HKS(basis.vals, basis.vecs, domain, scaled=self.scaled).T
+        return pyFM.signatures.HKS(
+            shape.basis.vals, shape.basis.vecs, domain, scaled=self.scaled
+        ).T
 
 
 class PyfmWaveKernelSignature(SpectralDescriptor):
@@ -160,13 +162,13 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
         """
         return 7 * (e_max - e_min) / n_domain
 
-    def default_domain(self, basis, n_domain):
+    def default_domain(self, shape, n_domain):
         """Compute default domain.
 
         Parameters
         ----------
-        basis : Eigenbasis.
-            Basis.
+        shape : Shape.
+            Shape with basis.
         n_domain : int
             Number of energy points to use.
 
@@ -174,7 +176,7 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
         -------
         domain : array-like, shape=[n_domain]
         """
-        abs_ev = np.sort(np.abs(basis.vals))
+        abs_ev = np.sort(np.abs(shape.basis.vals))
         index = 1 if np.isclose(abs_ev[0], 0.0) else 0
 
         e_min, e_max = np.log(abs_ev[index]), np.log(abs_ev[-1])
@@ -192,13 +194,13 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
 
         return energy, sigma
 
-    def __call__(self, basis, domain=None):
+    def __call__(self, shape, domain=None):
         """Compute descriptor.
 
         Parameters
         ----------
-        basis : Eigenbasis.
-            Basis.
+        shape : Shape.
+            Shape with basis.
         domain : array-like, shape=[n_domain]
             Energy points for computation.
 
@@ -210,7 +212,7 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
         sigma = None
         if domain is None:
             if callable(self.domain):
-                domain, sigma = self.domain(basis, self.n_domain)
+                domain, sigma = self.domain(shape, self.n_domain)
             else:
                 domain = self.domain
 
@@ -225,16 +227,16 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
 
         if self.use_landmarks:
             return pyFM.signatures.lm_WKS(
-                basis.vals,
-                basis.vecs,
-                basis.landmark_indices,
+                shape.basis.vals,
+                shape.basis.vecs,
+                shape.landmark_indices,
                 domain,
                 sigma,
                 scaled=self.scaled,
             ).T
 
         return pyFM.signatures.WKS(
-            basis.vals, basis.vecs, domain, sigma, scaled=self.scaled
+            shape.basis.vals, shape.basis.vecs, domain, sigma, scaled=self.scaled
         ).T
 
 
