@@ -11,7 +11,7 @@ from tests.cases.laplacian import (
     LaplacianSpectrumFinderCmpCase,
 )
 
-from .data.mesh import LaplacianFinderCmpData, LaplacianSpectrumFinderCmpData
+from .data.laplacian import LaplacianFinderCmpData, LaplacianSpectrumFinderCmpData
 
 
 @pytest.mark.redundant

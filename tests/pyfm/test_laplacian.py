@@ -4,7 +4,7 @@ from pyFM.mesh import TriMesh
 
 from geomfum.laplacian import LaplacianFinder
 from tests.cases.laplacian import LaplacianFinderCmpCase
-from tests.geomfum.laplacian.data.mesh import LaplacianFinderCmpData
+from tests.geomfum.data.laplacian import LaplacianFinderCmpData
 
 
 def _pyfm_finder(**kwargs):
