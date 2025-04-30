@@ -14,7 +14,6 @@ from tests.cases.laplacian import (
 from .data.mesh import LaplacianFinderCmpData, LaplacianSpectrumFinderCmpData
 
 
-@pytest.mark.skip
 @pytest.mark.redundant
 class TestLaplacianFinderCmp(LaplacianFinderCmpCase, metaclass=DataBasedParametrizer):
     """Laplacian finder comparison.
@@ -24,20 +23,25 @@ class TestLaplacianFinderCmp(LaplacianFinderCmpCase, metaclass=DataBasedParametr
     Redundant with ``TestLaplacianSpectrumFinderCmp``.
     """
 
-    finder_a = LaplacianFinder.from_registry(which="robust")
-    finder_b = LaplacianFinder.from_registry(which="pyfm")
+    finder_a = LaplacianFinder.from_registry(which="pyfm")
+    finder_b = LaplacianFinder.from_registry(which="igl")
 
     testing_data = LaplacianFinderCmpData()
 
 
 @pytest.fixture(
     scope="class",
-    params=[("robust", "pyfm"), ("robust", "igl")],
+    params=[
+        ("pyfm", "igl"),
+        ("pyfm", "robust"),
+        ("igl", "robust"),
+    ],
 )
 def spectrum_finders(request):
     which_a, which_b = request.param
 
     spectrum_size = random.randint(2, 5)
+
     request.cls.finder_a = LaplacianSpectrumFinder(
         spectrum_size=spectrum_size,
         laplacian_finder=LaplacianFinder.from_registry(which=which_a),
