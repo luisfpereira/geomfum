@@ -3,18 +3,19 @@
 import random
 
 import pytest
-from geomstats.test.parametrizers import DataBasedParametrizer
+from polpo.testing import DataBasedParametrizer
 
 from geomfum.laplacian import LaplacianFinder, LaplacianSpectrumFinder
-from tests.cases.laplacian import (
+from tests.cases.cmp import (
     LaplacianFinderCmpCase,
     LaplacianSpectrumFinderCmpCase,
 )
 
-from .data.mesh import LaplacianFinderCmpData, LaplacianSpectrumFinderCmpData
+from .data.laplacian import LaplacianFinderCmpData, LaplacianSpectrumFinderCmpData
 
 
 @pytest.mark.redundant
+@pytest.mark.usefixtures("data_check")
 class TestLaplacianFinderCmp(LaplacianFinderCmpCase, metaclass=DataBasedParametrizer):
     """Laplacian finder comparison.
 
@@ -53,7 +54,7 @@ def spectrum_finders(request):
     )
 
 
-@pytest.mark.usefixtures("spectrum_finders")
+@pytest.mark.usefixtures("data_check", "spectrum_finders")
 class TestLaplacianSpectrumFinderCmp(
     LaplacianSpectrumFinderCmpCase, metaclass=DataBasedParametrizer
 ):

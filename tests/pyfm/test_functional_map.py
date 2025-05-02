@@ -1,5 +1,7 @@
+import random
+
 import pytest
-from geomstats.test.parametrizers import DataBasedParametrizer
+from polpo.testing import DataBasedParametrizer
 from pyFM.optimize.base_functions import (
     LB_commutation,
     LB_commutation_grad,
@@ -15,7 +17,7 @@ from geomfum.functional_map import (
     SpectralDescriptorPreservation,
     WeightedFactor,
 )
-from tests.cases.pyfm import WeightedFactorCmpCase
+from tests.cases.cmp import WeightedFactorCmpCase
 
 from .data.functional_map import WeightedFactorCmpTestData
 
@@ -73,42 +75,50 @@ def factors(request):
     factor_type = request.param
 
     testing_data = request.cls.testing_data
+    shape_pair = testing_data.shape_pair
 
-    shape_a, shape_b = testing_data.shape_a, testing_data.shape_b
+    spectrum_size_a = random.randint(3, 5)
+    spectrum_size_b = random.randint(3, 5)
+
+    shape_pair.set_spectrum_finder(shape_pair.key_a, spectrum_size=spectrum_size_a)
+    shape_pair.set_spectrum_finder(shape_pair.key_b, spectrum_size=spectrum_size_b)
+
+    shape_a, shape_b = shape_pair.get()
+
     descr_a, descr_b = testing_data.generate_random_descriptors()
 
     if factor_type == "spectral_descriptor_preservation":
         sdescr_a = shape_a.basis.project(descr_a)
         sdescr_b = shape_b.basis.project(descr_b)
 
-        factor = SpectralDescriptorPreservation(sdescr_a, sdescr_b)
-        pyfm_factor = PyfmDescrPreservation(sdescr_a.T, sdescr_b.T)
+        factor_a = SpectralDescriptorPreservation(sdescr_a, sdescr_b)
+        factor_b = PyfmDescrPreservation(sdescr_a.T, sdescr_b.T)
 
     elif factor_type == "lb_commutativity":
-        factor = LBCommutativityEnforcing.from_bases(shape_a.basis, shape_b.basis)
-        pyfm_factor = PyfmLBCommutation(factor.vals_sqdiff)
+        factor_a = LBCommutativityEnforcing.from_bases(shape_a.basis, shape_b.basis)
+        factor_b = PyfmLBCommutation(factor_a.vals_sqdiff)
 
     elif factor_type == "operator_commutativity-multiplication":
-        factor = OperatorCommutativityEnforcing.from_multiplication(
+        factor_a = OperatorCommutativityEnforcing.from_multiplication(
             shape_a.basis, descr_a[0], shape_b.basis, descr_b[0]
         )
-        pyfm_factor = PyfmOpCommutation(factor.oper_a, factor.oper_b)
+        factor_b = PyfmOpCommutation(factor_a.oper_a, factor_a.oper_b)
 
     elif factor_type == "operator_commutativity-orientation":
-        factor = OperatorCommutativityEnforcing.from_orientation(
+        factor_a = OperatorCommutativityEnforcing.from_orientation(
             shape_a, descr_a[0], shape_b, descr_b[0]
         )
-        pyfm_factor = PyfmOpCommutation(factor.oper_a, factor.oper_b)
+        factor_b = PyfmOpCommutation(factor_a.oper_a, factor_a.oper_b)
     else:
         raise ValueError(f"Unkown factor type: {factor_type}")
 
-    request.cls.factor = factor
-    request.cls.pyfm_factor = pyfm_factor
+    request.cls.factor_a = factor_a
+    request.cls.factor_b = factor_b
 
     request.cls.spectrum_size_a = shape_a.basis.spectrum_size
     request.cls.spectrum_size_b = shape_b.basis.spectrum_size
 
 
-@pytest.mark.usefixtures("factors")
+@pytest.mark.usefixtures("data_check", "factors")
 class TestWeightedFactorCmp(WeightedFactorCmpCase, metaclass=DataBasedParametrizer):
     testing_data = WeightedFactorCmpTestData()
