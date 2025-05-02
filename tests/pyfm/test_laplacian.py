@@ -1,9 +1,9 @@
 import pytest
-from geomstats.test.parametrizers import DataBasedParametrizer
+from polpo.testing import DataBasedParametrizer
 from pyFM.mesh import TriMesh
 
 from geomfum.laplacian import LaplacianFinder
-from tests.cases.laplacian import LaplacianFinderCmpCase
+from tests.cases.cmp import LaplacianFinderCmpCase
 from tests.geomfum.data.laplacian import LaplacianFinderCmpData
 
 
@@ -31,7 +31,7 @@ def finders(request):
 
 
 @pytest.mark.redundant
-@pytest.mark.usefixtures("finders")
+@pytest.mark.usefixtures("data_check", "finders")
 class TestLaplacianFinderCmp(LaplacianFinderCmpCase, metaclass=DataBasedParametrizer):
     """Laplacian finder comparison.
 
