@@ -60,11 +60,11 @@ class SpectralDescriptorCmpCase(TestCase):
     def shapes(self):
         return self.testing_data.shapes
 
-    def test_descriptor_cmp(self, shape_key, atol, domain=None):
+    def test_descriptor_cmp(self, shape_key, atol):
         shape, other_shape = self.shapes.get(shape_key)
 
-        descr_a = self.descriptor_a(shape, domain=domain)
-        descr_b = self.descriptor_b(other_shape, domain=domain)
+        descr_a = self.descriptor_a(shape)
+        descr_b = self.descriptor_b(other_shape)
 
         self.assertAllClose(descr_a, descr_b, atol=atol)
 

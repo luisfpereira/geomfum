@@ -2,6 +2,8 @@
 
 import abc
 
+import numpy as np
+
 import geomfum.linalg as la
 
 
@@ -27,6 +29,9 @@ class EigenBasis(Basis):
         self.full_vecs = vecs
         self.use_k = use_k
 
+        # NB: assumes sorted
+        self._n_zeros = np.count_nonzero(np.isclose(vals, 0.0))
+
     @property
     def vals(self):
         """Eigenvalues.
@@ -44,10 +49,32 @@ class EigenBasis(Basis):
 
         Returns
         -------
-        vecs : array-like, shape=[dim, full_spectrum_size]
+        vecs : array-like, shape=[dim, spectrum_size]
             Eigenvectors.
         """
         return self.full_vecs[:, : self.use_k]
+
+    @property
+    def nonzero_vals(self):
+        """Nonzero eigenvalues.
+
+        Returns
+        -------
+        vals : array-like, shape=[spectrum_size - n_zeros]
+            Eigenvalues.
+        """
+        return self.vals[self._n_zeros :]
+
+    @property
+    def nonzero_vecs(self):
+        """Eigenvectors corresponding to nonzero eigenvalues.
+
+        Returns
+        -------
+        vecs : array-like, shape=[dim, spectrum_size - n_zeros]
+            Eigenvectors.
+        """
+        return self.vecs[:, self._n_zeros :]
 
     @property
     def spectrum_size(self):

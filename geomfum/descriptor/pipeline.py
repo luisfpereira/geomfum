@@ -5,7 +5,6 @@ import abc
 import numpy as np
 
 import geomfum.linalg as la
-from geomfum.descriptor._base import SpectralDescriptor
 
 from ._base import Descriptor
 

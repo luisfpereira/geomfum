@@ -7,6 +7,7 @@ import pyFM.signatures
 import scipy
 
 from geomfum.descriptor._base import SpectralDescriptor
+from geomfum.descriptor.spectral import WksDefaultDomain, hks_default_domain
 from geomfum.laplacian import BaseLaplacianFinder
 from geomfum.operator import FunctionalOperator, VectorFieldOperator
 from geomfum.sample import BaseSampler
@@ -41,65 +42,38 @@ class PyfmHeatKernelSignature(SpectralDescriptor):
 
     Parameters
     ----------
-    scaled : bool
-        Whether to scale for each time value.
+    scale : bool
+        Whether to scale weights to sum to one.
     n_domain : int
-        Number of time points. Ignored if ``domain`` is not a callable.
+        Number of domain points. Ignored if ``domain`` is not None.
     domain : callable or array-like, shape=[n_domain]
-        Method to compute time points (``f(basis, n_domain)``) or
+        Method to compute time points (``f(shape, n_domain)``) or
         time points.
     use_landmarks : bool
         Whether to use landmarks.
     """
 
-    def __init__(self, scaled=True, n_domain=3, domain=None, use_landmarks=False):
+    def __init__(self, scale=True, n_domain=3, domain=None, use_landmarks=False):
         super().__init__(
-            n_domain, domain or self.default_domain, use_landmarks=use_landmarks
+            domain or (lambda shape: hks_default_domain(shape, n_domain=n_domain)),
+            use_landmarks=use_landmarks,
         )
-        self.scaled = scaled
+        self.scale = scale
 
-    def default_domain(self, shape, n_domain):
-        """Compute default domain.
-
-        Parameters
-        ----------
-        shape : Shape.
-            Shape with basis.
-        n_domain : int
-            Number of time points.
-
-        Returns
-        -------
-        domain : array-like, shape=[n_domain]
-            Time points.
-        """
-        abs_ev = np.sort(np.abs(shape.basis.vals))
-        index = 1 if np.isclose(abs_ev[0], 0.0) else 0
-        return np.geomspace(
-            4 * np.log(10) / abs_ev[-1], 4 * np.log(10) / abs_ev[index], n_domain
-        )
-
-    def __call__(self, shape, domain=None):
+    def __call__(self, shape):
         """Compute descriptor.
 
         Parameters
         ----------
         shape : Shape.
             Shape with basis.
-        domain : array-like, shape=[n_domain]
-            Time points.
 
         Returns
         -------
         descr : array-like, shape=[n_domain, n_vertices]
             Descriptor.
         """
-        if domain is None:
-            domain = (
-                self.domain(shape, self.n_domain)
-                if callable(self.domain)
-                else self.domain
-            )
+        domain = self.domain(shape) if callable(self.domain) else self.domain
 
         if self.use_landmarks:
             return pyFM.signatures.lm_HKS(
@@ -107,11 +81,11 @@ class PyfmHeatKernelSignature(SpectralDescriptor):
                 shape.basis.vecs,
                 shape.landmark_indices,
                 domain,
-                scaled=self.scaled,
+                scaled=self.scale,
             ).T
 
         return pyFM.signatures.HKS(
-            shape.basis.vals, shape.basis.vecs, domain, scaled=self.scaled
+            shape.basis.vals, shape.basis.vecs, domain, scaled=self.scale
         ).T
 
 
@@ -120,110 +94,48 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
 
     Parameters
     ----------
-    scaled : bool
-        Whether to scale for each energy value.
+    scale : bool
+        Whether to scale weights to sum to one.
     sigma : float
-        Standard deviation.
+        Standard deviation. Ignored if ``domain`` is a callable (other
+        than default one).
     n_domain : int
         Number of energy points. Ignored if ``domain`` is not a callable.
     domain : callable or array-like, shape=[n_domain]
-        Method to compute energy points (``f(basis, n_domain)``) or
-        energy points.
+        Method to compute domain points (``f(shape)``) or
+        domain points.
     use_landmarks : bool
         Whether to use landmarks.
     """
 
     def __init__(
-        self, scaled=True, sigma=None, n_domain=3, domain=None, use_landmarks=False
+        self, scale=True, sigma=None, n_domain=3, domain=None, use_landmarks=False
     ):
         super().__init__(
-            n_domain, domain or self.default_domain, use_landmarks=use_landmarks
+            domain or WksDefaultDomain(n_domain=n_domain, sigma=sigma),
+            use_landmarks=use_landmarks,
         )
-
-        self.scaled = scaled
+        self.scale = scale
         self.sigma = sigma
 
-    def default_sigma(self, e_min, e_max, n_domain):
-        """Compute default sigma.
-
-        Parameters
-        ----------
-        e_min : float
-            Minimum energy.
-        e_max : float
-            Maximum energy.
-        n_domain : int
-            Number of energy points.
-
-        Returns
-        -------
-        sigma : float
-            Standard deviation.
-        """
-        return 7 * (e_max - e_min) / n_domain
-
-    def default_domain(self, shape, n_domain):
-        """Compute default domain.
-
-        Parameters
-        ----------
-        shape : Shape.
-            Shape with basis.
-        n_domain : int
-            Number of energy points to use.
-
-        Returns
-        -------
-        domain : array-like, shape=[n_domain]
-        """
-        abs_ev = np.sort(np.abs(shape.basis.vals))
-        index = 1 if np.isclose(abs_ev[0], 0.0) else 0
-
-        e_min, e_max = np.log(abs_ev[index]), np.log(abs_ev[-1])
-
-        sigma = (
-            self.default_sigma(e_min, e_max, n_domain)
-            if self.sigma is None
-            else self.sigma
-        )
-
-        e_min += 2 * sigma
-        e_max -= 2 * sigma
-
-        energy = np.linspace(e_min, e_max, n_domain)
-
-        return energy, sigma
-
-    def __call__(self, shape, domain=None):
+    def __call__(self, shape):
         """Compute descriptor.
 
         Parameters
         ----------
         shape : Shape.
             Shape with basis.
-        domain : array-like, shape=[n_domain]
-            Energy points for computation.
 
         Returns
         -------
         descr : array-like, shape=[{n_domain, n_landmarks*n_domain}, n_vertices]
             Descriptor.
         """
-        sigma = None
-        if domain is None:
-            if callable(self.domain):
-                domain, sigma = self.domain(shape, self.n_domain)
-            else:
-                domain = self.domain
-
-        if sigma is None:
-            # TODO: simplify sigma
-            # TODO: need to verify this
-            sigma = (
-                self.default_sigma(np.amin(domain), np.amax(domain), len(domain))
-                if self.sigma is None
-                else self.sigma
-            )
+        if callable(self.domain):
+            domain, sigma = self.domain(shape)
+        else:
+            domain = self.domain
+            sigma = self.sigma
 
         if self.use_landmarks:
             return pyFM.signatures.lm_WKS(
@@ -232,11 +144,11 @@ class PyfmWaveKernelSignature(SpectralDescriptor):
                 shape.landmark_indices,
                 domain,
                 sigma,
-                scaled=self.scaled,
+                scaled=self.scale,
             ).T
 
         return pyFM.signatures.WKS(
-            shape.basis.vals, shape.basis.vecs, domain, sigma, scaled=self.scaled
+            shape.basis.vals, shape.basis.vecs, domain, sigma, scaled=self.scale
         ).T
 
 
