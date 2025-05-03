@@ -236,6 +236,7 @@ class HeatKernelSignatureRegistry(WhichRegistry):
 
 
 class WaveKernelSignatureRegistry(WhichRegistry):
+    has_internal = True
     MAP = {}
 
 

@@ -100,14 +100,14 @@ def spectral_descriptors(request):
 
     if descr_type == "hks":
         descriptor_a = HeatKernelSignature.from_registry(
-            scaled=True, n_domain=n_domain, use_landmarks=use_landmarks
+            scale=True, n_domain=n_domain, use_landmarks=use_landmarks
         )
         descriptor_b = _pyfm_hks(num_T=n_domain, use_landmarks=use_landmarks)
 
     elif descr_type == "wks":
         sigma = np.random.uniform(low=0.1, high=2.0, size=1)[0]
         descriptor_a = WaveKernelSignature.from_registry(
-            scaled=True, n_domain=n_domain, sigma=sigma, use_landmarks=use_landmarks
+            scale=True, n_domain=n_domain, sigma=sigma, use_landmarks=use_landmarks
         )
         descriptor_b = _pyfm_wks(
             num_T=n_domain, sigma=sigma, use_landmarks=use_landmarks

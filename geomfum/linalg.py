@@ -12,6 +12,10 @@ def normalize(array, axis=-1):
     return array / np.linalg.norm(array, axis=axis, keepdims=True)
 
 
+def scale_to_unit_sum(array, axis=-1):
+    return array / np.sum(array, axis=axis, keepdims=True)
+
+
 def _axiswise_scaling(vec, mat, axis=0):
     """Axis-wise scaling.
 

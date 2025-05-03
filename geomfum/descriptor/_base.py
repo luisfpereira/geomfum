@@ -10,8 +10,6 @@ class SpectralDescriptor(Descriptor, abc.ABC):
 
     Parameters
     ----------
-    n_domain : int
-        Number of domain points. Ignored if ``domain`` is not a callable.
     domain : callable or array-like, shape=[n_domain]
         Method to compute domain points (``f(basis, n_domain)``) or
         domain points.
@@ -19,9 +17,8 @@ class SpectralDescriptor(Descriptor, abc.ABC):
         Whether to use landmarks.
     """
 
-    def __init__(self, n_domain, domain, use_landmarks=False):
+    def __init__(self, domain, use_landmarks=False):
         super().__init__()
-        self.n_domain = n_domain
         self.domain = domain
         self.use_landmarks = use_landmarks
 
