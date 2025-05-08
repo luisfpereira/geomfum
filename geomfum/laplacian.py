@@ -6,6 +6,8 @@ import geomfum.wrap as _wrap  # noqa (for register)
 from geomfum._registry import LaplacianFinderRegistry, MeshWhichRegistryMixins
 from geomfum.basis import LaplaceEigenBasis
 from geomfum.numerics.eig import ScipyEigsh
+import numpy as np
+import scipy.sparse as sparse
 
 
 class BaseLaplacianFinder(abc.ABC):
@@ -29,10 +31,58 @@ class BaseLaplacianFinder(abc.ABC):
         """
 
 
-class LaplacianFinder(MeshWhichRegistryMixins):
+class LaplacianFinder(MeshWhichRegistryMixins, BaseLaplacianFinder):
     """Algorithm to find the Laplacian."""
 
     _Registry = LaplacianFinderRegistry
+
+    def __call__(self, shape):
+        """Apply algorithm.
+
+        Parameters
+        ----------
+        shape : TriangleMesh
+            Mesh.
+
+        Returns
+        -------
+        stiffness_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
+            Stiffness matrix.
+        mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
+            Diagonal lumped mass matrix.
+        """
+        
+        v1 = shape.vertices[shape.faces[:, 0]]  
+        v2 = shape.vertices[shape.faces[:, 1]]
+        v3 = shape.vertices[shape.faces[:, 2]]
+
+        u1 = v3 - v2
+        u2 = v1 - v3
+        u3 = v2 - v1
+
+        L1 = np.linalg.norm(u1, axis=1)
+        L2 = np.linalg.norm(u2, axis=1)
+        L3 = np.linalg.norm(u3, axis=1)
+
+
+        A1 = np.einsum("ij,ij->i", -u2, u3) / (L2 * L3)
+        A2 = np.einsum("ij,ij->i", u1, -u3) / (L1 * L3) 
+        A3 = np.einsum("ij,ij->i", -u1, u2) / (L1 * L2)
+
+        I = np.concatenate([shape.faces[:, 0], shape.faces[:, 1], shape.faces[:, 2]])
+        J = np.concatenate([shape.faces[:, 1], shape.faces[:, 2], shape.faces[:, 0]])
+        S = np.concatenate([A3, A1, A2])
+        S = 0.5 * S / np.sqrt(1 - S**2)
+
+        In = np.concatenate([I, J, I, J])
+        Jn = np.concatenate([J, I, I, J])
+        Sn = np.concatenate([-S, -S, S, S])
+
+        W = sparse.coo_matrix((Sn, (In, Jn)), shape=(shape.n_vertices, shape.n_vertices)).tocsc()
+
+        return (
+            W, sparse.dia_matrix((shape.vertex_areas, 0), shape=(shape.n_vertices, shape.n_vertices))
+        )
 
 
 class LaplacianSpectrumFinder:

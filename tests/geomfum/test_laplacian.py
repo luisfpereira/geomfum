@@ -24,8 +24,9 @@ class TestLaplacianFinderCmp(LaplacianFinderCmpCase, metaclass=DataBasedParametr
     Redundant with ``TestLaplacianSpectrumFinderCmp``.
     """
 
-    finder_a = LaplacianFinder.from_registry(which="pyfm")
-    finder_b = LaplacianFinder.from_registry(which="igl")
+    finder_a = LaplacianFinder()
+    finder_b = LaplacianFinder.from_registry(which="pyfm")
+    finder_c = LaplacianFinder.from_registry(which="igl")
 
     testing_data = LaplacianFinderCmpData()
 
@@ -33,6 +34,9 @@ class TestLaplacianFinderCmp(LaplacianFinderCmpCase, metaclass=DataBasedParametr
 @pytest.fixture(
     scope="class",
     params=[
+        ("default", "pyfm"),
+        ("default", "igl"),
+        ("default", "robust"),
         ("pyfm", "igl"),
         ("pyfm", "robust"),
         ("igl", "robust"),
@@ -42,16 +46,27 @@ def spectrum_finders(request):
     which_a, which_b = request.param
 
     spectrum_size = random.randint(2, 5)
+    if which_a=='default':
+        request.cls.finder_a = LaplacianSpectrumFinder(
+            spectrum_size=spectrum_size,
+            laplacian_finder=LaplacianFinder(),
+        )
+    else:
+        request.cls.finder_a = LaplacianSpectrumFinder(
+            spectrum_size=spectrum_size,
+            laplacian_finder=LaplacianFinder.from_registry(which=which_a),
+        )
 
-    request.cls.finder_a = LaplacianSpectrumFinder(
-        spectrum_size=spectrum_size,
-        laplacian_finder=LaplacianFinder.from_registry(which=which_a),
-    )
-
-    request.cls.finder_b = LaplacianSpectrumFinder(
-        spectrum_size=spectrum_size,
-        laplacian_finder=LaplacianFinder.from_registry(which=which_b),
-    )
+    if which_b == "default":
+        request.cls.finder_b = LaplacianSpectrumFinder(
+            spectrum_size=spectrum_size,
+            laplacian_finder=LaplacianFinder(),
+        )   
+    else:
+        request.cls.finder_b = LaplacianSpectrumFinder(
+            spectrum_size=spectrum_size,
+            laplacian_finder=LaplacianFinder.from_registry(which=which_b),
+        )
 
 
 @pytest.mark.usefixtures("data_check", "spectrum_finders")
