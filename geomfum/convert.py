@@ -4,7 +4,7 @@ import abc
 
 import scipy
 from sklearn.neighbors import NearestNeighbors
-
+import numpy as np
 
 class BaseP2pFromFmConverter(abc.ABC):
     """Pointwise map from functional map."""
@@ -69,6 +69,84 @@ class P2pFromFmConverter(BaseP2pFromFmConverter):
             emb1 = basis_a.full_vecs[:, :k1] @ fmap_matrix.T
             emb2 = basis_b.full_vecs[:, :k2]
 
+        if self.bijective:
+            emb1, emb2 = emb2, emb1
+
+        self.neighbor_finder.fit(emb1)
+        _, p2p_21 = self.neighbor_finder.kneighbors(emb2)
+
+        return p2p_21[:, 0]
+
+class DiscreteOptimizationP2pFromFmConverter(BaseP2pFromFmConverter):
+    """Discrete optimization pointwise map from functional map.
+
+    Parameters
+    ----------
+    neighbor_finder : NeighborFinder
+        Nearest neighbor finder.
+    bijective : bool
+        Whether to use bijective method. Check [VM2023]_.
+
+    References
+    ----------
+    .. [RMWO2021] Jing Ren, Simone Melzi, Peter Wonka, Maks Ovsjanikov.
+        “Discrete Optimization for Shape Matching.” Eurographics Symposium
+        on Geometry Processing 2021, K. Crane and J. Digne (Guest Editors),
+        Volume 40 (2021), Number 5. 
+    """
+
+    def __init__(self, neighbor_finder=None, adjoint=False, bijective=False, energies=['ortho','adjoint','conformal','descriptors']):
+        if neighbor_finder is None:
+            neighbor_finder = NearestNeighbors(
+                n_neighbors=1, leaf_size=40, algorithm="kd_tree", n_jobs=1
+            )
+        if neighbor_finder.n_neighbors > 1:
+            raise ValueError("Expects `n_neighors = 1`.")
+
+        self.neighbor_finder = neighbor_finder
+        self.bijective = bijective
+        self.adjoint = adjoint
+        self.energies = energies
+        
+    def __call__(self, fmap_matrix, basis_a, basis_b, descr_a, descr_b):
+        """Convert functional map.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Functional map matrix.
+
+        Returns
+        -------
+        p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
+            Pointwise map. ``bijective`` controls shape.
+        """
+        k2, k1 = fmap_matrix.shape        
+        #embedding concatenation
+        emb_a = []
+        emb_b = []
+
+        if  'ortho' in self.energies:
+            emb_a.append(basis_a.full_vecs[:, :k1] @ fmap_matrix.T)
+            emb_b.append(basis_b.full_vecs[:, :k2])
+        if 'adjoint' in self.energies:
+            emb_a.append(basis_a.full_vecs[:, :k1])
+            emb_b.append(basis_b.full_vecs[:, :k2] @ fmap_matrix)
+        #if 'bijective' in self.energies:
+        #    emb_a.append(basis_a.full_vecs[:, :k1] @ fmap_matrix)
+        #    emb_b.append(basis_b.full_vecs[:, :k2])
+        if 'conformal' in self.energies:
+            emb_a.append(basis_a.full_vecs[:, :k1] @ (basis_a.full_evals[:, :k1][:, None] * fmap_matrix.T))
+            emb_b.append(basis_b.full_vecs[:, :k2])
+        if 'descriptors' in self.energies:
+            emb_a.append(basis_a.full_vecs[:, :k1] @ basis_a.project(descr_a))
+            emb_b.append(basis_b.full_vecs[:, :k2] @ basis_b.project(descr_b))
+
+        
+        emb1 = np.concatenate(emb_a, axis=1)
+        emb2 = np.concatenate(emb_b, axis=1)
+        
+        
         if self.bijective:
             emb1, emb2 = emb2, emb1
 

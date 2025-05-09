@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import scipy
 
-from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter
+from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, DiscreteOptimizationP2pFromFmConverter
 
 
 class Refiner(abc.ABC):
@@ -343,3 +343,123 @@ class ZoomOut(IterativeRefiner):
             fm_from_p2p_converter=fm_from_p2p_converter,
             iter_refiner=None,
         )
+
+
+
+class DiscreteOptimization(IterativeRefiner):
+    """Discrete optimization refinement of functional map.
+
+
+    Parameters
+    ----------
+    nit : int
+        Number of iterations.
+    step : int or tuple[2, int]
+        How much to increase each basis per iteration.
+    References
+    ----------
+    .. [RMWO2021] Jing Ren, Simone Melzi, Peter Wonka, Maks Ovsjanikov.
+        “Discrete Optimization for Shape Matching.” Eurographics Symposium
+        on Geometry Processing 2021, K. Crane and J. Digne (Guest Editors),
+        Volume 40 (2021), Number 5. 
+    """
+    
+    def __init__(
+        self,
+        nit=10,
+        step=1,
+        energies=['ortho','adjoint','conformal','descriptors']):
+        super().__init__(
+            nit=nit,
+            step=step,
+            p2p_from_fm_converter=DiscreteOptimizationP2pFromFmConverter(energies=energies),
+            fm_from_p2p_converter=FmFromP2pConverter(),
+            iter_refiner=None,
+        )
+
+    def iter(self, fmap_matrix, basis_a, basis_b, descr_a=None, descr_b=None):
+        """Refiner iteration.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Functional map matrix.
+        basis_a : Eigenbasis.
+            Basis.
+        basis_b: Eigenbasis.
+            Basis.
+
+        Returns
+        -------
+        fmap_matrix : array-like, shape=[spectrum_size_b + step_b, spectrum_size_a + step_a]
+            Refined functional map matrix.
+        """
+        k2, k1 = fmap_matrix.shape
+        new_k1, new_k2 = k1 + self._step_a, k2 + self._step_b
+
+        p2p_21 = self.p2p_from_fm_converter(fmap_matrix, basis_a, basis_b, descr_a=descr_a, descr_b=descr_b)
+
+        fmap_matrix = self.fm_from_p2p_converter(
+            p2p_21, basis_a.truncate(new_k1), basis_b.truncate(new_k2)
+        )
+        return self.iter_refiner(fmap_matrix, basis_a, basis_b)
+
+
+    def __call__(self, fmap_matrix, basis_a, basis_b, descr_a=None, descr_b=None):
+        """Apply refiner.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Functional map matrix.
+        basis_a : Eigenbasis.
+            Basis.
+        basis_b: Eigenbasis.
+            Basis.
+        descr_a : array-like, shape=[n_vertices_a, n_descriptors]
+            Descriptors for `basis_a`.
+        descr_b : array-like, shape=[n_vertices_b, n_descriptors]
+            Descriptors for `basis_b`.
+
+        Returns
+        -------
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Refined functional map matrix.
+        """
+        k2, k1 = fmap_matrix.shape
+
+        nit = self.nit
+        if nit is None:
+            nit = min(
+                (k1 - basis_a.full_spectrum_size) // self._step_a,
+                (k2 - basis_b.full_spectrum_size) // self._step_b,
+            )
+        else:
+            msg = []
+            if k1 + nit * self._step_a > basis_a.full_spectrum_size:
+                msg.append("`basis_a`")
+            if k2 + nit * self._step_b > basis_b.full_spectrum_size:
+                msg.append("`basis_b`")
+
+            if msg:
+                raise ValueError(f"Not enough eigenvectors on {', '.join(msg)}.")
+
+        nit = self.nit
+
+        for _ in range(nit):
+            new_fmap_matrix = self.iter(fmap_matrix, basis_a, basis_b, descr_a, descr_b)
+
+            if (
+                self.atol is not None
+                and np.amax(np.abs(new_fmap_matrix - fmap_matrix)) < self.atol
+            ):
+                break
+
+            fmap_matrix = new_fmap_matrix
+
+        else:
+            if self.atol is not None:
+                logging.warning(f"Maximum number of iterations reached: {nit}")
+
+        return new_fmap_matrix
+
