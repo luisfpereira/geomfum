@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import scipy
 
-from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter
+from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, FmFromP2pBijectiveConverter
 
 
 class Refiner(abc.ABC):
@@ -343,3 +343,31 @@ class ZoomOut(IterativeRefiner):
             fm_from_p2p_converter=fm_from_p2p_converter,
             iter_refiner=None,
         )
+
+class AdjointBijectiveZoomOut(ZoomOut):
+    """Adjoint bijective zoomout algorithm.
+
+    Parameters
+    ----------
+    nit : int
+        Number of iterations.
+    step : int or tuple[2, int]
+        How much to increase each basis per iteration.
+    References
+    ----------
+    .. [VM2023] Giulio Viganò, Simone Melzi. Adjoint Bijective ZoomOut: Efficient upsampling for learned linearly-invariant embedding.” 2023
+    https://github.com/gviga/AB-ZoomOut
+    """
+
+    def __init__(
+        self,
+        nit=10,
+        step=1,
+    ):
+        super().__init__(
+            nit=nit,
+            step=step,
+            p2p_from_fm_converter=P2pFromFmConverter(adjoint=True, bijective=True),
+            fm_from_p2p_converter=FmFromP2pBijectiveConverter(),
+        )
+
