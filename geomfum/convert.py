@@ -1,10 +1,11 @@
 """Conversion between pointwise and functional maps."""
 
 import abc
-
 import scipy
 from sklearn.neighbors import NearestNeighbors
-
+from scipy.spatial.distance import cdist
+import numpy as np
+from geomfum._registry import SinkhornNeighbourFinderRegistry
 
 class BaseP2pFromFmConverter(abc.ABC):
     """Pointwise map from functional map."""
@@ -76,8 +77,93 @@ class P2pFromFmConverter(BaseP2pFromFmConverter):
         _, p2p_21 = self.neighbor_finder.kneighbors(emb2)
 
         return p2p_21[:, 0]
+    
+    
+class BaseSinkhornNeighbourFinder(abc.ABC):
+    """Base class for a synkhorn neighbour finder to find neighbours based on the solution of OT maps computed with Sinkhorn regularization.
+    
+    References
+    ----------
+    .. [Cuturi2013] Marco Cuturi. “Sinkhorn Distances: Lightspeed Computation of Optimal Transport.”
+    Advances in Neural Information Processing Systems (NIPS), 2013.
+    http://marcocuturi.net/SI.html
 
+    Parameters
+    ----------
+    n_neighbors : int
+        Number of neighbors.
+    epsilon : float
+        Regularization parameter for Sinkhorn algorithm.
+    max_iter : int
+        Maximum number of iterations for Sinkhorn algorithm.
+    """
+    @abc.abstractmethod
+    def fit(self, X):
+        """Store the reference points.
+        
+        Parameters
+        ----------
+        X : array-like, shape=[n_points_x, n_features]
+            Reference points.
+        """
+        pass
+    @abc.abstractmethod
+    def kneighbors(self, Y):
+        """Find k nearest neighbors using Sinkhorn regularization.
+        
+        Parameters
+        ----------
+        Y : array-like, shape=[n_points_y, n_features]
+            Query points.
+            
+        Returns
+        -------
+        distances : array-like, shape=[n_points_y, n_neighbors]
+            Distances to the nearest neighbors.
+        indices : array-like, shape=[n_points_y, n_neighbors]
+            Indices of the nearest neighbors.
+        """
+        pass
+    
+    
+class SinkhornNeighbourFinder(abc.ABC):
+    
+    _Registry = SinkhornNeighbourFinderRegistry
+    
+    
+class SinkhornP2pFromFmConverter(P2pFromFmConverter):
+    """Pointwise map from functional map using Sinkhorn filters.
 
+    Parameters
+    ----------
+    adjoint : bool
+        Whether to use adjoint method.
+    bijective : bool
+        Whether to use bijective method. Check [VM2023]_.
+    epsilon : float
+        Regularization parameter for Sinkhorn algorithm.
+    max_iter : int
+        Maximum number of iterations for Sinkhorn algorithm.
+    epsilon0 : float
+        Initial regularization parameter for epsilon scaling.
+    tau : float
+        Threshold for numerical stability in log-domain calculations.
+        
+    References
+    ----------
+    .. [PRMWO2021] Gautam Pai, Jing Ren, Simone Melzi, Peter Wonka, and Maks Ovsjanikov.
+        "Fast Sinkhorn Filters: Using Matrix Scaling for Non-Rigid Shape Correspondence
+        with Functional Maps." Proceedings of the IEEE/CVF Conference on Computer Vision
+        and Pattern Recognition (CVPR), 2021, pp. 11956-11965.
+        https://hal.science/hal-03184936/document
+    """
+
+    def __init__(self, sinkhorn_neigbour_finder=None, adjoint=False, bijective=False):
+        
+        neighbor_finder = sinkhorn_neigbour_finder
+        super().__init__(neighbor_finder, adjoint, bijective)
+        
+        
 class BaseFmFromP2pConverter(abc.ABC):
     """Functional map from pointwise map."""
 
