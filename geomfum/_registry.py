@@ -7,6 +7,9 @@ from geomfum._utils import has_package
 
 
 class Registry(abc.ABC):
+    # whether geomfum provides an implementation
+    has_internal = False
+
     @classmethod
     def register(cls, key, obj_name, requires=(), as_default=False):
         """Register.
@@ -92,6 +95,12 @@ class Registry(abc.ABC):
             f"{', '.join([str(elem) for elem in cls.list_available()])}."
         )
 
+    @classmethod
+    def raise_if_no_internal(cls):
+        """Raise error if no internal implementation."""
+        if not cls.has_internal:
+            raise ValueError(cls.only_from_registry())
+
 
 class WhichRegistry(Registry, abc.ABC):
     @classmethod
@@ -169,7 +178,7 @@ class MeshWhichRegistry(Registry, abc.ABC):
 
 class WhichRegistryMixins:
     def __init__(self, *args, **kwargs):
-        raise ValueError(self._Registry.only_from_registry())
+        self._Registry.raise_if_no_internal()
 
         super().__init__(*args, **kwargs)
 
@@ -192,7 +201,7 @@ class WhichRegistryMixins:
 
 class MeshWhichRegistryMixins:
     def __init__(self, *args, **kwargs):
-        raise ValueError(self._Registry.only_from_registry())
+        self._Registry.raise_if_no_internal()
 
         super().__init__(*args, **kwargs)
 
@@ -222,10 +231,12 @@ class LaplacianFinderRegistry(MeshWhichRegistry):
 
 
 class HeatKernelSignatureRegistry(WhichRegistry):
+    has_internal = True
     MAP = {}
 
 
 class WaveKernelSignatureRegistry(WhichRegistry):
+    has_internal = True
     MAP = {}
 
 
@@ -242,6 +253,14 @@ class FaceOrientationOperatorRegistry(WhichRegistry):
 
 
 class HierarchicalMeshRegistry(WhichRegistry):
+    MAP = {}
+
+
+class PoissonSamplerRegistry(WhichRegistry):
+    MAP = {}
+
+
+class FarthestPointSamplerRegistry(WhichRegistry):
     MAP = {}
 
 

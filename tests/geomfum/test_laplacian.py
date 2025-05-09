@@ -3,19 +3,19 @@
 import random
 
 import pytest
-from geomstats.test.parametrizers import DataBasedParametrizer
+from polpo.testing import DataBasedParametrizer
 
 from geomfum.laplacian import LaplacianFinder, LaplacianSpectrumFinder
-from tests.cases.laplacian import (
+from tests.cases.cmp import (
     LaplacianFinderCmpCase,
     LaplacianSpectrumFinderCmpCase,
 )
 
-from .data.mesh import LaplacianFinderCmpData, LaplacianSpectrumFinderCmpData
+from .data.laplacian import LaplacianFinderCmpData, LaplacianSpectrumFinderCmpData
 
 
-@pytest.mark.skip
 @pytest.mark.redundant
+@pytest.mark.usefixtures("data_check")
 class TestLaplacianFinderCmp(LaplacianFinderCmpCase, metaclass=DataBasedParametrizer):
     """Laplacian finder comparison.
 
@@ -24,20 +24,25 @@ class TestLaplacianFinderCmp(LaplacianFinderCmpCase, metaclass=DataBasedParametr
     Redundant with ``TestLaplacianSpectrumFinderCmp``.
     """
 
-    finder_a = LaplacianFinder.from_registry(which="robust")
-    finder_b = LaplacianFinder.from_registry(which="pyfm")
+    finder_a = LaplacianFinder.from_registry(which="pyfm")
+    finder_b = LaplacianFinder.from_registry(which="igl")
 
     testing_data = LaplacianFinderCmpData()
 
 
 @pytest.fixture(
     scope="class",
-    params=[("robust", "pyfm"), ("robust", "igl")],
+    params=[
+        ("pyfm", "igl"),
+        ("pyfm", "robust"),
+        ("igl", "robust"),
+    ],
 )
 def spectrum_finders(request):
     which_a, which_b = request.param
 
     spectrum_size = random.randint(2, 5)
+
     request.cls.finder_a = LaplacianSpectrumFinder(
         spectrum_size=spectrum_size,
         laplacian_finder=LaplacianFinder.from_registry(which=which_a),
@@ -49,7 +54,7 @@ def spectrum_finders(request):
     )
 
 
-@pytest.mark.usefixtures("spectrum_finders")
+@pytest.mark.usefixtures("data_check", "spectrum_finders")
 class TestLaplacianSpectrumFinderCmp(
     LaplacianSpectrumFinderCmpCase, metaclass=DataBasedParametrizer
 ):
