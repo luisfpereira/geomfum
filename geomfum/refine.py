@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import scipy
 
-from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, DiscreteOptimizationP2pFromFmConverter
+from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, DiscreteOptimizationP2pFromFmConverter, SmoothP2pFromFmConverter, DisplacementFromP2pConverter
 
 
 class Refiner(abc.ABC):
@@ -459,6 +459,137 @@ class DiscreteOptimization(IterativeRefiner):
                 break
 
             fmap_matrix = new_fmap_matrix
+
+        else:
+            if self.atol is not None:
+                logging.warning(f"Maximum number of iterations reached: {nit}")
+
+        return new_fmap_matrix
+
+
+
+
+
+class SmoothOptimization(IterativeRefiner):
+    """SMooth Functional maps optimization and refinement.
+
+
+    Parameters
+    ----------
+    nit : int
+        Number of iterations.
+    step : int or tuple[2, int]
+        How much to increase each basis per iteration.
+    References
+    ----------
+    .. [MRSO2022] R. Magnet, J. Ren, O. Sorkine-Hornung, and M. Ovsjanikov.
+        "Smooth NonRigid Shape Matching via Effective Dirichlet Energy Optimization."
+        In 2022 International Conference on 3D Vision (3DV).
+    """
+    
+    def __init__(
+        self,
+        nit=10,
+        step=1):
+        super().__init__(
+            nit=nit,
+            step=step,
+            p2p_from_fm_converter=SmoothP2pFromFmConverter(),
+            fm_from_p2p_converter=FmFromP2pConverter(),
+            iter_refiner=None,
+        )
+        
+        self.displ_from_p2p_converter=DisplacementFromP2pConverter()
+
+
+    def iter(self, fmap_matrix, displ, mesh_a, mesh_b):
+        """Refiner iteration.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Functional map matrix.
+        displ : array-like, shape=[n_vertices_a, 3]
+            Displacement matrix.
+        mesh_a : Mesh
+            Mesh.
+        mesh_b : Mesh  
+        Returns
+        -------
+        fmap_matrix : array-like, shape=[spectrum_size_b + step_b, spectrum_size_a + step_a]
+            Refined functional map matrix.
+        """
+        basis_a = mesh_a.basis
+        basis_b = mesh_b.basis
+        
+        k2, k1 = fmap_matrix.shape
+        new_k1, new_k2 = k1 + self._step_a, k2 + self._step_b
+
+        basis_a.use_k, basis_b.use_k = k1, k2
+        p2p_21 = self.p2p_from_fm_converter(fmap_matrix,displ, mesh_a,mesh_b)
+
+        fmap_matrix = self.fm_from_p2p_converter(
+            p2p_21, basis_a.truncate(new_k1), basis_b.truncate(new_k2)
+        )
+        displ = self.displ_from_p2p_converter(
+            p2p_21, mesh_a,mesh_b
+        )
+        basis_a.use_k, basis_b.use_k = new_k1, new_k2
+
+        return self.iter_refiner(fmap_matrix, basis_a, basis_b), displ
+
+
+    def __call__(self, fmap_matrix, displ, mesh_a,mesh_b):
+        """Apply refiner.
+
+        Parameters
+        ----------
+        p2p : array-like, shape=[n_vertices_a,]
+            Permutation map.
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Functional map matrix.
+        displ : array-like, shape=[n_vertices_a, 3]
+            Displacement matrix.
+        mesh_a : Mesh
+            Mesh.
+        mesh_b : Mesh  
+            Mesh.
+        Returns
+        -------
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Refined functional map matrix.
+        """
+        k2, k1 = fmap_matrix.shape
+
+        nit = self.nit
+        if nit is None:
+            nit = min(
+                (k1 - mesh_a.basis.full_spectrum_size) // self._step_a,
+                (k2 - mesh_b.basis.full_spectrum_size) // self._step_b,
+            )
+        else:
+            msg = []
+            if k1 + nit * self._step_a > mesh_a.basis.full_spectrum_size:
+                msg.append("`basis_a`")
+            if k2 + nit * self._step_b > mesh_a.basis.full_spectrum_size:
+                msg.append("`basis_b`")
+
+            if msg:
+                raise ValueError(f"Not enough eigenvectors on {', '.join(msg)}.")
+
+        nit = self.nit
+        
+        #first a pass of the refinement        
+        for _ in range(nit):
+            new_fmap_matrix, new_displ = self.iter(fmap_matrix,displ, mesh_a, mesh_b)
+
+            if (
+                self.atol is not None
+                and np.amax(np.abs(new_fmap_matrix - fmap_matrix)) < self.atol
+            ):
+                break
+
+            fmap_matrix, displ = new_fmap_matrix, new_displ
 
         else:
             if self.atol is not None:

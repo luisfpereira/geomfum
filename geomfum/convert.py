@@ -152,6 +152,80 @@ class DiscreteOptimizationP2pFromFmConverter(BaseP2pFromFmConverter):
 
         return p2p_21[:, 0]
 
+class SmoothP2pFromFmConverter(BaseP2pFromFmConverter):
+    """Smooth pointwise map from functional map.
+
+    Parameters
+    ----------
+    neighbor_finder : NeighborFinder
+        Nearest neighbor finder.
+    bijective : bool
+        Whether to use bijective method. Check [VM2023]_.
+
+    References
+    ----------
+    .. [MRSO2022] R. Magnet, J. Ren, O. Sorkine-Hornung, and M. Ovsjanikov.
+        "Smooth NonRigid Shape Matching via Effective Dirichlet Energy Optimization."
+        In 2022 International Conference on 3D Vision (3DV).
+    """
+
+    def __init__(self, neighbor_finder=None, adjoint=False, bijective=False):
+        if neighbor_finder is None:
+            neighbor_finder = NearestNeighbors(
+                n_neighbors=1, leaf_size=40, algorithm="kd_tree", n_jobs=1
+            )
+        if neighbor_finder.n_neighbors > 1:
+            raise ValueError("Expects `n_neighors = 1`.")
+
+        self.neighbor_finder = neighbor_finder
+        self.adjoint = adjoint
+        self.bijective = bijective
+        
+    def __call__(self, fmap_matrix,displ, mesh_a,mesh_b):
+        """Convert functional map.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Functional map matrix.
+
+        Returns
+        -------
+        p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
+            Pointwise map. ``bijective`` controls shape.
+        """
+        vert_a = mesh_a.vertices
+        vert_b = mesh_b.vertices
+        basis_a = mesh_a.basis
+        basis_b = mesh_b.basis
+        
+        k2, k1 = fmap_matrix.shape 
+        #embedding concatenation
+        emb_a = []
+        emb_b = []
+
+        if  self.adjoint:
+            emb_a.append(basis_a.full_vecs[:, :k1])
+            emb_b.append(basis_b.full_vecs[:, :k2] @ fmap_matrix)
+        else:
+            emb_a.append(basis_a.full_vecs[:, :k1] @ fmap_matrix.T)
+            emb_b.append(basis_b.full_vecs[:, :k2])
+
+        emb_a.append(vert_a)
+        emb_b.append(vert_b+displ)
+        #TODO: add bijective zoomout
+        
+        emb1 = np.concatenate(emb_a, axis=1)
+        emb2 = np.concatenate(emb_b, axis=1)
+        
+        
+        if self.bijective:
+            emb1, emb2 = emb2, emb1
+
+        self.neighbor_finder.fit(emb1)
+        _, p2p_21 = self.neighbor_finder.kneighbors(emb2)
+
+        return p2p_21[:, 0]
 
 class BaseFmFromP2pConverter(abc.ABC):
     """Functional map from pointwise map."""
@@ -216,3 +290,80 @@ class FmFromP2pBijectiveConverter(BaseFmFromP2pConverter):
         """
         evects2_pb = basis_b.vecs[p2p, :]
         return scipy.linalg.lstsq(evects2_pb, basis_a.vecs)[0]
+
+
+
+class BaseDisplacementFromP2pConverter(abc.ABC):
+    """Base class to obtain a displacement from a permutations map."""
+    
+
+class DisplacementFromP2pConverter(BaseDisplacementFromP2pConverter):
+    """Displacement from pointwise map.
+
+    Parameters
+    ----------
+    neighbor_finder : NeighborFinder
+        Nearest neighbor finder.
+    """
+    def __init__(self):
+        pass
+        
+    def __call__(self, p2p, mesh_a, mesh_b):
+        """Convert pointwise map to displacement.    
+    
+        Parameters
+        ----------
+        p2p : array-like, shape=[n_vertices_a]
+            Pointwise map.
+
+        Returns
+        -------
+        disp : array-like, shape=[n_vertices_a, 3]
+            Functional map matrix.
+        """
+        
+        return  mesh_a.vertices[p2p]-mesh_b.vertices
+
+class DirichletDisplacementFromP2pConverter(BaseDisplacementFromP2pConverter):
+    """Displacement from pointwise map.
+
+    Parameters
+    ----------
+    neighbor_finder : NeighborFinder
+        Nearest neighbor finder.
+        
+    References
+    ----------
+    .. [MRSO2022] R. Magnet, J. Ren, O. Sorkine-Hornung, and M. Ovsjanikov.
+        "Smooth NonRigid Shape Matching via Effective Dirichlet Energy Optimization."
+        In 2022 International Conference on 3D Vision (3DV).
+    """
+    
+    def __init__(self, weight=1.0):
+        self.weight = weight
+    def __call__(self, p2p, mesh_a, mesh_b, stiffness_matrix_b, mass_matrix_b):
+        """Convert pointwise map to displacement.    
+    
+        Parameters
+        ----------
+        p2p : array-like, shape=[n_vertices_a]
+            Pointwise map.
+        mesh_a : Mesh
+            Mesh A.
+        mesh_b : Mesh
+            Mesh B.
+        stiffness_matrix_a : array-like, shape=[n_vertices_a, n_vertices_a]
+            Stiffness matrix of mesh A.
+        mass_matrix_a : array-like, shape=[n_vertices_a, n_vertices_a]
+            Mass matrix of mesh A.
+
+        Returns
+        -------
+        disp : array-like, shape=[n_vertices_a, 3]
+            Functional map matrix.
+        """
+        
+        target = scipy.sparse.linalg.spsolve(stiffness_matrix_b + self.weight *mass_matrix_b, mass_matrix_b @ mesh_a.vertices[p2p])
+        
+        return target - mesh_b.vertices
+
