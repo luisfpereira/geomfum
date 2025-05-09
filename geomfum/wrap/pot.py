@@ -3,11 +3,11 @@
 
 import abc
 import ot
-from geomfum.convert import SinkhornNeighbourFinder
+from geomfum.convert import SinkhornNeighborFinder
 from numpy import np
 
 
-class POTSinkhornNeighbourFinder(SinkhornNeighbourFinder):
+class POTSinkhornNeighborFinder(SinkhornNeighborFinder):
     """This function implements a nieghbour finder based on the solution of OT maps computed with Sinkhorn regularization.
     
     References

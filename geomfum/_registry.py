@@ -267,7 +267,7 @@ class FarthestPointSamplerRegistry(WhichRegistry):
 class MeshPlotterRegistry(WhichRegistry):
     MAP = {}
 
-class SinkhornNeighbourFinderRegistry(WhichRegistry):
+class SinkhornNeighborFinderRegistry(WhichRegistry):
     MAP = {}
 
 def _create_register_funcs(module):
