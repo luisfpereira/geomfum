@@ -397,11 +397,14 @@ class DiscreteOptimization(IterativeRefiner):
         k2, k1 = fmap_matrix.shape
         new_k1, new_k2 = k1 + self._step_a, k2 + self._step_b
 
+        basis_a.use_k, basis_b.use_k = k1, k2
         p2p_21 = self.p2p_from_fm_converter(fmap_matrix, basis_a, basis_b, descr_a=descr_a, descr_b=descr_b)
 
         fmap_matrix = self.fm_from_p2p_converter(
             p2p_21, basis_a.truncate(new_k1), basis_b.truncate(new_k2)
         )
+        basis_a.use_k, basis_b.use_k = new_k1, new_k2
+
         return self.iter_refiner(fmap_matrix, basis_a, basis_b)
 
 

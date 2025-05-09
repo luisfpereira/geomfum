@@ -105,7 +105,6 @@ class DiscreteOptimizationP2pFromFmConverter(BaseP2pFromFmConverter):
 
         self.neighbor_finder = neighbor_finder
         self.bijective = bijective
-        self.adjoint = adjoint
         self.energies = energies
         
     def __call__(self, fmap_matrix, basis_a, basis_b, descr_a, descr_b):
@@ -132,16 +131,14 @@ class DiscreteOptimizationP2pFromFmConverter(BaseP2pFromFmConverter):
         if 'adjoint' in self.energies:
             emb_a.append(basis_a.full_vecs[:, :k1])
             emb_b.append(basis_b.full_vecs[:, :k2] @ fmap_matrix)
-        #if 'bijective' in self.energies:
-        #    emb_a.append(basis_a.full_vecs[:, :k1] @ fmap_matrix)
-        #    emb_b.append(basis_b.full_vecs[:, :k2])
         if 'conformal' in self.energies:
-            emb_a.append(basis_a.full_vecs[:, :k1] @ (basis_a.full_evals[:, :k1][:, None] * fmap_matrix.T))
+            emb_a.append(basis_a.full_vecs[:, :k1] @ (basis_a.full_vals[:k1][:, None] * fmap_matrix.T))
             emb_b.append(basis_b.full_vecs[:, :k2])
         if 'descriptors' in self.energies:
-            emb_a.append(basis_a.full_vecs[:, :k1] @ basis_a.project(descr_a))
-            emb_b.append(basis_b.full_vecs[:, :k2] @ basis_b.project(descr_b))
+            emb_a.append(basis_a.full_vecs[:, :k1] @ basis_a.project(descr_a).T)
+            emb_b.append(basis_b.full_vecs[:, :k2] @ basis_b.project(descr_b).T)
 
+        #TODO: add bijective zoomout
         
         emb1 = np.concatenate(emb_a, axis=1)
         emb2 = np.concatenate(emb_b, axis=1)
