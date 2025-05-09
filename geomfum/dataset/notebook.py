@@ -24,13 +24,10 @@ class NotebooksDataset:
         self.data_dir = data_dir
 
         pyfm_data_url = "https://raw.githubusercontent.com/RobinMagnet/pyFM/refs/heads/master/examples/data/"
-        geomfum_data_url = "https://raw.githubusercontent.com/luisfpereira/geomfum/refs/heads/master/data/"
         
         self.files = {
             "cat-00": DownloadableFile("cat-00.off", f"{pyfm_data_url}/cat-00.off"),
             "lion-00": DownloadableFile("lion-00.off", f"{pyfm_data_url}/lion-00.off"),
-            "tr_reg_000": DownloadableFile("tr_reg_000.off", f"{geomfum_data_url}/tr_reg_000.off"),
-            "tr_reg_001": DownloadableFile("tr_reg_001.off", f"{geomfum_data_url}/tr_reg_001.off"),
         }
 
         os.makedirs(data_dir, exist_ok=True)
