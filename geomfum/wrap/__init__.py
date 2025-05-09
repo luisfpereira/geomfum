@@ -78,6 +78,6 @@ register_mesh_plotter(
     "polyscope", "PsMeshPlotter", requires="polyscope", as_default=False
 )
 
-register_sinkhorn_Neighbor_finder(
+register_sinkhorn_neighbor_finder(
     "pot", "POTSinkhornNeighborFinder", requires="pot", as_default=False
 )
