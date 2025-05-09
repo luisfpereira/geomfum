@@ -267,6 +267,8 @@ class FarthestPointSamplerRegistry(WhichRegistry):
 class MeshPlotterRegistry(WhichRegistry):
     MAP = {}
 
+class SinkhornNeighborFinderRegistry(WhichRegistry):
+    MAP = {}
 
 def _create_register_funcs(module):
     """Create ``register`` functions for each class registry in this module.
@@ -296,3 +298,4 @@ def _create_register_funcs(module):
 
 
 _create_register_funcs(sys.modules[__name__])
+
