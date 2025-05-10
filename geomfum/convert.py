@@ -216,7 +216,7 @@ class DiscreteOptimizationP2pFromFmConverter(BaseP2pFromFmConverter):
             emb2.append(basis_b.full_vecs[:, :k2])
         
         emb1 = np.concatenate(emb1, axis=1)
-        emb2 = np.concatenate(emb1, axis=1)
+        emb2 = np.concatenate(emb2, axis=1)
         
     
         self.neighbor_finder.fit(emb1)

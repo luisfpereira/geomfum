@@ -873,12 +873,10 @@ class FastSinkhornFilters(ZoomOut):
         self,
         nit=10,
         step=1,
-        sinkhorn_neigbour_finder=None,
-        bijective=False,
-    ):
+        ):
         super().__init__(
             nit=nit,
             step=step,
-            p2p_from_fm_converter=SinkhornP2pFromFmConverter(adjoint=True),
+            p2p_from_fm_converter=SinkhornP2pFromFmConverter(adjoint=False),
             fm_from_p2p_converter=FmFromP2pConverter(),
         )
