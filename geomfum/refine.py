@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import scipy
 
-from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, DiscreteOptimizationP2pFromFmConverter, SmoothP2pFromFmConverter, DisplacementFromP2pConverter, BijectiveP2pFromFmConverter, DirichletDisplacementFromP2pConverter
+from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, BijectiveP2pFromFmConverter, FmFromP2pBijectiveConverter, DiscreteOptimizationP2pFromFmConverter, SmoothP2pFromFmConverter, DirichletDisplacementFromP2pConverter, SinkhornP2pFromFmConverter 
 
 
 class Refiner(abc.ABC):
@@ -817,3 +817,68 @@ class SmoothOptimization(BijectiveIterativeRefiner):
 
         return new_fmap_matrix12, new_fmap_matrix21, new_displ21, new_displ12
 
+
+class AdjointBijectiveZoomOut(ZoomOut):
+    """Adjoint bijective zoomout algorithm.
+
+    Parameters
+    ----------
+    nit : int
+        Number of iterations.
+    step : int or tuple[2, int]
+        How much to increase each basis per iteration.
+    References
+    ----------
+    .. [VM2023] Giulio Viganò, Simone Melzi. Adjoint Bijective ZoomOut: Efficient upsampling for learned linearly-invariant embedding.” 2023
+    https://github.com/gviga/AB-ZoomOut
+    """
+
+    def __init__(
+        self,
+        nit=10,
+        step=1,
+    ):
+        super().__init__(
+            nit=nit,
+            step=step,
+            p2p_from_fm_converter=P2pFromFmConverter(adjoint=True, bijective=True),
+            fm_from_p2p_converter=FmFromP2pBijectiveConverter(),
+        )
+
+
+
+class FastSinkhornFilters(ZoomOut):
+    """Fast Sinkhorn filters.
+
+    Parameters
+    ----------
+    nit : int
+        Number of iterations.
+    step : int or tuple[2, int]
+        How much to increase each basis per iteration.
+    sinkhorn_neigbour_finder : SinkhornKNeighborsFinder
+        Nearest neighbor finder.
+    bijective : bool
+        Whether to use bijective functional map.
+    References
+    ----------
+    .. [PRMWO2021] Gautam Pai, Jing Ren, Simone Melzi, Peter Wonka, and Maks Ovsjanikov.
+        "Fast Sinkhorn Filters: Using Matrix Scaling for Non-Rigid Shape Correspondence
+        with Functional Maps." Proceedings of the IEEE/CVF Conference on Computer Vision
+        and Pattern Recognition (CVPR), 2021, pp. 11956-11965.
+        https://hal.science/hal-03184936/document
+    """
+
+    def __init__(
+        self,
+        nit=10,
+        step=1,
+        sinkhorn_neigbour_finder=None,
+        bijective=False,
+    ):
+        super().__init__(
+            nit=nit,
+            step=step,
+            p2p_from_fm_converter=SinkhornP2pFromFmConverter(adjoint=True),
+            fm_from_p2p_converter=FmFromP2pConverter(),
+        )
