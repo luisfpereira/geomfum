@@ -158,9 +158,9 @@ class SinkhornP2pFromFmConverter(P2pFromFmConverter):
         https://hal.science/hal-03184936/document
     """
 
-    def __init__(self, sinkhorn_neigbour_finder=None, adjoint=False, bijective=False):
+    def __init__(self, sinkhorn_neigbor_finder=None, adjoint=False, bijective=False):
         
-        neighbor_finder = sinkhorn_neigbour_finder
+        neighbor_finder = sinkhorn_neigbor_finder
         super().__init__(neighbor_finder, adjoint, bijective)
         
         
