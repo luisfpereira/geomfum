@@ -4,7 +4,7 @@ import abc
 import scipy
 from sklearn.neighbors import NearestNeighbors
 from geomfum._registry import SinkhornNeighborFinderRegistry, WhichRegistryMixins
-
+import numpy as np
 
 class BaseP2pFromFmConverter(abc.ABC):
     """Pointwise map from functional map."""
@@ -128,7 +128,48 @@ class BaseSinkhornNeighborFinder(abc.ABC):
 class SinkhornNeighborFinder(WhichRegistryMixins):
     """Sinkhorn neighbor finder to find Neighbors based on the solution of OT maps computed with Sinkhorn regularization."""
     _Registry = SinkhornNeighborFinderRegistry
-    
+    def __init__(self, n_neighbors=1, lambd=1e-1, tau=1e-9, max_iter=100):
+        self.n_neighbors = n_neighbors
+        self.lambd = lambd
+        self.max_iter = max_iter
+        self.tau = tau
+        self.X = None
+
+    def fit(self, X):
+        self.X = X
+        return self
+
+    def kneighbors(self, Y):
+        M = np.linalg.norm(Y[:, None, :] - self.X[None, :, :], axis=2)
+        n, m = M.shape
+
+        a = np.ones(n) / n
+        b = np.ones(m) / m
+
+        Gs = self._sinkhorn_numpy(a, b, M, lambd=self.lambd, max_iter=self.max_iter, tau=self.tau)
+
+        indices = np.argsort(Gs, axis=1)[:, :self.n_neighbors]
+        distances = np.array([M[i, indices[i]] for i in range(Y.shape[0])])
+
+        return distances, indices
+
+    def _sinkhorn_numpy(self,a, b, M, lambd=1e-2, max_iter=100, tau=1e-9):
+        K = np.exp(-M / lambd)
+        u = np.ones_like(a)
+        v = np.ones_like(b)
+
+        for _ in range(max_iter):
+            K_v = K @ v
+            K_v[K_v < tau] = tau  # Avoid division by zero
+            u = a / K_v
+
+            K_T_u = K.T @ u
+            K_T_u[K_T_u < tau] = tau
+            v = b / K_T_u
+
+        P = u[:, None] * K * v[None, :]
+        return P
+        
     
 class SinkhornP2pFromFmConverter(P2pFromFmConverter):
     """Pointwise map from functional map using Sinkhorn filters.
