@@ -51,13 +51,13 @@ class P2pFromFmConverter(BaseP2pFromFmConverter):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+        fmap_matrix_12 : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
 
         Returns
         -------
-        p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
-            Pointwise map. ``bijective`` controls shape.
+        p2p_21 : array-like, shape=[n_vertices_b]
+            Pointwise map from mesh A to mesh B.
         """
         k2, k1 = fmap_matrix_12.shape
 
@@ -107,37 +107,44 @@ class BijectiveP2pFromFmConverter(BaseP2pFromFmConverter):
         self.neighbor_finder = neighbor_finder
         self.adjoint = adjoint
 
-    def __call__(self, fmap_matrix_ab, fmap_matrix_ba, basis_a, basis_b):
+    def __call__(self, fmap_matrix_12, fmap_matrix_21, basis_a, basis_b):
         """Convert functional map.
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+        fmap_matrix_12 : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
-
+        fmap_matrix_21 : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
+        basis_a : Basis
+            Basis of mesh A.
+        basis_b : Basis
+            Basis of mesh B.
         Returns
         -------
-        p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
-            Pointwise map. ``bijective`` controls shape.
+        p2p_21 : array-like, shape=[n_vertices_b]
+            Pointwise map from mesh A to mesh B.
+        p2p_12 : array-like, shape=[n_vertices_a]
+            Pointwise map from mesh B to mesh A.
         """
-        k2, k1 = fmap_matrix_ab.shape
+        k2, k1 = fmap_matrix_12.shape
         
         emb1=[]
         emb2=[]
 
         if self.adjoint:
             emb1.append( basis_a.full_vecs[:, :k1] )
-            emb2.append( basis_b.full_vecs[:, :k2] @ fmap_matrix_ab )
+            emb2.append( basis_b.full_vecs[:, :k2] @ fmap_matrix_12 )
             
-            emb1.append( basis_a.full_vecs[:, :k1] @ fmap_matrix_ba )
+            emb1.append( basis_a.full_vecs[:, :k1] @ fmap_matrix_21 )
             emb2.append( basis_b.full_vecs[:, :k2] )
 
         else:
-            emb1.append( basis_a.full_vecs[:, :k1] @ fmap_matrix_ba.T )
+            emb1.append( basis_a.full_vecs[:, :k1] @ fmap_matrix_21.T )
             emb2.append( basis_b.full_vecs[:, :k2] )
             
             emb1.append( basis_a.full_vecs[:, :k1] )
-            emb2.append( basis_b.full_vecs[:, :k2] @ fmap_matrix_ab.T )
+            emb2.append( basis_b.full_vecs[:, :k2] @ fmap_matrix_12.T )
         
         emb1= np.concatenate(emb1, axis=1)
         emb2= np.concatenate(emb2, axis=1)
@@ -161,7 +168,7 @@ class DiscreteOptimizationP2pFromFmConverter(BaseP2pFromFmConverter):
     neighbor_finder : NeighborFinder
         Nearest neighbor finder.
     energies : list of str
-        Energies to use. Options are 'ortho', 'adjoint', 'conformal', and 'descriptors'.
+        Energies to use. Options are 'ortho', 'adjoint', 'bijective', 'conformal', and 'descriptors'.
         
     References
     ----------
@@ -187,13 +194,25 @@ class DiscreteOptimizationP2pFromFmConverter(BaseP2pFromFmConverter):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+        fmap_matrix_12 : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
+        fmap_matrix_21 : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
+        basis_a : Basis
+            Basis of mesh A.
+        basis_b : Basis
+            Basis of mesh B.
+        descr_a : array-like, shape=[n_features, n_vertices_a]
+            Descriptors of mesh A.
+        descr_b : array-like, shape=[n_features, n_vertices_b, ]
+            Descriptors of mesh B.
 
         Returns
         -------
-        p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
-            Pointwise map. ``bijective`` controls shape.
+        p2p_21 : array-like, shape=[n_vertices_b]
+            Pointwise map from mesh A to mesh B.
+        p2p_12 : array-like, shape=[n_vertices_a]
+            Pointwise map from mesh B to mesh A.
         """
         k2, k1 = fmap_matrix_12.shape        
 
@@ -231,6 +250,8 @@ class DiscreteOptimizationP2pFromFmConverter(BaseP2pFromFmConverter):
         
         return p2p_21[:, 0], p2p_12[:, 0]
 
+
+
 class SmoothP2pFromFmConverter(BaseP2pFromFmConverter):
     """Smooth pointwise map from functional map.
 
@@ -238,6 +259,8 @@ class SmoothP2pFromFmConverter(BaseP2pFromFmConverter):
     ----------
     neighbor_finder : NeighborFinder
         Nearest neighbor finder.
+    adjoint : bool
+        Whether to use adjoint method.
 
     References
     ----------
@@ -261,13 +284,25 @@ class SmoothP2pFromFmConverter(BaseP2pFromFmConverter):
 
         Parameters
         ----------
-        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+        fmap_matrix_12 : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
+        fmap_matrix_21 : array-like, shape=[spectrum_size_a, spectrum_size_b]
+            Functional map matrix.
+        displ21 : array-like, shape=[n_vertices_b, 3]
+            Displacement from mesh B to mesh A.
+        displ12 : array-like, shape=[n_vertices_a, 3]
+            Displacement from mesh A to mesh B.
+        mesh_a : Mesh
+            Mesh A. 
+        mesh_b : Mesh
+            Mesh B.
 
         Returns
         -------
-        p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
-            Pointwise map. ``bijective`` controls shape.
+        p2p_21 : array-like, shape=[n_vertices_b]
+            Pointwise map from mesh A to mesh B.
+        p2p_12 : array-like, shape=[n_vertices_a]
+            Pointwise map from mesh B to mesh A.
         """
         vert_a = mesh_a.vertices
         vert_b = mesh_b.vertices
@@ -332,6 +367,7 @@ class BaseSinkhornNeighborFinder(abc.ABC):
     max_iter : int
         Maximum number of iterations for Sinkhorn algorithm.
     """
+    
     @abc.abstractmethod
     def fit(self, X):
         """Store the reference points.
@@ -362,7 +398,8 @@ class BaseSinkhornNeighborFinder(abc.ABC):
     
 
 class SinkhornNeighborFinder(WhichRegistryMixins):
-
+    """Implementation of Sinkhorn Neighbor FInder"""
+    
     _Registry = SinkhornNeighborFinderRegistry
     
 class SinkhornP2pFromFmConverter(P2pFromFmConverter):
@@ -370,19 +407,12 @@ class SinkhornP2pFromFmConverter(P2pFromFmConverter):
 
     Parameters
     ----------
+    sinkhorn_neigbor_finder : SinkhornNeighborFinder
+        Sinkhorn neighbor finder.
     adjoint : bool
         Whether to use adjoint method.
     bijective : bool
         Whether to use bijective method. Check [VM2023]_.
-    epsilon : float
-        Regularization parameter for Sinkhorn algorithm.
-    max_iter : int
-        Maximum number of iterations for Sinkhorn algorithm.
-    epsilon0 : float
-        Initial regularization parameter for epsilon scaling.
-    tau : float
-        Threshold for numerical stability in log-domain calculations.
-        
     References
     ----------
     .. [PRMWO2021] Gautam Pai, Jing Ren, Simone Melzi, Peter Wonka, and Maks Ovsjanikov.
@@ -510,8 +540,8 @@ class DirichletDisplacementFromP2pConverter(BaseDisplacementFromP2pConverter):
         In 2022 International Conference on 3D Vision (3DV).
     """
     
-    def __init__(self, weight=1e3):
-        self.weight = weight
+    def __init__(self, w_coupling=1e3):
+        self.w_coupling = w_coupling
     def __call__(self, p2p, mesh_a, mesh_b, stiffness_matrix_b, mass_matrix_b):
         """Convert pointwise map to displacement.    
     
@@ -534,6 +564,6 @@ class DirichletDisplacementFromP2pConverter(BaseDisplacementFromP2pConverter):
             Functional map matrix.
         """
         
-        target = scipy.sparse.linalg.spsolve(stiffness_matrix_b + self.weight *mass_matrix_b, mass_matrix_b @ mesh_a.vertices[p2p])
+        target = scipy.sparse.linalg.spsolve(stiffness_matrix_b + self.w_coupling *mass_matrix_b, mass_matrix_b @ mesh_a.vertices[p2p])
         
         return target - mesh_b.vertices

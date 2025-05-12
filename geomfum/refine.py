@@ -373,7 +373,7 @@ class BijectiveIterativeRefiner(Refiner):
         fmap_matrix21 = self.fm_from_p2p_converter(
             p2p_12, basis_b.truncate(new_k2), basis_a.truncate(new_k1)
         )
-        return self.iter_refiner(fmap_matrix21, basis_a, basis_b), self.iter_refiner(fmap_matrix12, basis_a, basis_b)
+        return self.iter_refiner(fmap_matrix12, basis_a, basis_b), self.iter_refiner(fmap_matrix21, basis_b, basis_a)
 
 
     def __call__(self, fmap_matrix12,fmap_matrix21, basis_a, basis_b):
@@ -606,7 +606,7 @@ class DiscreteOptimization(BijectiveIterativeRefiner):
             p2p_12, basis_b.truncate(new_k2), basis_a.truncate(new_k1)
         )
         basis_a.use_k, basis_b.use_k = new_k1, new_k2
-        return self.iter_refiner(fmap_matrix21, basis_a, basis_b), self.iter_refiner(fmap_matrix12, basis_a, basis_b)
+        return self.iter_refiner(fmap_matrix12, basis_a, basis_b), self.iter_refiner(fmap_matrix21, basis_b, basis_a)
 
 
 
@@ -685,7 +685,8 @@ class SmoothOptimization(BijectiveIterativeRefiner):
     def __init__(
         self,
         nit=10,
-        step=1):
+        step=1,
+        w_coupling=1e3):
         super().__init__(
             nit=nit,
             step=step,
@@ -693,8 +694,8 @@ class SmoothOptimization(BijectiveIterativeRefiner):
             fm_from_p2p_converter=FmFromP2pConverter(),
             iter_refiner=None,
         )
-        
-        self.displ_from_p2p_converter=DirichletDisplacementFromP2pConverter()
+        self.w_coupling=w_coupling
+        self.displ_from_p2p_converter=DirichletDisplacementFromP2pConverter(w_coupling=w_coupling)
 
 
     def iter(self, fmap_matrix12,fmap_matrix21, displ21, displ12, mesh_a, mesh_b,W_a,A_a, W_b,A_b):
@@ -748,7 +749,7 @@ class SmoothOptimization(BijectiveIterativeRefiner):
 
         basis_a.use_k, basis_b.use_k = new_k1, new_k2
 
-        return self.iter_refiner(fmap_matrix12, basis_a, basis_b),self.iter_refiner(fmap_matrix21, basis_a, basis_b), displ21, displ12
+        return self.iter_refiner(fmap_matrix12, basis_a, basis_b),self.iter_refiner(fmap_matrix21, basis_b, basis_a), displ21, displ12
 
 
     def __call__(self, fmap_matrix12,fmap_matrix21, displ21, displ12, mesh_a, mesh_b, W_a=None,A_a=None, W_b=None,A_b=None):
@@ -785,7 +786,7 @@ class SmoothOptimization(BijectiveIterativeRefiner):
             msg = []
             if k1 + nit * self._step_a > mesh_a.basis.full_spectrum_size:
                 msg.append("`basis_a`")
-            if k2 + nit * self._step_b > mesh_a.basis.full_spectrum_size:
+            if k2 + nit * self._step_b > mesh_b.basis.full_spectrum_size:
                 msg.append("`basis_b`")
 
             if msg:
