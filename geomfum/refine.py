@@ -397,7 +397,7 @@ class FastSinkhornFilters(ZoomOut):
         self,
         nit=10,
         step=1,
-        sinkhorn_neigbor_finder=SinkhornNeighborFinder.from_registry(),
+        sinkhorn_neigbor_finder=SinkhornNeighborFinder.from_registry(which='pot'),
     ):
         super().__init__(
             nit=nit,
