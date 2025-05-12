@@ -5,8 +5,8 @@ import logging
 
 import numpy as np
 import scipy
-
-from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, BijectiveP2pFromFmConverter, FmFromP2pBijectiveConverter, DiscreteOptimizationP2pFromFmConverter, SmoothP2pFromFmConverter, DirichletDisplacementFromP2pConverter, SinkhornP2pFromFmConverter, SinkhornNeighborFinder 
+from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, BijectiveP2pFromFmConverter, FmFromP2pBijectiveConverter
+from geomfum.convert import SinkhornNeighborFinder, DiscreteOptimizationP2pFromFmConverter, SmoothP2pFromFmConverter, DirichletDisplacementFromP2pConverter, SinkhornP2pFromFmConverter 
 
 
 class Refiner(abc.ABC):
@@ -871,7 +871,7 @@ class FastSinkhornFilters(ZoomOut):
         self,
         nit=10,
         step=1,
-        sinkhorn_neigbor_finder=SinkhornNeighborFinder(),
+        sinkhorn_neigbor_finder=SinkhornNeighborFinder.from_registry(which='pot'),
     ):
         super().__init__(
             nit=nit,
