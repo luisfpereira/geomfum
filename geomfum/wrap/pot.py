@@ -1,13 +1,12 @@
 """ python optimal transport wrapper """
 
 
-import abc
+import numpy as np
 import ot
-from geomfum.convert import SinkhornNeighborFinder
-from numpy import np
+from geomfum.convert import BaseSinkhornNeighborFinder
 
 
-class POTSinkhornNeighborFinder(SinkhornNeighborFinder):
+class PotSinkhornNeighborFinder(BaseSinkhornNeighborFinder):
     """This function implements a nieghbour finder based on the solution of OT maps computed with Sinkhorn regularization.
     
     References

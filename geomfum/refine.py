@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import scipy
 
-from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, FmFromP2pBijectiveConverter, SinkhornP2pFromFmConverter
+from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, FmFromP2pBijectiveConverter, SinkhornP2pFromFmConverter, SinkhornNeighborFinder
 
 
 class Refiner(abc.ABC):
@@ -384,8 +384,6 @@ class FastSinkhornFilters(ZoomOut):
         How much to increase each basis per iteration.
     sinkhorn_neigbour_finder : SinkhornKNeighborsFinder
         Nearest neighbor finder.
-    bijective : bool
-        Whether to use bijective functional map.
     References
     ----------
     .. [PRMWO2021] Gautam Pai, Jing Ren, Simone Melzi, Peter Wonka, and Maks Ovsjanikov.
@@ -399,11 +397,12 @@ class FastSinkhornFilters(ZoomOut):
         self,
         nit=10,
         step=1,
+        sinkhorn_neigbor_finder=SinkhornNeighborFinder.from_registry(),
     ):
         super().__init__(
             nit=nit,
             step=step,
-            p2p_from_fm_converter=SinkhornP2pFromFmConverter(),
+            p2p_from_fm_converter=SinkhornP2pFromFmConverter(sinkhorn_neigbor_finder),
             fm_from_p2p_converter=FmFromP2pConverter(),
         )
     

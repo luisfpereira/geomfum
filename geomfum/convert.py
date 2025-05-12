@@ -3,9 +3,8 @@
 import abc
 import scipy
 from sklearn.neighbors import NearestNeighbors
-from scipy.spatial.distance import cdist
-import numpy as np
-from geomfum._registry import SinkhornNeighborFinderRegistry
+from geomfum._registry import SinkhornNeighborFinderRegistry, WhichRegistryMixins
+
 
 class BaseP2pFromFmConverter(abc.ABC):
     """Pointwise map from functional map."""
@@ -126,8 +125,8 @@ class BaseSinkhornNeighborFinder(abc.ABC):
         pass
     
     
-class SinkhornNeighborFinder(abc.ABC):
-    
+class SinkhornNeighborFinder(WhichRegistryMixins):
+    """Sinkhorn neighbor finder to find Neighbors based on the solution of OT maps computed with Sinkhorn regularization."""
     _Registry = SinkhornNeighborFinderRegistry
     
     
