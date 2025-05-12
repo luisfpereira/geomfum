@@ -3,8 +3,8 @@
 import abc
 import scipy
 from sklearn.neighbors import NearestNeighbors
+from geomfum._registry import SinkhornNeighborFinderRegistry, WhichRegistryMixins
 import numpy as np
-from geomfum._registry import SinkhornNeighborFinderRegistry
 
 class BaseP2pFromFmConverter(abc.ABC):
     """Pointwise map from functional map."""
@@ -360,8 +360,8 @@ class BaseSinkhornNeighborFinder(abc.ABC):
         pass
     
     
-class SinkhornNeighborFinder(abc.ABC):
-    
+class SinkhornNeighborFinder(WhichRegistryMixins):
+    """Sinkhorn neighbor finder to find Neighbors based on the solution of OT maps computed with Sinkhorn regularization."""
     _Registry = SinkhornNeighborFinderRegistry
     
     
@@ -392,9 +392,9 @@ class SinkhornP2pFromFmConverter(P2pFromFmConverter):
         https://hal.science/hal-03184936/document
     """
 
-    def __init__(self, sinkhorn_neigbour_finder=None, adjoint=False, bijective=False):
+    def __init__(self, sinkhorn_neigbor_finder=None, adjoint=False, bijective=False):
         
-        neighbor_finder = sinkhorn_neigbour_finder
+        neighbor_finder = sinkhorn_neigbor_finder
         super().__init__(neighbor_finder, adjoint, bijective)
         
         

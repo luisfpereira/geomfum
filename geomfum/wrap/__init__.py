@@ -79,5 +79,5 @@ register_mesh_plotter(
 )
 
 register_sinkhorn_neighbor_finder(
-    "pot", "POTSinkhornNeighborFinder", requires="pot", as_default=False
+    "pot", "PotSinkhornNeighborFinder", requires="ot", as_default=True
 )
