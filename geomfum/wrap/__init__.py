@@ -9,6 +9,7 @@ from geomfum._registry import (
     register_mesh_plotter,
     register_poisson_sampler,
     register_wave_kernel_signature,
+    register_feature_extractor,
 )
 from geomfum._utils import has_package
 
@@ -75,4 +76,13 @@ register_mesh_plotter("pyvista", "PvMeshPlotter", requires="pyvista", as_default
 
 register_mesh_plotter(
     "polyscope", "PsMeshPlotter", requires="polyscope", as_default=False
+)
+
+
+register_feature_extractor(
+    "pointnet", "PointnetFeatureExtractor", requires="torch", as_default=True
+)
+
+register_feature_extractor(
+    "diffusionnet", "DiffusionnetFeatureExtractor", requires="torch", as_default=True
 )
