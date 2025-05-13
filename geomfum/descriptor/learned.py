@@ -50,3 +50,22 @@ class LearnedDescriptor( Descriptor, abc.ABC):
         features = features.squeeze().T.cpu().numpy()
         return features
 
+    def load(self, model):
+        """Load model parameters from the provided file path.
+        Args:
+            path (str): Path to the model file.
+        """
+        self.feature_extractor.load(model)
+    def load_from_path(self, path):
+        """Load model parameters from the provided file path.
+        Args:
+            path (str): Path to the model file.
+        """
+        self.feature_extractor.load_from_path(path)
+        
+    def save(self, path):
+        """Save model parameters to the provided file path.
+        Args:
+            path (str): Path to save the model file.
+        """
+        self.feature_extractor.save(path)
