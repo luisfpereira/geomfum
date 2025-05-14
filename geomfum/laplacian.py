@@ -72,7 +72,8 @@ class LaplacianFinder(MeshWhichRegistryMixins, BaseLaplacianFinder):
         I = np.concatenate([shape.faces[:, 0], shape.faces[:, 1], shape.faces[:, 2]])
         J = np.concatenate([shape.faces[:, 1], shape.faces[:, 2], shape.faces[:, 0]])
         S = np.concatenate([A3, A1, A2])
-        S = 0.5 * S / np.sqrt(1 - S**2)
+        epsilon = 1e-8
+        S = 0.5 * S / np.sqrt(1 - S**2 + epsilon)
 
         In = np.concatenate([I, J, I, J])
         Jn = np.concatenate([J, I, I, J])
