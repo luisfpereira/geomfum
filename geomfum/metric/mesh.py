@@ -347,13 +347,17 @@ class KClosestGraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
 import potpourri3d as pp3d
 
 class HeatDistanceMetric(_SingleDispatchMixins,FinitePointSetMetric):
-    """Heat distance metric as in 
-    "The Heat Method for Distance Computation, Communications of the ACM (2017), 
-    Keenan Crane, Clarisse Weischedel, Max Wardetzky"
+    """Heat distance metric between vertices of a mesh. 
+    
     Parameters
     ----------
     shape : Shape
         Shape.
+
+    References
+    ----------
+    "The Heat Method for Distance Computation, Communications of the ACM (2017), 
+    Keenan Crane, Clarisse Weischedel, Max Wardetzky"
     """
 
     def __init__(self, shape):
