@@ -1,7 +1,9 @@
+"""Module that metrics for calcualte distances on a mesh."""
 import abc
 
 import networkx as nx
 import numpy as np
+import potpourri3d as pp3d
 
 from geomfum.numerics.graph import single_source_partial_dijkstra_path_length
 
@@ -344,11 +346,11 @@ class KClosestGraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
         )
         return np.array(list(dist_dict.values())), np.array(list(dist_dict.keys()))
 
-import potpourri3d as pp3d
+
 
 class HeatDistanceMetric(_SingleDispatchMixins,FinitePointSetMetric):
-    """Heat distance metric between vertices of a mesh. 
-    
+    """Heat distance metric between vertices of a mesh.
+
     Parameters
     ----------
     shape : Shape
@@ -377,7 +379,6 @@ class HeatDistanceMetric(_SingleDispatchMixins,FinitePointSetMetric):
         -----
         slow
         """
-
         dist_mat = np.empty((self._shape.n_vertices, self._shape.n_vertices))
         for i in range(self._shape.n_vertices):
             dist_mat[i] = self.solver.compute_distance(i)
@@ -400,7 +401,6 @@ class HeatDistanceMetric(_SingleDispatchMixins,FinitePointSetMetric):
         target_point : array-like, shape=[n_vertices,]
             Target index.
         """
-        
         dist=self.solver.compute_distance(source_point.item())
         
         target_point = np.arange(self._shape.n_vertices)
@@ -422,7 +422,6 @@ class HeatDistanceMetric(_SingleDispatchMixins,FinitePointSetMetric):
         dist : numeric
             Distance.
         """
-        
         dist=self.solver.compute_distance(point_a)[point_b]
         
         return dist
