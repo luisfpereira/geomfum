@@ -17,7 +17,26 @@ import torch.nn as nn
 
 
 class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
+    """
+    Feature extractor that uses DiffusionNet for geometric deep learning on 3D mesh data.
 
+    Parameters:
+        in_channels (int): Number of input feature channels (e.g., 3 for xyz). Default is 3.
+        out_channels (int): Number of output feature channels. Default is 128.
+        hidden_channels (int): Number of hidden channels in the network. Default is 128.
+        n_block (int): Number of DiffusionNet blocks. Default is 4.
+        last_activation (nn.Module or None): Activation function applied to the output. Default is None.
+        mlp_hidden_channels (List[int] or None): Hidden layer sizes in the MLP blocks. Default is None.
+        output_at (str): Output type — one of ['vertices', 'edges', 'faces', 'global_mean']. Default is 'vertices'.
+        dropout (bool): Whether to apply dropout in MLP layers. Default is True.
+        with_gradient_features (bool): Whether to compute and include spatial gradient features. Default is True.
+        with_gradient_rotations (bool): Whether to use gradient rotations in spatial features. Default is True.
+        diffusion_method (str): Diffusion method used — one of ['spectral', 'implicit_dense']. Default is 'spectral'.
+        k_eig (int): Number of eigenvectors/eigenvalues used for spectral diffusion. Default is 128.
+        cache_dir (str or None): Path to cache directory for storing/loading spectral operators. Default is None.
+        input_type (str): Type of input feature — one of ['xyz', 'shot', 'hks']. Default is 'xyz'.
+        device (torch.device): Device to run the model on. Default is CPU.
+    """
     def __init__(self, in_channels=3, out_channels=128, hidden_channels=128, n_block=4, last_activation=None, 
                  mlp_hidden_channels=None, output_at='vertices', dropout=True, with_gradient_features=True, 
                  with_gradient_rotations=True, diffusion_method='spectral', k_eig=128, cache_dir=None, 
@@ -51,7 +70,13 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         self.device = device
         
     def __call__(self, shape):
-        '''Call pass through the DiffusionNet model'''
+        '''Call pass through the DiffusionNet model
+        Args:
+            shape (Shape): A shape object.
+        
+        Returns:
+            torch.Tensor: Extracted feature tensor of shape [1, V, out_channels], 
+        '''
         
         v = torch.tensor(shape.vertices).to(torch.float32).to(self.device)
         f = torch.tensor(shape.faces).to(torch.int64).to(self.device)
@@ -89,6 +114,15 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         """
         
         torch.save(self.model.state_dict(), path)
+
+
+"""
+Original implementation from
+https://github.com/dongliangcao/Self-Supervised-Multimodal-Shape-Matching by Dongliang Cao
+
+"""
+
+
 
 class LearnedTimeDiffusion(nn.Module):
     """
@@ -478,8 +512,11 @@ class DiffusionNet(nn.Module):
         return x_out
 
 """
-DiffusionNet Utils: Implementation by Dongliang Cao, this part can be fully removed and adapted to the geomfum library
+DiffusionNet Utils: Implementation by Dongliang Cao, 
 """
+
+#TODO: see if we can remove some functions and use alternatives from geomfum
+
 import os
 import os.path as osp
 import random
