@@ -2,12 +2,13 @@
 
 import abc
 
+import numpy as np
+import scipy.sparse as sparse
+
 import geomfum.wrap as _wrap  # noqa (for register)
 from geomfum._registry import LaplacianFinderRegistry, MeshWhichRegistryMixins
 from geomfum.basis import LaplaceEigenBasis
 from geomfum.numerics.eig import ScipyEigsh
-import numpy as np
-import scipy.sparse as sparse
 
 
 class BaseLaplacianFinder(abc.ABC):
@@ -37,7 +38,7 @@ class LaplacianFinder(MeshWhichRegistryMixins, BaseLaplacianFinder):
     _Registry = LaplacianFinderRegistry
 
     def __call__(self, shape):
-        """Apply algorithm.
+        """Apply algorithm. Laplace Beltrami operator with cotangent weights formulation.
 
         Parameters
         ----------
@@ -51,39 +52,43 @@ class LaplacianFinder(MeshWhichRegistryMixins, BaseLaplacianFinder):
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
-        
-        v1 = shape.vertices[shape.faces[:, 0]]  
-        v2 = shape.vertices[shape.faces[:, 1]]
-        v3 = shape.vertices[shape.faces[:, 2]]
+        v0 = shape.vertices[shape.faces[:, 0]]
+        v1 = shape.vertices[shape.faces[:, 1]]
+        v2 = shape.vertices[shape.faces[:, 2]]
 
-        u1 = v3 - v2
-        u2 = v1 - v3
-        u3 = v2 - v1
+        e0 = v2 - v1
+        e1 = v0 - v2
+        e2 = v1 - v0
 
-        L1 = np.linalg.norm(u1, axis=1)
-        L2 = np.linalg.norm(u2, axis=1)
-        L3 = np.linalg.norm(u3, axis=1)
+        l0 = np.linalg.norm(e0, axis=1)
+        l1 = np.linalg.norm(e1, axis=1)
+        l2 = np.linalg.norm(e2, axis=1)
 
+        cos_angle12 = np.einsum("ij,ij->i", -e1, e2) / (l1 * l2)
+        cos_angle20 = np.einsum("ij,ij->i", e0, -e2) / (l0 * l2)
+        cos_angle01 = np.einsum("ij,ij->i", -e0, e1) / (l0 * l1)
 
-        A1 = np.einsum("ij,ij->i", -u2, u3) / (L2 * L3)
-        A2 = np.einsum("ij,ij->i", u1, -u3) / (L1 * L3) 
-        A3 = np.einsum("ij,ij->i", -u1, u2) / (L1 * L2)
+        epsilon = 1e-8
+        cot_angle12 = 0.5 * cos_angle12 / np.sqrt(1 - cos_angle12**2 + epsilon)
+        cot_angle20 = 0.5 * cos_angle20 / np.sqrt(1 - cos_angle20**2 + epsilon)
+        cot_angle01 = 0.5 * cos_angle01 / np.sqrt(1 - cos_angle01**2 + epsilon)
 
         I = np.concatenate([shape.faces[:, 0], shape.faces[:, 1], shape.faces[:, 2]])
         J = np.concatenate([shape.faces[:, 1], shape.faces[:, 2], shape.faces[:, 0]])
-        S = np.concatenate([A3, A1, A2])
-        epsilon = 1e-8
-        S = 0.5 * S / np.sqrt(1 - S**2 + epsilon)
+        W = np.concatenate([cot_angle20, cot_angle12, cot_angle01])
 
-        In = np.concatenate([I, J, I, J])
-        Jn = np.concatenate([J, I, I, J])
-        Sn = np.concatenate([-S, -S, S, S])
+        row = np.concatenate([I, J, I, J])
+        col = np.concatenate([J, I, I, J])
+        data = np.concatenate([-W, -W, W, W])
 
-        W = sparse.coo_matrix((Sn, (In, Jn)), shape=(shape.n_vertices, shape.n_vertices)).tocsc()
+        stiffness_matrix = sparse.coo_matrix(
+            (data, (row, col)), shape=(shape.n_vertices, shape.n_vertices)
+        ).tocsc()
 
-        return (
-            W, sparse.dia_matrix((shape.vertex_areas, 0), shape=(shape.n_vertices, shape.n_vertices))
+        mass_matrix = sparse.dia_matrix(
+            (shape.vertex_areas, 0), shape=(shape.n_vertices, shape.n_vertices)
         )
+        return stiffness_matrix, mass_matrix
 
 
 class LaplacianSpectrumFinder:
