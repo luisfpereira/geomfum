@@ -70,8 +70,9 @@ class RobustPointCloudLaplacianFinder(BaseLaplacianFinder):
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
+        vertices = np.array(shape.vertices, dtype=np.float32)
         return robust_laplacian.point_cloud_laplacian(
-            shape.vertices,
+            vertices,
             mollify_factor=self.mollify_factor,
             n_neighbors=self.n_neighbors,
         )
