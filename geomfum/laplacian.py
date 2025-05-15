@@ -68,14 +68,12 @@ class LaplacianFinder(MeshWhichRegistryMixins, BaseLaplacianFinder):
         cos_angle20 = np.einsum("ij,ij->i", e0, -e2) / (l0 * l2)
         cos_angle01 = np.einsum("ij,ij->i", -e0, e1) / (l0 * l1)
 
-        epsilon = 1e-8
-        cot_angle12 = 0.5 * cos_angle12 / np.sqrt(1 - cos_angle12**2 + epsilon)
-        cot_angle20 = 0.5 * cos_angle20 / np.sqrt(1 - cos_angle20**2 + epsilon)
-        cot_angle01 = 0.5 * cos_angle01 / np.sqrt(1 - cos_angle01**2 + epsilon)
-
         I = np.concatenate([shape.faces[:, 0], shape.faces[:, 1], shape.faces[:, 2]])
         J = np.concatenate([shape.faces[:, 1], shape.faces[:, 2], shape.faces[:, 0]])
-        W = np.concatenate([cot_angle20, cot_angle12, cot_angle01])
+        W = np.concatenate([cos_angle20, cos_angle12, cos_angle01])
+
+        epsilon = 1e-10
+        W = 0.5 * W / np.sqrt(1 - W**2 + epsilon)
 
         row = np.concatenate([I, J, I, J])
         col = np.concatenate([J, I, I, J])
