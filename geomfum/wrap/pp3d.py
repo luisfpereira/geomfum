@@ -1,19 +1,16 @@
-"""
-
-Wrap file for potpourri3d functions
+"""potpourri3d wrapper.
 
 https://github.com/nmwsharp/potpourri3d
 by Nicholas Sharp.
-
 """
 
 import numpy as np
 import potpourri3d as pp3d
 
-from geomfum.metric.mesh import HeatDistanceMetric
+from geomfum.metric.mesh import FinitePointSetMetric, _SingleDispatchMixins
 
 
-class Pp3dHeatDistanceMetric(HeatDistanceMetric):
+class Pp3dHeatDistanceMetric(_SingleDispatchMixins, FinitePointSetMetric):
     """Heat distance metric between vertices of a mesh.
 
     Parameters
@@ -23,8 +20,9 @@ class Pp3dHeatDistanceMetric(HeatDistanceMetric):
 
     References
     ----------
-    "The Heat Method for Distance Computation, Communications of the ACM (2017),
-    Keenan Crane, Clarisse Weischedel, Max Wardetzky"
+    .. [CWW2017] Crane, K., Weischedel, C., Wardetzky, M., 2017.
+        The heat method for distance computation. Commun. ACM 60, 90–99.
+        https://doi.org/10.1145/3131280
     """
 
     def __init__(self, shape):
@@ -43,11 +41,11 @@ class Pp3dHeatDistanceMetric(HeatDistanceMetric):
         -----
         slow
         """
-        dist_mat = np.empty((self._shape.n_vertices, self._shape.n_vertices))
+        dist_mat = []
         for i in range(self._shape.n_vertices):
-            dist_mat[i] = self.solver.compute_distance(i)
+            dist_mat.append(self.solver.compute_distance(i))
 
-        return dist_mat
+        return np.stack(dist_mat)
 
     def _dist_from_source_single(self, source_point):
         """Distance between mesh vertices.

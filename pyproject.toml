@@ -22,7 +22,7 @@ dependencies = ["numpy", "scipy", "scikit-learn", "meshio", "pyfmaps"]
 
 [project.optional-dependencies]
 lapl = ["robust-laplacian", "libigl"]
-metric = ["networkx"]
+metric = ["networkx", "potpourri3d"]
 sampling = ["pymeshlab"]
 opt = ["geomfum[lapl,metric,sampling,rematching]"]
 rematching = [
