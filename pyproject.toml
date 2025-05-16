@@ -24,7 +24,7 @@ dependencies = ["numpy", "scipy", "scikit-learn", "meshio", "pyfmaps"]
 lapl = ["robust-laplacian", "libigl"]
 metric = ["networkx"]
 sampling = ["pymeshlab"]
-opt = ["geomfum[lapl,metric,sampling]"]
+opt = ["geomfum[lapl,metric,sampling,rematching]"]
 rematching = [
     "Rematching@git+https://github.com/filthynobleman/rematching.git@python-binding",
 ]
