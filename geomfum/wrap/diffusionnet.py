@@ -645,9 +645,7 @@ class LearnedTimeDiffusion(nn.Module):
 
         if self.method == "spectral":
             # Transform to spectral
-            feat_spec = self.torch.matmul(
-                evecs.transpose(-2, -1), feat * mass.unsqueeze(-1)
-            )
+            feat_spec = torch.matmul(evecs.transpose(-2, -1), feat * mass.unsqueeze(-1))
 
             # Diffuse
             diffuse_coefs = torch.exp(
@@ -656,7 +654,7 @@ class LearnedTimeDiffusion(nn.Module):
             feat_diffuse_spec = diffuse_coefs * feat_spec
 
             # Transform back to feature
-            feat_diffuse = self.torch.matmul(feat_diffuse_spec, evecs)
+            feat_diffuse = torch.matmul(evecs, feat_diffuse_spec)
 
         else:  # 'implicit_dense'
             # Form the dense matrix (M + tL) with dims (B, C, V, V)
