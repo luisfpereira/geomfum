@@ -1,8 +1,11 @@
+"""Module that metrics for calcualte distances on a mesh."""
+
 import abc
 
 import networkx as nx
 import numpy as np
 
+from geomfum._registry import HeatDistanceMetricRegistry, WhichRegistryMixins
 from geomfum.numerics.graph import single_source_partial_dijkstra_path_length
 
 
@@ -343,3 +346,16 @@ class KClosestGraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
             self._graph, source_point.item(), self.k_closest, weight="weight"
         )
         return np.array(list(dist_dict.values())), np.array(list(dist_dict.keys()))
+
+
+class HeatDistanceMetric(WhichRegistryMixins):
+    """Heat distance metric between vertices of a mesh.
+
+    References
+    ----------
+    .. [CWW2017] Crane, K., Weischedel, C., Wardetzky, M., 2017.
+        The heat method for distance computation. Commun. ACM 60, 90–99.
+        https://doi.org/10.1145/3131280
+    """
+
+    _Registry = HeatDistanceMetricRegistry
