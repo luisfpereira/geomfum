@@ -12,38 +12,47 @@ https://arxiv.org/abs/2012.00888
 """
 
 import numpy as np
+import scipy
 import torch
 import torch.nn as nn
-import hashlib
-
-import scipy
-
 
 from geomfum.descriptor.learned import BaseFeatureExtractor
-from geomfum.shape.mesh import TriangleMesh
 
 
+# TODO: Implement betching operations. for now diffusionnet accept just one mesh as input
 class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
-    """
-    Feature extractor that uses DiffusionNet for geometric deep learning on 3D mesh data.
+    """Feature extractor that uses DiffusionNet for geometric deep learning on 3D mesh data.
 
     Parameters
     ----------
-        in_channels (int): Number of input feature channels (e.g., 3 for xyz). Default is 3.
-        out_channels (int): Number of output feature channels. Default is 128.
-        hidden_channels (int): Number of hidden channels in the network. Default is 128.
-        n_block (int): Number of DiffusionNet blocks. Default is 4.
-        last_activation (nn.Module or None): Activation function applied to the output. Default is None.
-        mlp_hidden_channels (List[int] or None): Hidden layer sizes in the MLP blocks. Default is None.
-        output_at (str): Output type — one of ['vertices', 'edges', 'faces', 'global_mean']. Default is 'vertices'.
-        dropout (bool): Whether to apply dropout in MLP layers. Default is True.
-        with_gradient_features (bool): Whether to compute and include spatial gradient features. Default is True.
-        with_gradient_rotations (bool): Whether to use gradient rotations in spatial features. Default is True.
-        diffusion_method (str): Diffusion method used — one of ['spectral', 'implicit_dense']. Default is 'spectral'.
-        k_eig (int): Number of eigenvectors/eigenvalues used for spectral diffusion. Default is 128.
-        cache_dir (str or None): Path to cache directory for storing/loading spectral operators. Default is None.
-        input_type (str): Type of input feature — one of ['xyz', 'shot', 'hks']. Default is 'xyz'.
-        device (torch.device): Device to run the model on. Default is CPU.
+    in_channels : int
+        Number of input feature channels (e.g., 3 for xyz). Default is 3.
+    out_channels : int
+        Number of output feature channels. Default is 128.
+    hidden_channels : int
+        Number of hidden channels in the network. Default is 128.
+    n_block : int
+        Number of DiffusionNet blocks. Default is 4.
+    last_activation : nn.Module or None
+        Activation function applied to the output. Default is None.
+    mlp_hidden_channels : List[int] or None
+        Hidden layer sizes in the MLP blocks. Default is None.
+    output_at : str
+        Output type — one of ['vertices', 'edges', 'faces', 'global_mean']. Default is 'vertices'.
+    dropout : bool
+        Whether to apply dropout in MLP layers. Default is True.
+    with_gradient_features : bool
+        Whether to compute and include spatial gradient features. Default is True.
+    with_gradient_rotations : bool
+        Whether to use gradient rotations in spatial features. Default is True.
+    diffusion_method : str
+        Diffusion method used — one of ['spectral', 'implicit_dense']. Default is 'spectral'.
+    k_eig : int
+        Number of eigenvectors/eigenvalues used for spectral diffusion. Default is 128.
+    cache_dir : str or None
+        Path to cache directory for storing/loading spectral operators. Default is None.
+    device : torch.device
+        Device to run the model on. Default is CPU.
     """
 
     def __init__(
@@ -97,24 +106,44 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         self.n_features = self.out_channels
         self.device = device
 
-    def __call__(self, shape):
+    def __call__(self, shape, feats=None):
         """Call pass through the DiffusionNet model.
 
-        Args:
-            shape (Shape): A shape object.
+        Parameters
+        ----------
+        shape : Shape
+            A shape object.
+        feats : torch.Tensor, optional
+            Input features. Default is None.
 
         Returns
         -------
-            torch.Tensor: Extracted feature tensor of shape [1, V, out_channels],
+        torch.Tensor
+            Extracted feature tensor of shape [1, V, out_channels].
         """
         v = torch.tensor(shape.vertices).to(torch.float32).to(self.device)
         f = torch.tensor(shape.faces).to(torch.int64).to(self.device)
 
+        # Compute spectral operators
+        frames, mass, L, evals, evecs, gradX, gradY = self._get_operators(
+            shape, k=self.k_eig
+        )
         if v.dim() == 2:
             v = v.unsqueeze(0)
             f = f.unsqueeze(0)
+            if feats is not None:
+                feats = feats.unsqueeze(0)
+            frames = frames.unsqueeze(0)
+            mass = mass.unsqueeze(0)
+            L = L.unsqueeze(0)
+            evals = evals.unsqueeze(0)
+            evecs = evecs.unsqueeze(0)
+            gradX = gradX.unsqueeze(0)
+            gradY = gradY.unsqueeze(0)
 
-        self.features = self.model(v, f)
+        self.features = self.model(
+            v, f, feats, frames, mass, L, evals, evecs, gradX, gradY
+        )
         return self.features
 
     def load_from_path(self, path):
@@ -146,6 +175,61 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         """
         torch.save(self.model.state_dict(), path)
 
+    def _get_operators(self, mesh, k=200):
+        # TODO: add cache_dir
+        """Compute the spectral operators for the input mesh.
+
+        Parameters
+        ----------
+        mesh : TriangleMesh
+            Input mesh.
+        k : int
+            Number of eigenvalues/eigenvectors to compute diffusion. Default 200.
+
+        Returns
+        -------
+        frames : torch.Tensor
+            Tangent frames for vertices.
+        mass : torch.Tensor
+            Diagonal elements in mass matrix [B, V].
+        L : torch.SparseTensor
+            Sparse Laplacian matrix [B, V, V].
+        evals : torch.Tensor
+            Eigenvalues of Laplacian Matrix [B, K].
+        evecs : torch.Tensor
+            Eigenvectors of Laplacian Matrix [B, V, K].
+        gradX : torch.SparseTensor
+            Real part of gradient matrix [B, V, V].
+        gradY : torch.SparseTensor
+            Imaginary part of gradient matrix [B, V, V].
+        """
+        assert k >= 0, (
+            f"Number of eigenvalues/vectors should be non-negative, bug get {k}"
+        )
+
+        frames = mesh.vertex_tangent_frames
+        L, M = mesh.laplacian.find()
+        massvec_np = M.diagonal().astype(np.float32)
+
+        if k > 0:
+            evals, evecs = mesh.laplacian.find_spectrum(spectrum_size=k)
+
+        grad_mat = mesh.gradient_matrix
+        gradX_np = np.real(grad_mat)
+        gradY_np = np.imag(grad_mat)
+
+        frames = torch.from_numpy(frames).to(device=self.device, dtype=torch.float32)
+        massvec = torch.from_numpy(massvec_np).to(
+            device=self.device, dtype=torch.float32
+        )
+        L = sparse_np_to_torch(L).to(device=self.device, dtype=torch.float32)
+        evals = torch.from_numpy(evals).to(device=self.device, dtype=torch.float32)
+        evecs = torch.from_numpy(evecs).to(device=self.device, dtype=torch.float32)
+        gradX = sparse_np_to_torch(gradX_np).to(device=self.device, dtype=torch.float32)
+        gradY = sparse_np_to_torch(gradY_np).to(device=self.device, dtype=torch.float32)
+
+        return frames, massvec, L, evals, evecs, gradX, gradY
+
 
 """
 Original implementation from
@@ -155,6 +239,18 @@ https://github.com/dongliangcao/Self-Supervised-Multimodal-Shape-Matching by Don
 
 # TODO: FIND A PLACE FOR THESE FUNCTIONS
 def sparse_np_to_torch(A):
+    """Convert scipy sparse matrix to torch sparse tensor.
+
+    Parameters
+    ----------
+    A : scipy.sparse.spmatrix
+        Input sparse matrix.
+
+    Returns
+    -------
+    torch.Tensor
+        Sparse tensor representation.
+    """
     Acoo = A.tocoo()
     values = Acoo.data
     indices = np.vstack((Acoo.row, Acoo.col))
@@ -165,6 +261,18 @@ def sparse_np_to_torch(A):
 
 
 def sparse_torch_to_np(A):
+    """Convert torch sparse tensor to scipy sparse matrix.
+
+    Parameters
+    ----------
+    A : torch.Tensor
+        Input sparse tensor.
+
+    Returns
+    -------
+    scipy.sparse.csc_matrix
+        Sparse matrix representation.
+    """
     assert len(A.shape) == 2
 
     indices = A.indices().detach().cpu().numpy()
@@ -179,22 +287,34 @@ class DiffusionNet(nn.Module):
 
     Parameters
     ----------
-    in_channels (int): number of input channels.
-    out_channels (int): number of output channels.
-    hidden_channels (int, optional): number of hidden channels in diffusion block. Default 128.
-    n_block (int, optional): number of diffusion blocks. Default 4.
-    last_activation (nn.Module, optional): output layer. Default None.
-    mlp_hidden_channels (List, optional): mlp hidden layers. Default None means [hidden_channels, hidden_channels].
-    output_at (str, optional): produce outputs at various mesh elements by averaging from vertices.
-    One of ['vertices', 'edges', 'faces', 'global_mean']. Default 'vertices'.
-    dropout (bool, optional): whether use dropout in mlp. Default True.
-    with_gradient_features (bool, optional): whether use SpatialGradientFeatures in DiffusionBlock. Default True.
-    with_gradient_rotations (bool, optional): whether use gradient rotations in SpatialGradientFeatures. Default True.
-    diffusion_method (str, optional): diffusion method applied in diffusion layer.
-    One of ['spectral', 'implicit_dense']. Default 'spectral'.
-    k_eig (int, optional): number of eigenvalues/eigenvectors to compute diffusion. Default 128.
-    cache_dir (str, optional): cache dir contains all pre-computed spectral operators. Default None.
-    input_type (str, optional): input type. One of ['xyz', 'shot', 'hks'] Default 'xyz'.
+    in_channels : int
+        Number of input channels.
+    out_channels : int
+        Number of output channels.
+    hidden_channels : int
+        Number of hidden channels in diffusion block. Default 128.
+    n_block : int
+        Number of diffusion blocks. Default 4.
+    last_activation : nn.Module or None
+        Output layer. Default None.
+    mlp_hidden_channels : List or None
+        MLP hidden layers. Default None means [hidden_channels, hidden_channels].
+    output_at : str
+        Produce outputs at various mesh elements by averaging from vertices.
+        One of ['vertices', 'edges', 'faces', 'global_mean']. Default 'vertices'.
+    dropout : bool
+        Whether use dropout in mlp. Default True.
+    with_gradient_features : bool
+        Whether use SpatialGradientFeatures in DiffusionBlock. Default True.
+    with_gradient_rotations : bool
+        Whether use gradient rotations in SpatialGradientFeatures. Default True.
+    diffusion_method : str
+        Diffusion method applied in diffusion layer.
+        One of ['spectral', 'implicit_dense']. Default 'spectral'.
+    k_eig : int
+        Number of eigenvalues/eigenvectors to compute diffusion. Default 128.
+    cache_dir : str or None
+        Cache dir contains all pre-computed spectral operators. Default None.
     """
 
     def __init__(
@@ -267,22 +387,52 @@ class DiffusionNet(nn.Module):
             blocks += [block]
         self.blocks = nn.ModuleList(blocks)
 
-    def forward(self, verts, faces=None, feats=None):
+    def forward(
+        self,
+        verts,
+        faces=None,
+        feats=None,
+        frames=None,
+        mass=None,
+        L=None,
+        evals=None,
+        evecs=None,
+        gradX=None,
+        gradY=None,
+    ):
         """Compute the forward pass of the DiffusionNet.
 
-        Args
+        Parameters
+        ----------
+        verts : torch.Tensor
+            Input vertices [B, V, 3].
+        faces : torch.Tensor, optional
+            Input faces [B, F, 3]. Default None.
+        feats : torch.Tensor, optional
+            Input features. Default None.
+        frames : torch.Tensor
+            Tangent frames for vertices.
+        mass : torch.Tensor
+            Diagonal elements in mass matrix.
+        L : torch.SparseTensor
+            Sparse Laplacian matrix.
+        evals : torch.Tensor
+            Eigenvalues of Laplacian Matrix.
+        evecs : torch.Tensor
+            Eigenvectors of Laplacian Matrix.
+        gradX : torch.SparseTensor
+            Real part of gradient matrix.
+        gradY : torch.SparseTensor
+            Imaginary part of gradient matrix.
+
+        Returns
         -------
-        verts (torch.Tensor): input vertices [B, V, 3].
-        faces (torch.Tensor, optional): input faces [B, F, 3]. Default None.
+        torch.Tensor
+            Output features.
         """
         assert verts.dim() == 3, "Only support batch operation"
         if faces is not None:
             assert faces.dim() == 3, "Only support batch operation"
-
-        # ensure reproducibility to first convert to cpu to find the precomputed spectral ops
-        _, mass, L, evals, evecs, gradX, gradY = self._get_all_operators(
-            verts.cpu(), faces.cpu(), k=self.k_eig, cache_dir=self.cache_dir
-        )
 
         mass = mass.to(device=verts.device)
         L = L.to(device=verts.device)
@@ -319,112 +469,24 @@ class DiffusionNet(nn.Module):
 
         return x_out
 
-    def _get_operators(self, vertices, faces, k=200, cache_dir=None):
-        # TODO: add cache_dir
-        """Compute the spectral operators for the input mesh.
-
-        Args
-        -------
-        vertices (torch.Tensor): input vertices [B, V, 3].
-        faces (torch.Tensor): input faces [B, F, 3].
-        k_eig (int): number of eigenvalues/eigenvectors to compute diffusion. Default 200.
-
-        Returns
-        -------
-        mass (torch.Tensor): diagonal elements in mass matrix [B, V].
-        L (torch.SparseTensor): sparse Laplacian matrix [B, V, V].
-        evals (torch.Tensor): eigenvalues of Laplacian Matrix [B, K].
-        evecs (torch.Tensor): eigenvectors of Laplacian Matrix [B, V, K].
-        gradX (torch.SparseTensor): real part of gradient matrix [B, V, V].
-        gradY (torch.SparseTensor): imaginary part of gradient matrix [B, V, V].
-        """
-        assert k >= 0, (
-            f"Number of eigenvalues/vectors should be non-negative, bug get {k}"
-        )
-
-        device = vertices.device
-        dtype = vertices.dtype
-        mesh = TriangleMesh(vertices=vertices.cpu().numpy(), faces=faces.cpu().numpy())
-
-        frames = mesh.vertex_tangent_frames
-
-        # laplacian
-
-        L, M = mesh.laplacian.find()
-        massvec_np = M.diagonal().astype(np.float32)
-
-        # Compute the eigenbasis
-        if k > 0:
-            evals, evecs = mesh.laplacian.find_spectrum(spectrum_size=k)
-
-        # Build gradient matrices
-        grad_mat = mesh.gradient_matrix
-
-        # split complex gradient into two real sparse matrices (PyTorch doesn't like complex sparse matrix)
-        gradX_np = np.real(grad_mat)
-        gradY_np = np.imag(grad_mat)
-
-        frames = torch.from_numpy(frames).to(device=device, dtype=dtype)
-        massvec = torch.from_numpy(massvec_np).to(device=device, dtype=dtype)
-        L = sparse_np_to_torch(L).to(device=device, dtype=dtype)
-        evals = torch.from_numpy(evals).to(device=device, dtype=dtype)
-        evecs = torch.from_numpy(evecs).to(device=device, dtype=dtype)
-        gradX = sparse_np_to_torch(gradX_np).to(device=device, dtype=dtype)
-        gradY = sparse_np_to_torch(gradY_np).to(device=device, dtype=dtype)
-
-        return frames, massvec, L, evals, evecs, gradX, gradY
-
-    def _get_all_operators(self, vertices, faces, k=200, cache_dir=None):
-        """Compute the spectral operators for the batch of input meshes.
-
-        Args
-        -------
-        vertices (torch.Tensor): input vertices [B, V, 3].
-        faces (torch.Tensor): input faces [B, F, 3].
-        k_eig (int): number of eigenvalues/eigenvectors to compute diffusion. Default 200.
-        """
-        frames = []
-        mass = []
-        L = []
-        evals = []
-        evecs = []
-        gradX = []
-        gradY = []
-
-        for i in range(vertices.shape[0]):
-            output = self._get_operators(
-                vertices[0], faces[0], k=k, cache_dir=cache_dir
-            )
-            frames += [output[0]]
-            mass += [output[1]]
-            L += [output[2]]
-            evals += [output[3]]
-            evecs += [output[4]]
-            gradX += [output[5]]
-            gradY += [output[6]]
-
-        frames = torch.stack(frames)
-        mass = torch.stack(mass)
-        L = torch.stack(L)
-        evals = torch.stack(evals)
-        evecs = torch.stack(evecs)
-        gradX = torch.stack(gradX)
-        gradY = torch.stack(gradY)
-
-        return frames, mass, L, evals, evecs, gradX, gradY
-
 
 class DiffusionNetBlock(nn.Module):
     """Building Block of DiffusionNet.
 
     Parameters
     ----------
-        in_channels (int): number of input channels.
-        mlp_hidden_channels (List): list of mlp hidden channels.
-        dropout (bool, optional): whether use dropout in MLP. Default True.
-        with_gradient_features (bool, optional): whether use spatial gradient feature. Default True.
-        with_gradient_rotations (bool, optional): whether use spatial gradient rotation. Default True.
-
+    in_channels : int
+        Number of input channels.
+    mlp_hidden_channels : List
+        List of mlp hidden channels.
+    dropout : bool
+        Whether use dropout in MLP. Default True.
+    diffusion_method : str
+        Method for diffusion. Default "spectral".
+    with_gradient_features : bool
+        Whether use spatial gradient feature. Default True.
+    with_gradient_rotations : bool
+        Whether use spatial gradient rotation. Default True.
     """
 
     def __init__(
@@ -467,15 +529,27 @@ class DiffusionNetBlock(nn.Module):
     def forward(self, feat_in, mass, L, evals, evecs, gradX, gradY):
         """Compute the forward pass of the diffusion block.
 
-        Args
+        Parameters
+        ----------
+        feat_in : torch.Tensor
+            Input feature vector [B, V, C].
+        mass : torch.Tensor
+            Diagonal elements of mass matrix [B, V].
+        L : torch.SparseTensor
+            Sparse Laplacian matrix [B, V, V].
+        evals : torch.Tensor
+            Eigenvalues of Laplacian Matrix [B, K].
+        evecs : torch.Tensor
+            Eigenvectors of Laplacian Matrix [B, V, K].
+        gradX : torch.SparseTensor
+            Real part of gradient matrix [B, V, V].
+        gradY : torch.SparseTensor
+            Imaginary part of gradient matrix [B, V, V].
+
+        Returns
         -------
-        feat_in (torch.Tensor): input feature vector [B, V, C].
-        mass (torch.Tensor): diagonal elements of mass matrix [B, V].
-        L (torch.SparseTensor): sparse Laplacian matrix [B, V, V].
-        evals (torch.Tensor): eigenvalues of Laplacian Matrix [B, K].
-        evecs (torch.Tensor): eigenvectors of Laplacian Matrix [B, V, K].
-        gradX (torch.SparseTensor): real part of gradient matrix [B, V, V].
-        gradY (torch.SparseTensor): imaginary part of gradient matrix [B, V, V].
+        torch.Tensor
+            Output feature vector.
         """
         B = feat_in.shape[0]
         assert feat_in.shape[-1] == self.in_channels, (
@@ -518,17 +592,16 @@ class DiffusionNetBlock(nn.Module):
 
 
 class LearnedTimeDiffusion(nn.Module):
-    """
-    Applied diffusion with learned time per-channel.
+    """Applied diffusion with learned time per-channel.
 
-    In the spectral domain this becomes
-        f_out = e ^ (lambda_i * t) * f_in
+    In the spectral domain this becomes f_out = e ^ (lambda_i * t) * f_in
 
     Parameters
     ----------
-    in_channels (int): number of input channels.
-    method (str, optional): method to perform time diffusion. Default 'spectral'.
-
+    in_channels : int
+        Number of input channels.
+    method : str
+        Method to perform time diffusion. Default 'spectral'.
     """
 
     def __init__(self, in_channels, method="spectral"):
@@ -543,16 +616,23 @@ class LearnedTimeDiffusion(nn.Module):
     def forward(self, feat, L, mass, evals, evecs):
         """Forward pass of the diffusion layer.
 
-        Args:
-            feat (torch.Tensor): feature vector [B, V, C].
-            L (torch.SparseTensor): sparse Laplacian matrix [B, V, V].
-            mass (torch.Tensor): diagonal elements in mass matrix [B, V].
-            evals (torch.Tensor): eigenvalues of Laplacian matrix [B, K].
-            evecs (torch.Tensor): eigenvectors of Laplacian matrix [B, V, K].
+        Parameters
+        ----------
+        feat : torch.Tensor
+            Feature vector [B, V, C].
+        L : torch.SparseTensor
+            Sparse Laplacian matrix [B, V, V].
+        mass : torch.Tensor
+            Diagonal elements in mass matrix [B, V].
+        evals : torch.Tensor
+            Eigenvalues of Laplacian matrix [B, K].
+        evecs : torch.Tensor
+            Eigenvectors of Laplacian matrix [B, V, K].
 
         Returns
         -------
-            feat_diffuse (torch.Tensor): diffused feature vector [B, V, C].
+        feat_diffuse : torch.Tensor
+            Diffused feature vector [B, V, C].
         """
         # project times to the positive half-space
         # (and away from 0 in the incredibly rare chance that they get stuck)
@@ -565,7 +645,9 @@ class LearnedTimeDiffusion(nn.Module):
 
         if self.method == "spectral":
             # Transform to spectral
-            feat_spec = self._to_basis(feat, evecs, mass)
+            feat_spec = self.torch.matmul(
+                evecs.transpose(-2, -1), feat * mass.unsqueeze(-1)
+            )
 
             # Diffuse
             diffuse_coefs = torch.exp(
@@ -574,7 +656,7 @@ class LearnedTimeDiffusion(nn.Module):
             feat_diffuse_spec = diffuse_coefs * feat_spec
 
             # Transform back to feature
-            feat_diffuse = self._from_basis(feat_diffuse_spec, evecs)
+            feat_diffuse = self.torch.matmul(feat_diffuse_spec, evecs)
 
         else:  # 'implicit_dense'
             # Form the dense matrix (M + tL) with dims (B, C, V, V)
@@ -595,46 +677,16 @@ class LearnedTimeDiffusion(nn.Module):
 
         return feat_diffuse
 
-    def _to_basis(self, feat, basis, massvec):
-        """Transform feature into coefficients of orthonormal basis.
-
-        Args
-        -------
-        feat (torch.Tensor): feature vector [B, V, C]
-        basis (torch.Tensor): functional basis [B, V, K]
-        massvec (torch.Tensor): mass vector [B, V]
-
-        Returns
-        -------
-        coef (torch.Tensor): coefficient of basis [B, K, C]
-        """
-        basis_t = basis.transpose(-2, -1)
-        coef = torch.matmul(basis_t, feat * massvec.unsqueeze(-1))
-        return coef
-
-    def _from_basis(self, coef, basis):
-        """Transform coefficients of orthonormal basis into feature.
-
-        Args
-        -------
-        coef (torch.Tensor): coefficients [B, K, C]
-        basis (torch.Tensor): functional basis [B, V, K]
-
-        Returns
-        -------
-        feat (torch.Tensor): feature vector [B, V, C]
-        """
-        feat = torch.matmul(basis, coef)
-        return feat
-
 
 class SpatialGradientFeatures(nn.Module):
     """Compute dot-products between input vectors. Uses a learned complex-linear layer to keep dimension down.
 
     Parameters
     ----------
-    in_channels (int): number of input channels.
-    with_gradient_rotations (bool, optional): whether with gradient rotations. Default True.
+    in_channels : int
+        Number of input channels.
+    with_gradient_rotations : bool
+        Whether with gradient rotations. Default True.
     """
 
     def __init__(self, in_channels, with_gradient_rotations=True):
@@ -652,12 +704,15 @@ class SpatialGradientFeatures(nn.Module):
     def forward(self, feat_in):
         """Compute the spatial gradient features.
 
-        Args:
-            feat_in (torch.Tensor): input feature vector (B, V, C, 2).
+        Parameters
+        ----------
+        feat_in : torch.Tensor
+            Input feature vector (B, V, C, 2).
 
         Returns
         -------
-            feat_out (torch.Tensor): output feature vector (B, V, C)
+        feat_out : torch.Tensor
+            Output feature vector (B, V, C)
         """
         feat_a = feat_in
 
@@ -678,10 +733,14 @@ class MiniMLP(nn.Sequential):
 
     Parameters
     ----------
-    layer_sizes (List): list of layer size.
-    dropout (bool, optional): whether use dropout. Default False.
-    activation (nn.Module, optional): activation function. Default ReLU.
-    name (str, optional): module name. Default 'miniMLP'
+    layer_sizes : List
+        List of layer size.
+    dropout : bool
+        Whether use dropout. Default False.
+    activation : nn.Module
+        Activation function. Default ReLU.
+    name : str
+        Module name. Default 'miniMLP'
     """
 
     def __init__(self, layer_sizes, dropout=False, activation=nn.ReLU, name="miniMLP"):
