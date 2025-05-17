@@ -99,7 +99,6 @@ class BaseNeighborFinder(abc.ABC):
         X : array-like, shape=[n_points_x, n_features]
             Reference points.
         """
-        pass
 
     @abc.abstractmethod
     def kneighbors(self, Y):
@@ -117,7 +116,6 @@ class BaseNeighborFinder(abc.ABC):
         indices : array-like, shape=[n_points_y, n_neighbors]
             Indices of the nearest neighbors.
         """
-        pass
 
 
 class SinkhornNeighborFinder(WhichRegistryMixins):
