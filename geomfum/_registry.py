@@ -225,7 +225,7 @@ class MeshWhichRegistryMixins:
 
 
 class LaplacianFinderRegistry(MeshWhichRegistry):
-    """Laplacian finder registry."""
+    has_internal = True
 
     MAP = {}
 
