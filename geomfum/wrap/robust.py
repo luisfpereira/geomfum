@@ -1,6 +1,5 @@
 """robust_laplacian wrapper."""
 
-import numpy as np
 import robust_laplacian
 
 from geomfum.laplacian import BaseLaplacianFinder
@@ -33,10 +32,8 @@ class RobustMeshLaplacianFinder(BaseLaplacianFinder):
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
-        vertices = np.array(shape.vertices, dtype=np.float32)
-        faces = np.array(shape.faces, dtype=np.int32)
         return robust_laplacian.mesh_laplacian(
-            vertices, faces, mollify_factor=self.mollify_factor
+            shape.vertices, shape.faces, mollify_factor=self.mollify_factor
         )
 
 
@@ -70,9 +67,8 @@ class RobustPointCloudLaplacianFinder(BaseLaplacianFinder):
         mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
-        vertices = np.array(shape.vertices, dtype=np.float32)
         return robust_laplacian.point_cloud_laplacian(
-            vertices,
+            shape.vertices,
             mollify_factor=self.mollify_factor,
             n_neighbors=self.n_neighbors,
         )
