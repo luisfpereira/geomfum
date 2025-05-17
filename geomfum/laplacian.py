@@ -70,9 +70,9 @@ class LaplacianFinder(MeshWhichRegistryMixins, BaseLaplacianFinder):
 
         I = np.concatenate([shape.faces[:, 0], shape.faces[:, 1], shape.faces[:, 2]])
         J = np.concatenate([shape.faces[:, 1], shape.faces[:, 2], shape.faces[:, 0]])
-        W = np.concatenate([cos_angle20, cos_angle12, cos_angle01])
+        W = np.concatenate([cos_angle01, cos_angle12, cos_angle20])
 
-        epsilon = 1e-10
+        epsilon = 1e-8
         W = 0.5 * W / np.sqrt(1 - W**2 + epsilon)
 
         row = np.concatenate([I, J, I, J])

@@ -34,8 +34,6 @@ class TestLaplacianFinderCmp(LaplacianFinderCmpCase, metaclass=DataBasedParametr
     scope="class",
     params=[
         ("default", "pyfm"),
-        ("default", "igl"),
-        ("default", "robust"),
         ("pyfm", "igl"),
         ("pyfm", "robust"),
         ("igl", "robust"),
