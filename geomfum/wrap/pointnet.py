@@ -8,12 +8,12 @@ References
     https://github.com/riccardomarin/Diff-FMaps by Riccardo Marin
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from geomfum.descriptor.learned import BaseFeatureExtractor
+
 
 class PointnetFeatureExtractor(BaseFeatureExtractor):
     """Feature extractor using PointNet architecture.
@@ -41,7 +41,7 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         mlp_dims=[512, 256, 128],
         head_channels=[256, 128],
         dropout=0.3,
-        device=None
+        device=None,
     ):
         self.device = device or torch.device("cpu")
         self.model = PointNet(
@@ -49,7 +49,7 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
             mlp_dims=mlp_dims,
             head_channels=head_channels,
             out_features=n_features,
-            dropout=dropout
+            dropout=dropout,
         ).to(self.device)
 
     def __call__(self, shape):
@@ -82,7 +82,9 @@ class PointNetfeat(nn.Module):
         List of hidden dimensions for the global MLP layers.
     """
 
-    def __init__(self, conv_channels=[64, 64, 128, 128, 1024], mlp_dims=[1024, 256, 256]):
+    def __init__(
+        self, conv_channels=[64, 64, 128, 128, 1024], mlp_dims=[1024, 256, 256]
+    ):
         super().__init__()
         self.conv_layers = nn.ModuleList()
         in_channels = 3
@@ -123,6 +125,7 @@ class PointNetfeat(nn.Module):
         global_features = global_features.unsqueeze(2).repeat(1, 1, x.shape[2])
         return torch.cat([global_features, point_features], dim=1)
 
+
 class PointNet(nn.Module):
     """Full PointNet model with feature head.
 
@@ -149,7 +152,7 @@ class PointNet(nn.Module):
         mlp_dims=[1024, 256, 256],
         head_channels=[512, 256, 256],
         out_features=128,
-        dropout=0.3
+        dropout=0.3,
     ):
         super().__init__()
         self.feat = PointNetfeat(conv_channels, mlp_dims)
