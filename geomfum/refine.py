@@ -247,8 +247,6 @@ class IterativeRefiner(Refiner):
             if msg:
                 raise ValueError(f"Not enough eigenvectors on {', '.join(msg)}.")
 
-        nit = self.nit
-
         for _ in range(nit):
             new_fmap_matrix = self.iter(fmap_matrix, basis_a, basis_b)
 
