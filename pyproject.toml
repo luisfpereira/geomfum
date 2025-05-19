@@ -18,7 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 requires-python = ">= 3.9"
-dependencies = ["numpy", "scipy", "scikit-learn", "meshio", "pyfmaps"]
+dependencies = ["numpy", "scipy", "scikit-learn", "meshio", "pyfmaps","torch"]
 
 [project.optional-dependencies]
 lapl = ["robust-laplacian", "libigl==2.5.4.dev0"]
