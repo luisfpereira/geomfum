@@ -21,10 +21,10 @@ requires-python = ">= 3.9"
 dependencies = ["numpy", "scipy", "scikit-learn", "meshio", "pyfmaps","torch"]
 
 [project.optional-dependencies]
-lapl = ["robust-laplacian", "libigl==2.5.4.dev0"]
-metric = ["networkx"]
+lapl = ["robust-laplacian", "libigl"]
+metric = ["networkx", "potpourri3d"]
 sampling = ["pymeshlab"]
-opt = ["geomfum[lapl,metric,sampling]"]
+opt = ["geomfum[lapl,metric,sampling,rematching]"]
 rematching = [
     "Rematching@git+https://github.com/filthynobleman/rematching.git@python-binding",
 ]
