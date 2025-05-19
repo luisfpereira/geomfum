@@ -26,7 +26,6 @@ class TriangleMesh(Shape):
 
     def __init__(self, vertices, faces):
         super().__init__(is_mesh=True)
-        # Ensure vertices and faces are numpy arrays
         self.vertices = np.asarray(vertices)
         self.faces = np.asarray(faces)
 
