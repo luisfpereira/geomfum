@@ -10,7 +10,6 @@ from geomfum.convert import (
     FmFromP2pBijectiveConverter,
     FmFromP2pConverter,
     P2pFromFmConverter,
-    SinkhornNeighborFinder,
     SinkhornP2pFromFmConverter,
 )
 
@@ -361,8 +360,10 @@ class AdjointBijectiveZoomOut(ZoomOut):
 
     References
     ----------
-    .. [VM2023] Giulio Viganò, Simone Melzi. Adjoint Bijective ZoomOut: Efficient upsampling for learned linearly-invariant embedding.” 2023
-    https://github.com/gviga/AB-ZoomOut
+    .. [VM2023] Giulio Viganò, Simone Melzi.
+        Adjoint Bijective ZoomOut: Efficient upsampling for learned linearly-invariant
+        embedding. 2023
+        https://github.com/gviga/AB-ZoomOut
     """
 
     def __init__(
@@ -387,7 +388,7 @@ class FastSinkhornFilters(ZoomOut):
         Number of iterations.
     step : int or tuple[2, int]
         How much to increase each basis per iteration.
-    sinkhorn_neigbour_finder : SinkhornKNeighborsFinder
+    neighbor_finder : SinkhornKNeighborsFinder
         Nearest neighbor finder.
 
     References
@@ -403,11 +404,11 @@ class FastSinkhornFilters(ZoomOut):
         self,
         nit=10,
         step=1,
-        sinkhorn_neigbor_finder=SinkhornNeighborFinder.from_registry(which="pot"),
+        neighbor_finder=None,
     ):
         super().__init__(
             nit=nit,
             step=step,
-            p2p_from_fm_converter=SinkhornP2pFromFmConverter(sinkhorn_neigbor_finder),
+            p2p_from_fm_converter=SinkhornP2pFromFmConverter(neighbor_finder),
             fm_from_p2p_converter=FmFromP2pConverter(),
         )

@@ -9,8 +9,8 @@ from geomfum._registry import (
     register_laplacian_finder,
     register_mesh_plotter,
     register_poisson_sampler,
-    register_wave_kernel_signature,
     register_sinkhorn_neighbor_finder,
+    register_wave_kernel_signature,
 )
 from geomfum._utils import has_package
 

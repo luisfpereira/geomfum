@@ -28,11 +28,12 @@ class PotSinkhornNeighborFinder(BaseNeighborFinder):
     """
 
     def __init__(self, n_neighbors=1, lambd=1e-1, method="sinkhorn", max_iter=100):
-        self.n_neighbors = n_neighbors
+        super().__init__(n_neighbors=n_neighbors)
+
         self.lambd = lambd
         self.max_iter = max_iter
         self.method = method
-        self.X = None
+        self.X_ = None
 
     def fit(self, X):
         """Store the reference points.
@@ -42,16 +43,18 @@ class PotSinkhornNeighborFinder(BaseNeighborFinder):
         X : array-like, shape=[n_points_x, n_features]
             Reference points.
         """
-        self.X = X
+        self.X_ = X
         return self
 
-    def kneighbors(self, Y):
+    def kneighbors(self, X, return_distance=True):
         """Find k nearest neighbors using Sinkhorn regularization.
 
         Parameters
         ----------
-        Y : array-like, shape=[n_points_y, n_features]
+        X : array-like, shape=[n_points_y, n_features]
             Query points.
+        return_distance : bool
+            Whether to return the distances.
 
         Returns
         -------
@@ -60,16 +63,20 @@ class PotSinkhornNeighborFinder(BaseNeighborFinder):
         indices : array-like, shape=[n_points_y, n_neighbors]
             Indices of the nearest neighbors.
         """
-        M = np.exp(-self.lambd * ot.dist(Y, self.X))
+        M = np.exp(-self.lambd * ot.dist(X, self.X_))
 
         n, m = M.shape
         a = np.ones(n) / n
         b = np.ones(m) / m
 
+        # TODO: implement as sinkhorn solver?
         Gs = ot.sinkhorn(a, b, M, self.lambd, self.method, self.max_iter)
 
         indices = np.argsort(Gs, axis=1)[:, : self.n_neighbors]
 
-        distances = np.array([M[i, indices[i]] for i in range(Y.shape[0])])
+        if not return_distance:
+            return indices
+
+        distances = np.array([M[i, indices[i]] for i in range(X.shape[0])])
 
         return distances, indices

@@ -76,7 +76,7 @@ class P2pFromFmConverter(BaseP2pFromFmConverter):
             emb1, emb2 = emb2, emb1
 
         self.neighbor_finder.fit(emb1)
-        _, p2p_21 = self.neighbor_finder.kneighbors(emb2)
+        p2p_21 = self.neighbor_finder.kneighbors(emb2, return_distance=False)
 
         return p2p_21[:, 0]
 
@@ -84,48 +84,61 @@ class P2pFromFmConverter(BaseP2pFromFmConverter):
 class BaseNeighborFinder(abc.ABC):
     """Base class for a Neighbor finder.
 
+    A simplified blueprint of ``sklearn.NearestNeighbors`` implementation.
+
     Parameters
     ----------
     n_neighbors : int
         Number of neighbors.
     """
 
+    def __init__(self, n_neighbors=1):
+        self.n_neighbors = 1
+
     @abc.abstractmethod
-    def fit(self, X):
+    def fit(self, X, y=None):
         """Store the reference points.
 
         Parameters
         ----------
         X : array-like, shape=[n_points_x, n_features]
             Reference points.
+        y : Ignored
         """
 
     @abc.abstractmethod
-    def kneighbors(self, Y):
+    def kneighbors(self, X, return_distance=True):
         """Find k nearest neighbors using Sinkhorn regularization.
 
         Parameters
         ----------
-        Y : array-like, shape=[n_points_y, n_features]
+        X : array-like, shape=[n_points_y, n_features]
             Query points.
+        return_distance : bool
+            Whether to return the distances.
 
         Returns
         -------
         distances : array-like, shape=[n_points_y, n_neighbors]
-            Distances to the nearest neighbors.
+            Distances to the nearest neighbors, only present if
+            ``return_distance is True``.
         indices : array-like, shape=[n_points_y, n_neighbors]
             Indices of the nearest neighbors.
         """
 
 
 class SinkhornNeighborFinder(WhichRegistryMixins):
-    """Class for a Sinkhorn  Neighbor finder to find Neighbors based on the solution of OT maps computed with Sinkhorn regularization.
+    """Sinkhorn neighbor finder.
+
+    Finds neighbors based on the solution of optimal transport (OT) maps
+    computed with Sinkhorn regularization.
 
     References
     ----------
-    .. [Cuturi2013] Marco Cuturi. “Sinkhorn Distances: Lightspeed Computation of Optimal Transport.”
-    Advances in Neural Information Processing Systems (NIPS), 2013.
-    http://marcocuturi.net/SI.html
+    .. [Cuturi2013] Marco Cuturi. “Sinkhorn Distances: Lightspeed Computation
+        of Optimal Transport.”
+        Advances in Neural Information Processing Systems (NIPS), 2013.
+        http://marcocuturi.net/SI.html
     """
 
     _Registry = SinkhornNeighborFinderRegistry
@@ -136,18 +149,12 @@ class SinkhornP2pFromFmConverter(P2pFromFmConverter):
 
     Parameters
     ----------
+    neighbor_finder : SinkhornKNeighborsFinder
+        Nearest neighbor finder.
     adjoint : bool
         Whether to use adjoint method.
     bijective : bool
         Whether to use bijective method. Check [VM2023]_.
-    epsilon : float
-        Regularization parameter for Sinkhorn algorithm.
-    max_iter : int
-        Maximum number of iterations for Sinkhorn algorithm.
-    epsilon0 : float
-        Initial regularization parameter for epsilon scaling.
-    tau : float
-        Threshold for numerical stability in log-domain calculations.
 
     References
     ----------
@@ -160,12 +167,15 @@ class SinkhornP2pFromFmConverter(P2pFromFmConverter):
 
     def __init__(
         self,
-        sinkhorn_neigbor_finder=SinkhornNeighborFinder.from_registry(which="pot"),
+        neighbor_finder=None,
         adjoint=False,
         bijective=False,
     ):
+        if neighbor_finder is None:
+            neighbor_finder = SinkhornNeighborFinder.from_registry(which="pot")
+
         super().__init__(
-            neighbor_finder=sinkhorn_neigbor_finder,
+            neighbor_finder=neighbor_finder,
             adjoint=adjoint,
             bijective=bijective,
         )
