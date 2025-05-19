@@ -317,8 +317,10 @@ class PoissonSamplerRegistry(Registry):
 class FarthestPointSamplerRegistry(Registry):
     MAP = {}
 
-class SinkhornNeighborFinderRegistry(WhichRegistry):
+
+class SinkhornNeighborFinderRegistry(Registry):
     MAP = {}
+
 
 class MeshPlotterRegistry(Registry):
     MAP = {}
@@ -356,4 +358,3 @@ def _create_register_funcs(module):
 
 
 _create_register_funcs(sys.modules[__name__])
-
