@@ -5,8 +5,17 @@ import logging
 
 import numpy as np
 import scipy
-from geomfum.convert import FmFromP2pConverter, P2pFromFmConverter, BijectiveP2pFromFmConverter, FmFromP2pBijectiveConverter
-from geomfum.convert import SinkhornNeighborFinder, DiscreteOptimizationP2pFromFmConverter, SmoothP2pFromFmConverter, DirichletDisplacementFromP2pConverter, SinkhornP2pFromFmConverter 
+
+from geomfum.convert import (
+    BijectiveP2pFromFmConverter,
+    FmFromP2pBijectiveConverter,
+    FmFromP2pConverter,
+    P2pFromFmConverter,
+    DiscreteOptimizationP2pFromFmConverter,
+    SmoothP2pFromFmConverter,
+    DirichletDisplacementFromP2pConverter,
+    SinkhornP2pFromFmConverter,
+)
 
 
 class Refiner(abc.ABC):
@@ -247,8 +256,6 @@ class IterativeRefiner(Refiner):
             if msg:
                 raise ValueError(f"Not enough eigenvectors on {', '.join(msg)}.")
 
-        nit = self.nit
-
         for _ in range(nit):
             new_fmap_matrix = self.iter(fmap_matrix, basis_a, basis_b)
 
@@ -265,7 +272,6 @@ class IterativeRefiner(Refiner):
                 logging.warning(f"Maximum number of iterations reached: {nit}")
 
         return new_fmap_matrix
-
 
 
 class BijectiveIterativeRefiner(Refiner):
@@ -346,7 +352,7 @@ class BijectiveIterativeRefiner(Refiner):
         else:
             self._step_a, self._step_b = step
 
-    def iter(self, fmap_matrix12,fmap_matrix21, basis_a, basis_b):
+    def iter(self, fmap_matrix12, fmap_matrix21, basis_a, basis_b):
         """Refiner iteration.
 
         Parameters
@@ -366,17 +372,20 @@ class BijectiveIterativeRefiner(Refiner):
         k2, k1 = fmap_matrix12.shape
         new_k1, new_k2 = k1 + self._step_a, k2 + self._step_b
 
-        p2p_21, p2p_12 = self.p2p_from_fm_converter(fmap_matrix12,fmap_matrix21, basis_a, basis_b)
+        p2p_21, p2p_12 = self.p2p_from_fm_converter(
+            fmap_matrix12, fmap_matrix21, basis_a, basis_b
+        )
         fmap_matrix12 = self.fm_from_p2p_converter(
             p2p_21, basis_a.truncate(new_k1), basis_b.truncate(new_k2)
         )
         fmap_matrix21 = self.fm_from_p2p_converter(
             p2p_12, basis_b.truncate(new_k2), basis_a.truncate(new_k1)
         )
-        return self.iter_refiner(fmap_matrix12, basis_a, basis_b), self.iter_refiner(fmap_matrix21, basis_b, basis_a)
+        return self.iter_refiner(fmap_matrix12, basis_a, basis_b), self.iter_refiner(
+            fmap_matrix21, basis_b, basis_a
+        )
 
-
-    def __call__(self, fmap_matrix12,fmap_matrix21, basis_a, basis_b):
+    def __call__(self, fmap_matrix12, fmap_matrix21, basis_a, basis_b):
         """Apply refiner.
 
         Parameters
@@ -414,7 +423,9 @@ class BijectiveIterativeRefiner(Refiner):
         nit = self.nit
 
         for _ in range(nit):
-            new_fmap_matrix12, new_fmap_matrix21 = self.iter(fmap_matrix12 , fmap_matrix21, basis_a, basis_b)
+            new_fmap_matrix12, new_fmap_matrix21 = self.iter(
+                fmap_matrix12, fmap_matrix21, basis_a, basis_b
+            )
 
             if (
                 self.atol is not None
@@ -422,7 +433,7 @@ class BijectiveIterativeRefiner(Refiner):
             ):
                 break
 
-            fmap_matrix12 , fmap_matrix21= new_fmap_matrix12, new_fmap_matrix21
+            fmap_matrix12, fmap_matrix21 = new_fmap_matrix12, new_fmap_matrix21
 
         else:
             if self.atol is not None:
@@ -509,7 +520,6 @@ class ZoomOut(IterativeRefiner):
         )
 
 
-
 class BijectiveZoomOut(BijectiveIterativeRefiner):
     """Bijective Zoomout algorithm.
 
@@ -530,6 +540,7 @@ class BijectiveZoomOut(BijectiveIterativeRefiner):
         "MapTree: Recovering Multiple Solutions in the Space of Maps."
         ACM Transactions on Graphics 42, no. 4 (2023): 1-15.
     """
+
     def __init__(
         self,
         nit=10,
@@ -559,23 +570,25 @@ class DiscreteOptimization(BijectiveIterativeRefiner):
     .. [RMWO2021] Jing Ren, Simone Melzi, Peter Wonka, Maks Ovsjanikov.
         “Discrete Optimization for Shape Matching.” Eurographics Symposium
         on Geometry Processing 2021, K. Crane and J. Digne (Guest Editors),
-        Volume 40 (2021), Number 5. 
+        Volume 40 (2021), Number 5.
     """
-    
+
     def __init__(
-        self,
-        nit=10,
-        step=1,
-        energies=['ortho','adjoint','conformal','descriptors']):
+        self, nit=10, step=1, energies=["ortho", "adjoint", "conformal", "descriptors"]
+    ):
         super().__init__(
             nit=nit,
             step=step,
-            p2p_from_fm_converter=DiscreteOptimizationP2pFromFmConverter(energies=energies),
+            p2p_from_fm_converter=DiscreteOptimizationP2pFromFmConverter(
+                energies=energies
+            ),
             fm_from_p2p_converter=FmFromP2pConverter(),
             iter_refiner=None,
         )
 
-    def iter(self, fmap_matrix12,fmap_matrix21, basis_a, basis_b, descr_a=None, descr_b=None):
+    def iter(
+        self, fmap_matrix12, fmap_matrix21, basis_a, basis_b, descr_a=None, descr_b=None
+    ):
         """Refiner iteration.
 
         Parameters
@@ -598,7 +611,9 @@ class DiscreteOptimization(BijectiveIterativeRefiner):
         k2, k1 = fmap_matrix12.shape
         new_k1, new_k2 = k1 + self._step_a, k2 + self._step_b
         basis_a.use_k, basis_b.use_k = k1, k2
-        p2p_21, p2p_12 = self.p2p_from_fm_converter(fmap_matrix12, fmap_matrix21, basis_a, basis_b, descr_a, descr_b)
+        p2p_21, p2p_12 = self.p2p_from_fm_converter(
+            fmap_matrix12, fmap_matrix21, basis_a, basis_b, descr_a, descr_b
+        )
         fmap_matrix12 = self.fm_from_p2p_converter(
             p2p_21, basis_a.truncate(new_k1), basis_b.truncate(new_k2)
         )
@@ -606,11 +621,13 @@ class DiscreteOptimization(BijectiveIterativeRefiner):
             p2p_12, basis_b.truncate(new_k2), basis_a.truncate(new_k1)
         )
         basis_a.use_k, basis_b.use_k = new_k1, new_k2
-        return self.iter_refiner(fmap_matrix12, basis_a, basis_b), self.iter_refiner(fmap_matrix21, basis_b, basis_a)
+        return self.iter_refiner(fmap_matrix12, basis_a, basis_b), self.iter_refiner(
+            fmap_matrix21, basis_b, basis_a
+        )
 
-
-
-    def __call__(self, fmap_matrix12,fmap_matrix21, basis_a, basis_b, descr_a=None, descr_b=None):
+    def __call__(
+        self, fmap_matrix12, fmap_matrix21, basis_a, basis_b, descr_a=None, descr_b=None
+    ):
         """Apply refiner.
 
         Parameters
@@ -645,9 +662,15 @@ class DiscreteOptimization(BijectiveIterativeRefiner):
             if msg:
                 raise ValueError(f"Not enough eigenvectors on {', '.join(msg)}.")
 
-
         for _ in range(nit):
-            new_fmap_matrix12, new_fmap_matrix21 = self.iter(fmap_matrix12 , fmap_matrix21, basis_a, basis_b, descr_a=descr_a, descr_b=descr_b)
+            new_fmap_matrix12, new_fmap_matrix21 = self.iter(
+                fmap_matrix12,
+                fmap_matrix21,
+                basis_a,
+                basis_b,
+                descr_a=descr_a,
+                descr_b=descr_b,
+            )
 
             if (
                 self.atol is not None
@@ -655,14 +678,13 @@ class DiscreteOptimization(BijectiveIterativeRefiner):
             ):
                 break
 
-            fmap_matrix12 , fmap_matrix21= new_fmap_matrix12, new_fmap_matrix21
+            fmap_matrix12, fmap_matrix21 = new_fmap_matrix12, new_fmap_matrix21
 
         else:
             if self.atol is not None:
                 logging.warning(f"Maximum number of iterations reached: {nit}")
 
         return new_fmap_matrix12, new_fmap_matrix21
-
 
 
 class SmoothOptimization(BijectiveIterativeRefiner):
@@ -681,12 +703,8 @@ class SmoothOptimization(BijectiveIterativeRefiner):
         "Smooth NonRigid Shape Matching via Effective Dirichlet Energy Optimization."
         In 2022 International Conference on 3D Vision (3DV).
     """
-    
-    def __init__(
-        self,
-        nit=10,
-        step=1,
-        w_coupling=1e3):
+
+    def __init__(self, nit=10, step=1, w_coupling=1e3):
         super().__init__(
             nit=nit,
             step=step,
@@ -694,11 +712,24 @@ class SmoothOptimization(BijectiveIterativeRefiner):
             fm_from_p2p_converter=FmFromP2pConverter(),
             iter_refiner=None,
         )
-        self.w_coupling=w_coupling
-        self.displ_from_p2p_converter=DirichletDisplacementFromP2pConverter(w_coupling=w_coupling)
+        self.w_coupling = w_coupling
+        self.displ_from_p2p_converter = DirichletDisplacementFromP2pConverter(
+            w_coupling=w_coupling
+        )
 
-
-    def iter(self, fmap_matrix12,fmap_matrix21, displ21, displ12, mesh_a, mesh_b,W_a,A_a, W_b,A_b):
+    def iter(
+        self,
+        fmap_matrix12,
+        fmap_matrix21,
+        displ21,
+        displ12,
+        mesh_a,
+        mesh_b,
+        W_a,
+        A_a,
+        W_b,
+        A_b,
+    ):
         """Refiner iteration.
 
         Parameters
@@ -711,7 +742,7 @@ class SmoothOptimization(BijectiveIterativeRefiner):
             Displacement matrix.
         displ12: array-like, shape=[n_vertices_b, 3]
             Displacement matrix.
-        mesh_a : Mesh   
+        mesh_a : Mesh
             Mesh.
         mesh_b : Mesh
             Mesh.
@@ -723,18 +754,20 @@ class SmoothOptimization(BijectiveIterativeRefiner):
             Refined functional map matrix.
         displ21 : array-like, shape=[n_vertices_a, 3]
             Refined displacement matrix.
-        displ12 : array-like, shape=[n_vertices_b, 3]  
+        displ12 : array-like, shape=[n_vertices_b, 3]
             Refined displacement matrix.
         """
         basis_a = mesh_a.basis
         basis_b = mesh_b.basis
-        
+
         k2, k1 = fmap_matrix12.shape
         new_k1, new_k2 = k1 + self._step_a, k2 + self._step_b
 
         basis_a.use_k, basis_b.use_k = k1, k2
-        p2p_21, p2p_12 = self.p2p_from_fm_converter(fmap_matrix12,fmap_matrix21,displ21, displ12, mesh_a,mesh_b)
-        
+        p2p_21, p2p_12 = self.p2p_from_fm_converter(
+            fmap_matrix12, fmap_matrix21, displ21, displ12, mesh_a, mesh_b
+        )
+
         fmap_matrix12 = self.fm_from_p2p_converter(
             p2p_21, basis_a.truncate(new_k1), basis_b.truncate(new_k2)
         )
@@ -742,17 +775,31 @@ class SmoothOptimization(BijectiveIterativeRefiner):
             p2p_12, basis_b.truncate(new_k2), basis_a.truncate(new_k1)
         )
 
-        displ21= self.displ_from_p2p_converter(
-            p2p_21, mesh_a,mesh_b, W_b,A_b)
-        displ12 = self.displ_from_p2p_converter(    
-            p2p_12, mesh_b,mesh_a, W_a,A_a)
+        displ21 = self.displ_from_p2p_converter(p2p_21, mesh_a, mesh_b, W_b, A_b)
+        displ12 = self.displ_from_p2p_converter(p2p_12, mesh_b, mesh_a, W_a, A_a)
 
         basis_a.use_k, basis_b.use_k = new_k1, new_k2
 
-        return self.iter_refiner(fmap_matrix12, basis_a, basis_b),self.iter_refiner(fmap_matrix21, basis_b, basis_a), displ21, displ12
+        return (
+            self.iter_refiner(fmap_matrix12, basis_a, basis_b),
+            self.iter_refiner(fmap_matrix21, basis_b, basis_a),
+            displ21,
+            displ12,
+        )
 
-
-    def __call__(self, fmap_matrix12,fmap_matrix21, displ21, displ12, mesh_a, mesh_b, W_a=None,A_a=None, W_b=None,A_b=None):
+    def __call__(
+        self,
+        fmap_matrix12,
+        fmap_matrix21,
+        displ21,
+        displ12,
+        mesh_a,
+        mesh_b,
+        W_a=None,
+        A_a=None,
+        W_b=None,
+        A_b=None,
+    ):
         """Apply refiner.
 
         Parameters
@@ -765,7 +812,7 @@ class SmoothOptimization(BijectiveIterativeRefiner):
             Displacement matrix.
         displ12: array-like, shape=[n_vertices_b, 3]
             Displacement matrix.
-        mesh_a : Mesh   
+        mesh_a : Mesh
             Mesh.
         mesh_b : Mesh
             Mesh.
@@ -793,16 +840,28 @@ class SmoothOptimization(BijectiveIterativeRefiner):
                 raise ValueError(f"Not enough eigenvectors on {', '.join(msg)}.")
 
         nit = self.nit
-        
-        #compute laplacian utils
+
+        # compute laplacian utils
         if W_a is None or W_b is None or A_a is None or A_b is None:
             from geomfum.laplacian import LaplacianFinder
+
             laplacian_finder = LaplacianFinder.from_registry(which="robust")
-            W_a,A_a= laplacian_finder(mesh_a)
-            W_b,A_b= laplacian_finder(mesh_b)
-        #first a pass of the refinement        
+            W_a, A_a = laplacian_finder(mesh_a)
+            W_b, A_b = laplacian_finder(mesh_b)
+        # first a pass of the refinement
         for _ in range(nit):
-            new_fmap_matrix12,new_fmap_matrix21, new_displ21, new_displ12 = self.iter(fmap_matrix12,fmap_matrix21, displ21, displ12, mesh_a, mesh_b, W_a,A_a, W_b,A_b)
+            new_fmap_matrix12, new_fmap_matrix21, new_displ21, new_displ12 = self.iter(
+                fmap_matrix12,
+                fmap_matrix21,
+                displ21,
+                displ12,
+                mesh_a,
+                mesh_b,
+                W_a,
+                A_a,
+                W_b,
+                A_b,
+            )
 
             if (
                 self.atol is not None
@@ -810,7 +869,7 @@ class SmoothOptimization(BijectiveIterativeRefiner):
             ):
                 break
 
-            fmap_matrix12 , fmap_matrix21= new_fmap_matrix12, new_fmap_matrix21
+            fmap_matrix12, fmap_matrix21 = new_fmap_matrix12, new_fmap_matrix21
             displ21, displ12 = new_displ21, new_displ12
         else:
             if self.atol is not None:
@@ -828,10 +887,13 @@ class AdjointBijectiveZoomOut(ZoomOut):
         Number of iterations.
     step : int or tuple[2, int]
         How much to increase each basis per iteration.
+
     References
     ----------
-    .. [VM2023] Giulio Viganò, Simone Melzi. Adjoint Bijective ZoomOut: Efficient upsampling for learned linearly-invariant embedding.” 2023
-    https://github.com/gviga/AB-ZoomOut
+    .. [VM2023] Giulio Viganò, Simone Melzi.
+        Adjoint Bijective ZoomOut: Efficient upsampling for learned linearly-invariant
+        embedding. 2023
+        https://github.com/gviga/AB-ZoomOut
     """
 
     def __init__(
@@ -847,7 +909,6 @@ class AdjointBijectiveZoomOut(ZoomOut):
         )
 
 
-
 class FastSinkhornFilters(ZoomOut):
     """Fast Sinkhorn filters.
 
@@ -857,8 +918,9 @@ class FastSinkhornFilters(ZoomOut):
         Number of iterations.
     step : int or tuple[2, int]
         How much to increase each basis per iteration.
-    sinkhorn_neigbour_finder : SinkhornKNeighborsFinder
+    neighbor_finder : SinkhornKNeighborsFinder
         Nearest neighbor finder.
+
     References
     ----------
     .. [PRMWO2021] Gautam Pai, Jing Ren, Simone Melzi, Peter Wonka, and Maks Ovsjanikov.
@@ -872,12 +934,11 @@ class FastSinkhornFilters(ZoomOut):
         self,
         nit=10,
         step=1,
-        sinkhorn_neigbor_finder=SinkhornNeighborFinder.from_registry(which='pot'),
+        neighbor_finder=None,
     ):
         super().__init__(
             nit=nit,
             step=step,
-            p2p_from_fm_converter=SinkhornP2pFromFmConverter(sinkhorn_neigbor_finder),
+            p2p_from_fm_converter=SinkhornP2pFromFmConverter(neighbor_finder),
             fm_from_p2p_converter=FmFromP2pConverter(),
         )
-    
