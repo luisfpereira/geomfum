@@ -16,8 +16,8 @@ class Registry(abc.ABC):
 
         Parameters
         ----------
-        key : str or tuple
-            Key. First element must be wrap name.
+        key : str
+            Key.
         obj_name : class name
             Name of the object to register.
         requires : str or tuple
@@ -41,13 +41,13 @@ class Registry(abc.ABC):
         cls.MAP[key] = (obj_name, missing_package)
 
     @classmethod
-    def get(cls, key):
+    def get(cls, key=None):
         """Get register object.
 
         Parameters
         ----------
-        key : str or tuple
-            Key. First element must be wrap name.
+        key : str
+            Key.
 
         Returns
         -------
@@ -56,13 +56,18 @@ class Registry(abc.ABC):
         """
         if key is None:
             key = cls.default
+
+        if key == "geomfum":
+            if cls.has_internal:
+                return None
+
+            cls.raise_if_no_internal()
+
         obj_name, missing_package = cls.MAP[key]
         if missing_package:
             raise ModuleNotFoundError(missing_package)
 
-        package_name = key if isinstance(key, str) else key[0]
-
-        module = __import__(f"geomfum.wrap.{package_name}", fromlist=[""])
+        module = __import__(f"geomfum.wrap.{key}", fromlist=[""])
         Obj = getattr(module, obj_name)
 
         return Obj
@@ -90,7 +95,7 @@ class Registry(abc.ABC):
         """
         sign = str(inspect.signature(cls.get))[1:-1]
         return (
-            f"No internal implementation. Use`.from_registry({sign}, **kwargs)`. "
+            f"No internal implementation. Use `.from_registry({sign}, **kwargs)`. "
             "Available implementations: "
             f"{', '.join([str(elem) for elem in cls.list_available()])}."
         )
@@ -102,15 +107,35 @@ class Registry(abc.ABC):
             raise ValueError(cls.only_from_registry())
 
 
-class WhichRegistry(Registry, abc.ABC):
+class NestedRegistry(abc.ABC):
     @classmethod
-    def register(cls, which, obj_name, requires=(), as_default=False):
+    def _outer_registry(cls, key=None):
+        """Get outer dict.
+
+        Parameters
+        ----------
+        key_out : Hashable
+            Key for outer register dict.
+            Defaults to first key if ``None``.
+
+        Returns
+        -------
+        registry : Registry
+        """
+        if key is None:
+            return cls.Registries[list(cls.Registries.keys())[0]]
+        return cls.Registries[key]
+
+    @classmethod
+    def register(cls, key_out, key_in, obj_name, requires=(), as_default=False):
         """Register.
 
         Parameters
         ----------
-        which : str
-            Key.
+        key_out : Hashable
+            Key for outer register dict.
+        key_in : str
+            Key for object in inner register.
         obj_name : class name
             Name of the object to register.
         requires : str or tuple
@@ -118,62 +143,75 @@ class WhichRegistry(Registry, abc.ABC):
         as_default : bool
             Whether to set it as default.
         """
-        return super().register(which, obj_name, requires, as_default)
+        return cls._outer_registry(key_out).register(
+            key_in, obj_name, requires, as_default
+        )
 
     @classmethod
-    def get(cls, which):
+    def get(cls, key_out, key_in):
         """Get register object.
 
         Parameters
         ----------
-        which : str
-            Key.
+        key_out : Hashable
+            Key for outer register dict.
+        key_in : str
+            Key for object in inner register.
 
         Returns
         -------
         Obj : class
             Registered object.
         """
-        return super().get(which)
-
-
-class MeshWhichRegistry(Registry, abc.ABC):
-    @classmethod
-    def register(cls, mesh, which, obj_name, requires=(), as_default=False):
-        """Register.
-
-        Parameters
-        ----------
-        mesh : bool
-            Whether a mesh or point cloud.
-        which : str
-            Key.
-        obj_name : class name
-            Name of the object to register.
-        requires : str or tuple
-            Required packages.
-        as_default : bool
-            Whether to set it as default.
-        """
-        return super().register((which, mesh), obj_name, requires)
+        return cls._outer_registry(key_out).get(key_in)
 
     @classmethod
-    def get(cls, mesh, which):
-        """Get register object.
-
-        Parameters
-        ----------
-        mesh : bool
-            Whether a mesh or point cloud.
-        which : str
-            Key.
+    def list_available(cls, key_out=None):
+        """List register keys.
 
         Returns
         -------
-        Obj : class
-            Registered object.
+        keys : list or dict[list]
+            Registered keys.
         """
-        return super().get((which, mesh))
+        if key_out is not None:
+            return cls._outer_registry(key_out).list_available()
+
+        available = {}
+        for key, Registry in cls.Registries.items():
+            available[key] = Registry.list_available()
+
+        return available
+
+    @classmethod
+    def only_from_registry(cls, key_out=None):
+        """Message for no internal implementation.
+
+        Parameters
+        ----------
+        key_out : Hashable
+            Key for outer register dict.
+            If ``None``, defaults to default outer key.
+
+        Returns
+        -------
+        msg : str
+            Message for no internal implementation with available
+            implementations.
+        """
+        return cls._outer_registry(key_out).only_from_registry()
+
+    @classmethod
+    def raise_if_no_internal(cls, key_out=None):
+        """Raise error if no internal implementation.
+
+        Parameters
+        ----------
+        key_out : Hashable
+            Key for outer register dict.
+            If ``None``, defaults to default outer key.
+        """
+        return cls._outer_registry(key_out).only_from_registry()
 
 
 class WhichRegistryMixins:
@@ -201,12 +239,13 @@ class WhichRegistryMixins:
 
 class MeshWhichRegistryMixins:
     def __init__(self, *args, **kwargs):
+        # TODO: has to be improved
         self._Registry.raise_if_no_internal()
 
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def from_registry(cls, *args, mesh=True, which="robust", **kwargs):
+    def from_registry(cls, *args, mesh=True, which=None, **kwargs):
         """Instantiate wrapped implementation.
 
         Parameters
@@ -221,54 +260,73 @@ class MeshWhichRegistryMixins:
         obj : Obj
             An instantiated object.
         """
-        return cls._Registry.get(mesh, which)(*args, **kwargs)
+        instantiator = cls._Registry.get(mesh, which)
+        if instantiator is None:
+            return cls.__new__(cls, *args, **kwargs)
+
+        return instantiator(*args, **kwargs)
 
 
-class LaplacianFinderRegistry(MeshWhichRegistry):
-    """Laplacian finder registry."""
-
-    MAP = {}
-
-
-class HeatKernelSignatureRegistry(WhichRegistry):
+class _MeshLaplacianFinderRegistry(Registry):
     has_internal = True
     MAP = {}
 
 
-class WaveKernelSignatureRegistry(WhichRegistry):
+class _PointSetLaplacianFinderRegistry(Registry):
+    has_internal = False
+    MAP = {}
+
+
+class LaplacianFinderRegistry(NestedRegistry):
+    Registries = {
+        True: _MeshLaplacianFinderRegistry,
+        False: _PointSetLaplacianFinderRegistry,
+    }
+
+
+class HeatKernelSignatureRegistry(Registry):
     has_internal = True
     MAP = {}
 
 
-class FaceValuedGradientRegistry(WhichRegistry):
+class WaveKernelSignatureRegistry(Registry):
+    has_internal = True
     MAP = {}
 
 
-class FaceDivergenceOperatorRegistry(WhichRegistry):
+class FaceValuedGradientRegistry(Registry):
     MAP = {}
 
 
-class FaceOrientationOperatorRegistry(WhichRegistry):
+class FaceDivergenceOperatorRegistry(Registry):
     MAP = {}
 
 
-class HierarchicalMeshRegistry(WhichRegistry):
+class FaceOrientationOperatorRegistry(Registry):
     MAP = {}
 
 
-class PoissonSamplerRegistry(WhichRegistry):
+class HierarchicalMeshRegistry(Registry):
     MAP = {}
 
 
-class FarthestPointSamplerRegistry(WhichRegistry):
+class PoissonSamplerRegistry(Registry):
     MAP = {}
 
 
-class MeshPlotterRegistry(WhichRegistry):
+class FarthestPointSamplerRegistry(Registry):
     MAP = {}
 
 
-class HeatDistanceMetricRegistry(WhichRegistry):
+class SinkhornNeighborFinderRegistry(Registry):
+    MAP = {}
+
+
+class MeshPlotterRegistry(Registry):
+    MAP = {}
+
+
+class HeatDistanceMetricRegistry(Registry):
     MAP = {}
 
 
@@ -280,7 +338,7 @@ def _create_register_funcs(module):
     from the name and transforming it in snake case
     (e.g. ``register_laplacian_finder``).
 
-    These functions are widely used within ``geomstats.wrap``.
+    These functions are widely used within ``geomfum.wrap``.
     """
     for name, method in inspect.getmembers(module):
         if not (

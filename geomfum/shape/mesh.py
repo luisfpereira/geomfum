@@ -26,8 +26,8 @@ class TriangleMesh(Shape):
 
     def __init__(self, vertices, faces):
         super().__init__(is_mesh=True)
-        self.vertices = vertices
-        self.faces = faces
+        self.vertices = np.asarray(vertices)
+        self.faces = np.asarray(faces)
 
         self._edges = None
         self._face_normals = None
