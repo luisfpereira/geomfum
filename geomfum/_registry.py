@@ -317,9 +317,9 @@ class PoissonSamplerRegistry(Registry):
 class FarthestPointSamplerRegistry(Registry):
     MAP = {}
 
-class FeatureExtractorRegistry(WhichRegistry):
-    MAP = {}
 
+class FeatureExtractorRegistry(Registry):
+    MAP = {}
 
 
 class SinkhornNeighborFinderRegistry(Registry):
