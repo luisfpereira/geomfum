@@ -28,6 +28,10 @@ class ShapePlotter(abc.ABC):
     def set_vertex_scalars(self, scalars):
         """Set vertex scalars on mesh."""
         raise NotImplementedError("Not implemented for this plotter.")
+    
+    def highlight_vertices(self, coords, color, size):
+        """Highlight vertices on mesh."""
+        raise NotImplementedError("Not implemented for this plotter.")
 
 
 class MeshPlotter(WhichRegistryMixins, ShapePlotter):

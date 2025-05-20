@@ -5,7 +5,6 @@ from sklearn.neighbors import NearestNeighbors
 
 import geomfum.wrap as _wrap  # noqa (for register)
 from geomfum._registry import (
-    FarthestPointSamplerRegistry,
     PoissonSamplerRegistry,
     WhichRegistryMixins,
 )
@@ -18,17 +17,94 @@ class BaseSampler(abc.ABC):
     def sample(self, shape):
         """Sample shape."""
 
-
 class PoissonSampler(WhichRegistryMixins):
     """Poisson disk sampling."""
 
     _Registry = PoissonSamplerRegistry
 
+class FarthestPointSampler(BaseSampler):
+    """Farthest point Euclidean sampling.
 
-class FarthestPointSampler(WhichRegistryMixins):
-    """Farthest point Euclidean sampling."""
+    Parameters
+    ----------
+    min_n_samples : int
+        Minimum number of samples to target.
+    dist_func : callable, optional 
+        A callable distance function from a point if None, uses the default distance function (Euclidean distance).
+    """
 
-    _Registry = FarthestPointSamplerRegistry
+    def __init__(self, min_n_samples, dist_func = None):
+        super().__init__()
+        self.min_n_samples = min_n_samples
+        self.dist_func = dist_func
+
+    def sample(self, shape, first_point=None):
+        """Sample using farthest point sampling.
+
+        Parameters
+        ----------
+        shape : TriangleMesh
+            Mesh.
+        first_point : int, optional
+            Index of the first point to sample. If None, samples randomly.
+
+        Returns
+        -------
+        samples : array-like, shape=[n_samples, 3]
+            Coordinates of samples.
+        """
+        if self.dist_func is None:
+            def dist_func(i):
+                return np.linalg.norm(shape.vertices - shape.vertices[i, None, :], axis=1)
+            self.dist_func = dist_func
+        
+        return self.farthest_point_sampling_call(
+            self.dist_func,
+            self.min_n_samples,
+            points_pool=shape.n_vertices,
+            first_index = first_point,            
+        )
+    
+    def farthest_point_sampling_call(self, dist_func, k, points_pool=None, first_index=None,):
+        """Sample points using farthest point sampling.
+
+        Parameters
+        ----------
+        d_func   : callable - for index i, d_func(i) is a (points_pool,) array of geodesic distance to
+                other points
+        k        : int - number of points to sample
+        points_pool : Number of points. If not specified, checks d_func(0)
+        first_index : int - index of the first point to sample. If None, samples randomly
+
+        Returns
+        -------
+        fps : (k,) array of indices of sampled points
+        """
+        if dist_func is None:
+            raise ValueError("d_func should be a callable") 
+        if first_index is None:
+            rng = np.random.default_rng()
+            inds = [rng.integers(points_pool).item(0)]
+        else:
+            inds = [first_index]
+
+        if points_pool is None:
+            points_pool = dist_func(0)[0].shape
+        else:
+            assert points_pool > 0
+        dists = dist_func(inds[0])
+
+        iterable = range(k-1)
+        for i in iterable:
+            if i == k-1:
+                continue
+            newid = np.argmax(dists[0])
+            inds.append(newid)
+            new_dists = dist_func(newid)
+            minimum_dists = np.minimum(dists[0], new_dists[0])
+            dists = (minimum_dists, dists[1])
+            
+        return np.asarray(inds)
 
 
 class VertexProjectionSampler(BaseSampler):
@@ -63,7 +139,7 @@ class VertexProjectionSampler(BaseSampler):
                 n_neighbors=1, leaf_size=40, algorithm="kd_tree", n_jobs=1
             )
         if neighbor_finder.n_neighbors > 1:
-            raise ValueError("Expects `n_neighors = 1`.")
+            raise ValueError("Expects `n_neighbors = 1`.")
 
         self.neighbor_finder = neighbor_finder
         self.sampler = sampler
