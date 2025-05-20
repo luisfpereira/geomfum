@@ -31,6 +31,8 @@ class PotSinkhornNeighborFinder(BaseNeighborFinder):
         super().__init__(n_neighbors=n_neighbors)
 
         self.lambd = lambd
+        self.max_iter = max_iter
+        self.method = method
         self.X_ = None
 
     def fit(self, X):
@@ -61,8 +63,8 @@ class PotSinkhornNeighborFinder(BaseNeighborFinder):
         indices : array-like, shape=[n_points_y, n_neighbors]
             Indices of the nearest neighbors.
         """
-
         M = np.exp(-self.lambd * ot.dist(X, self.X_))
+
         n, m = M.shape
         a = np.ones(n) / n
         b = np.ones(m) / m
