@@ -3,14 +3,15 @@ from geomfum._registry import (
     register_face_orientation_operator,
     register_face_valued_gradient,
     register_farthest_point_sampler,
+    register_feature_extractor,
     register_heat_distance_metric,
     register_heat_kernel_signature,
     register_hierarchical_mesh,
     register_laplacian_finder,
     register_mesh_plotter,
     register_poisson_sampler,
+    register_sinkhorn_neighbor_finder,
     register_wave_kernel_signature,
-    register_feature_extractor,
 )
 from geomfum._utils import has_package
 
@@ -80,11 +81,15 @@ register_mesh_plotter(
 )
 
 register_feature_extractor(
-    "pointnet", "PointnetFeatureExtractor", requires="torch", as_default=True
+    "pointnet", "PointnetFeatureExtractor", requires="torch", as_default=False
 )
 
 register_feature_extractor(
     "diffusionnet", "DiffusionnetFeatureExtractor", requires="torch", as_default=True
+)
+
+register_sinkhorn_neighbor_finder(
+    "pot", "PotSinkhornNeighborFinder", requires="ot", as_default=True
 )
 register_heat_distance_metric(
     "pp3d", "Pp3dHeatDistanceMetric", requires="potpourri3d", as_default=True
