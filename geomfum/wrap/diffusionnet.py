@@ -106,7 +106,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         self.n_features = self.out_channels
         self.device = device
 
-    def __call__(self, shape, feats=None):
+    def __call__(self, shape):
         """Call pass through the DiffusionNet model.
 
         Parameters
@@ -131,8 +131,6 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         if v.dim() == 2:
             v = v.unsqueeze(0)
             f = f.unsqueeze(0)
-            if feats is not None:
-                feats = feats.unsqueeze(0)
             frames = frames.unsqueeze(0)
             mass = mass.unsqueeze(0)
             L = L.unsqueeze(0)
@@ -141,8 +139,9 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
             gradX = gradX.unsqueeze(0)
             gradY = gradY.unsqueeze(0)
 
+        # TODO: add possibility of using other features as input
         self.features = self.model(
-            v, f, feats, frames, mass, L, evals, evecs, gradX, gradY
+            v, f, None, frames, mass, L, evals, evecs, gradX, gradY
         )
         return self.features
 
