@@ -159,14 +159,6 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         except Exception as e:
             raise ValueError(f"Failed to load model: {str(e)}")
 
-    def load(self, premodel):
-        """Load model parameters from a pre-trained model.
-
-        Args:
-            premodel (dict): State dictionary containing model parameters
-        """
-        self.model.load_state_dict(premodel)
-
     def save(self, path):
         """Save model parameters to the specified file path.
 
