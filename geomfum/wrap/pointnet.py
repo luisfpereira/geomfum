@@ -70,6 +70,35 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         features = self.model(vertices)
         return features
 
+    def load_from_path(self, path):
+        """Load model parameters from the provided file path.
+
+        Args:
+            path (str): Path to the saved model parameters
+        """
+        try:
+            self.model.load_state_dict(torch.load(path, map_location=self.device))
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Model file not found: {path}")
+        except Exception as e:
+            raise ValueError(f"Failed to load model: {str(e)}")
+
+    def load(self, premodel):
+        """Load model parameters from a pre-trained model.
+
+        Args:
+            premodel (dict): State dictionary containing model parameters
+        """
+        self.model.load_state_dict(premodel)
+
+    def save(self, path):
+        """Save model parameters to the specified file path.
+
+        Args:
+        path (str): Path to the saved model parameters
+        """
+        torch.save(self.model.state_dict(), path)
+
 
 class PointNetfeat(nn.Module):
     """PointNet local and global feature extractor.
