@@ -35,6 +35,10 @@ class LearnedDescriptor(Descriptor, abc.ABC):
     def __init__(self, feature_extractor=None):
         super().__init__()
         self.feature_extractor = feature_extractor
+        if self.feature_extractor is None:
+            self.feature_extractor = FeatureExtractor.from_registry(
+                which="diffusionnet"
+            )
 
     def __call__(self, shape):
         """Compute descriptor.
@@ -45,13 +49,7 @@ class LearnedDescriptor(Descriptor, abc.ABC):
             Shape.
         """
         with torch.no_grad():
-            if self.feature_extractor is None:
-                features = shape.vertices
-                print(
-                    "Warning: No feature extractor provided. Using vertices as features."
-                )
-            else:
-                features = self.feature_extractor(shape)
+            features = self.feature_extractor(shape)
         features = features.squeeze().T.cpu().numpy()
         return features
 
