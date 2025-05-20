@@ -2,6 +2,7 @@
 
 import abc
 
+import numpy as np
 import scipy
 from sklearn.neighbors import NearestNeighbors
 
@@ -122,6 +123,7 @@ class BijectiveP2pFromFmConverter(BaseP2pFromFmConverter):
             Basis of mesh A.
         basis_b : Basis
             Basis of mesh B.
+
         Returns
         -------
         p2p_21 : array-like, shape=[n_vertices_b]
@@ -550,7 +552,6 @@ class DisplacementFromP2pConverter(BaseDisplacementFromP2pConverter):
         disp : array-like, shape=[n_vertices_a, 3]
             Functional map matrix.
         """
-
         return mesh_a.vertices[p2p] - mesh_b.vertices
 
 
@@ -593,7 +594,6 @@ class DirichletDisplacementFromP2pConverter(BaseDisplacementFromP2pConverter):
         disp : array-like, shape=[n_vertices_a, 3]
             Functional map matrix.
         """
-
         target = scipy.sparse.linalg.spsolve(
             stiffness_matrix_b + self.w_coupling * mass_matrix_b,
             mass_matrix_b @ mesh_a.vertices[p2p],
