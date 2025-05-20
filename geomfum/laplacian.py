@@ -56,28 +56,31 @@ class LaplacianFinder(MeshWhichRegistryMixins, BaseLaplacianFinder):
         v1 = shape.vertices[shape.faces[:, 1]]
         v2 = shape.vertices[shape.faces[:, 2]]
 
-        e0 = v2 - v1
-        e1 = v0 - v2
-        e2 = v1 - v0
+        edgevec0 = v2 - v1
+        edgevec1 = v0 - v2
+        edgevec2 = v1 - v0
 
-        l0 = np.linalg.norm(e0, axis=1)
-        l1 = np.linalg.norm(e1, axis=1)
-        l2 = np.linalg.norm(e2, axis=1)
+        len0 = np.linalg.norm(edgevec0, axis=1)
+        len1 = np.linalg.norm(edgevec1, axis=1)
+        len2 = np.linalg.norm(edgevec2, axis=1)
 
-        cos_angle12 = np.einsum("ij,ij->i", -e1, e2) / (l1 * l2)
-        cos_angle20 = np.einsum("ij,ij->i", e0, -e2) / (l0 * l2)
-        cos_angle01 = np.einsum("ij,ij->i", -e0, e1) / (l0 * l1)
+        cos_angle12 = np.einsum("ij,ij->i", -edgevec1, edgevec2) / (len1 * len2)
+        cos_angle20 = np.einsum("ij,ij->i", edgevec0, -edgevec2) / (len0 * len2)
+        cos_angle01 = np.einsum("ij,ij->i", -edgevec0, edgevec1) / (len0 * len1)
 
-        I = np.concatenate([shape.faces[:, 0], shape.faces[:, 1], shape.faces[:, 2]])
-        J = np.concatenate([shape.faces[:, 1], shape.faces[:, 2], shape.faces[:, 0]])
-        W = np.concatenate([cos_angle01, cos_angle12, cos_angle20])
+        vind012 = np.concatenate(
+            [shape.faces[:, 0], shape.faces[:, 1], shape.faces[:, 2]]
+        )
+        vind120 = np.concatenate(
+            [shape.faces[:, 1], shape.faces[:, 2], shape.faces[:, 0]]
+        )
+        cos_angles = np.concatenate([cos_angle01, cos_angle12, cos_angle20])
 
-        epsilon = 1e-8
-        W = 0.5 * W / np.sqrt(1 - W**2 + epsilon)
+        cot_angles = 0.5 * cos_angles / np.sqrt(1 - cos_angles**2)
 
-        row = np.concatenate([I, J, I, J])
-        col = np.concatenate([J, I, I, J])
-        data = np.concatenate([-W, -W, W, W])
+        row = np.concatenate([vind012, vind120, vind012, vind120])
+        col = np.concatenate([vind120, vind012, vind012, vind120])
+        data = np.concatenate([-cot_angles, -cot_angles, cot_angles, cot_angles])
 
         stiffness_matrix = sparse.coo_matrix(
             (data, (row, col)), shape=(shape.n_vertices, shape.n_vertices)
