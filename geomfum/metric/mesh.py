@@ -303,6 +303,10 @@ class GraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
             Distance.
         target_point : array-like, shape=[n_targets]
             Target index.
+
+        Notes
+        -----
+        The Distances are ordered following the order of the indices.
         """
         dist_dict = nx.single_source_dijkstra_path_length(
             self._graph, source_point.item(), cutoff=self.cutoff, weight="weight"
@@ -310,9 +314,7 @@ class GraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
         indices = np.array(list(dist_dict.keys()))
         distances = np.array(list(dist_dict.values()))
         sort_order = np.argsort(indices)
-        indices = indices[sort_order]
-        distances = distances[sort_order]
-        return np.array(list(distances)), np.array(list(indices))
+        return np.array(list(distances[sort_order])), np.array(list(indices[sort_order]))
 
 
 class KClosestGraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
