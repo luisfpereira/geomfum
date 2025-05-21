@@ -56,17 +56,17 @@ class LaplacianFinder(MeshWhichRegistryMixins, BaseLaplacianFinder):
         v1 = shape.vertices[shape.faces[:, 1]]
         v2 = shape.vertices[shape.faces[:, 2]]
 
-        edgevec0 = v2 - v1
-        edgevec1 = v0 - v2
-        edgevec2 = v1 - v0
+        edges21 = v2 - v1
+        edges02 = v0 - v2
+        edges10 = v1 - v0
 
-        len0 = np.linalg.norm(edgevec0, axis=1)
-        len1 = np.linalg.norm(edgevec1, axis=1)
-        len2 = np.linalg.norm(edgevec2, axis=1)
+        elen21 = np.linalg.norm(edges21, axis=1)
+        elen02 = np.linalg.norm(edges02, axis=1)
+        elen10 = np.linalg.norm(edges10, axis=1)
 
-        cos_angle12 = np.einsum("ij,ij->i", -edgevec1, edgevec2) / (len1 * len2)
-        cos_angle20 = np.einsum("ij,ij->i", edgevec0, -edgevec2) / (len0 * len2)
-        cos_angle01 = np.einsum("ij,ij->i", -edgevec0, edgevec1) / (len0 * len1)
+        cos_angle12 = np.einsum("ij,ij->i", -edges02, edges10) / (elen02 * elen10)
+        cos_angle20 = np.einsum("ij,ij->i", edges21, -edges10) / (elen21 * elen10)
+        cos_angle01 = np.einsum("ij,ij->i", -edges21, edges02) / (elen21 * elen02)
 
         vind012 = np.concatenate(
             [shape.faces[:, 0], shape.faces[:, 1], shape.faces[:, 2]]
