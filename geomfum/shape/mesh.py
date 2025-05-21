@@ -88,15 +88,19 @@ class TriangleMesh(Shape):
         edges : array-like, shape=[n_edges, 2]
         """
         if self._edges is None:
-            I = np.concatenate([self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]])
-            J = np.concatenate([self.faces[:, 1], self.faces[:, 2], self.faces[:, 0]])
+            vind012 = np.concatenate(
+                [self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]]
+            )
+            vind120 = np.concatenate(
+                [self.faces[:, 1], self.faces[:, 2], self.faces[:, 0]]
+            )
 
-            In = np.concatenate([I, J])
-            Jn = np.concatenate([J, I])
-            Vn = np.ones_like(In)
+            E1 = np.concatenate([vind012, vind120])
+            E2 = np.concatenate([vind120, vind012])
+            W = np.ones_like(E1)
 
             M = scipy.sparse.csr_matrix(
-                (Vn, (In, Jn)), shape=(self.n_vertices, self.n_vertices)
+                (W, (E1, E2)), shape=(self.n_vertices, self.n_vertices)
             ).tocoo()
 
             edges0 = M.row
@@ -160,14 +164,16 @@ class TriangleMesh(Shape):
         """
         if self._vertex_areas is None:
             # THIS IS JUST A TRICK TO BE FASTER THAN NP.ADD.AT
-            I = np.concatenate([self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]])
-            J = np.zeros_like(I)
+            vind012 = np.concatenate(
+                [self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]]
+            )
+            vind120 = np.zeros_like(vind012)
 
-            V = np.tile(self.face_areas / 3, 3)
+            areas = np.tile(self.face_areas / 3, 3)
 
             self._vertex_areas = np.array(
                 scipy.sparse.coo_matrix(
-                    (V, (I, J)), shape=(self.n_vertices, 1)
+                    (areas, (vind012, vind120)), shape=(self.n_vertices, 1)
                 ).todense()
             ).flatten()
 
