@@ -8,11 +8,39 @@ def _prefix_with_ellipsis(string):
 
 
 def normalize(array, axis=-1):
+    """Normalize array along axis.
+
+    Parameters
+    ----------
+    array : array-like, shape=[..., n, ...]
+        Array to normalize.
+    axis : int
+        Axis to use for normalization.
+
+    Returns
+    -------
+    array : array-like, shape=[..., n, ...]
+        Normalized array.
+    """
     # TODO: handle norm zero?
     return array / np.linalg.norm(array, axis=axis, keepdims=True)
 
 
 def scale_to_unit_sum(array, axis=-1):
+    """Scale array to sum one along axis.
+
+    Parameters
+    ----------
+    array : array-like, shape=[..., n, ...]
+        Array to normalize.
+    axis : int
+        Axis to use for normalization.
+
+    Returns
+    -------
+    array : array-like, shape=[..., n, ...]
+        Scaled array.
+    """
     return array / np.sum(array, axis=axis, keepdims=True)
 
 
