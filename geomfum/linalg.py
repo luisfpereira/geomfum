@@ -12,14 +12,14 @@ def normalize(array, axis=-1):
 
     Parameters
     ----------
-    array : array-like, shape=[..., n]
+    array : array-like, shape=[..., n, ...]
         Array to normalize.
     axis : int
         Axis to use for normalization.
 
     Returns
     -------
-    array : array-like, shape=[..., n]
+    array : array-like, shape=[..., n, ...]
         Normalized array.
     """
     # TODO: handle norm zero?
@@ -31,14 +31,14 @@ def scale_to_unit_sum(array, axis=-1):
 
     Parameters
     ----------
-    array : array-like, shape=[..., n]
+    array : array-like, shape=[..., n, ...]
         Array to normalize.
     axis : int
         Axis to use for normalization.
 
     Returns
     -------
-    array : array-like, shape=[..., n]
+    array : array-like, shape=[..., n, ...]
         Scaled array.
     """
     return array / np.sum(array, axis=axis, keepdims=True)

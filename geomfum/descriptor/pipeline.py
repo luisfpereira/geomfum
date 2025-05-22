@@ -14,12 +14,30 @@ class Subsampler(abc.ABC):
 
     @abc.abstractmethod
     def __call__(self, array):
-        """Subsample array."""
-        pass
+        """Subsample array.
+
+        Parameters
+        ----------
+        array : array-like
+            Array to subsample.
+
+        Returns
+        -------
+        array : array-like
+            Subsampled array.
+        """
 
 
 class ArangeSubsampler(Subsampler):
-    """Subsampler based on arange method."""
+    """Subsampler based on arange method.
+
+    Parameters
+    ----------
+    subsample_step : int
+        Arange step.
+    axis : int
+        Axis from which to subsample.
+    """
 
     def __init__(self, subsample_step=1, axis=0):
         self.subsample_step = subsample_step
@@ -30,12 +48,12 @@ class ArangeSubsampler(Subsampler):
 
         Parameters
         ----------
-        array : array-like, shape=[..., n]
+        array : array-like, shape=[..., n, ...]
             Array to subsample.
 
         Returns
         -------
-        array : array-like, shape=[...,n]
+        array : array-like, shape=[..., d, ...]
             Subsampled array.
         """
         indices = np.arange(0, array.shape[self.axis], self.subsample_step)
@@ -50,8 +68,20 @@ class Normalizer(abc.ABC):
 
     @abc.abstractmethod
     def __call__(self, shape, array):
-        """Normalize array."""
-        pass
+        """Normalize array.
+
+        Parameters
+        ----------
+        shape : Shape
+            Shape.
+        array : array-like
+            Array to normalize.
+
+        Returns
+        -------
+        array : array-like
+            Normalized array.
+        """
 
 
 class L2InnerNormalizer(Normalizer):
@@ -83,9 +113,15 @@ class L2InnerNormalizer(Normalizer):
 
 
 class DescriptorPipeline:
-    """Descriptor pipeline."""
+    """Descriptor pipeline.
 
-    # steps: descriptor, subsampler, normalizer
+    Parameters
+    ----------
+    steps : list or tuple
+        Steps to apply.
+        Include: descriptor, subsampler, normalizer.
+    """
+
     def __init__(self, steps):
         self.steps = steps
 
