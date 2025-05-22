@@ -14,6 +14,7 @@ class Subsampler(abc.ABC):
 
     @abc.abstractmethod
     def __call__(self, array):
+        """Subsample array."""
         pass
 
 
@@ -25,6 +26,18 @@ class ArangeSubsampler(Subsampler):
         self.axis = axis
 
     def __call__(self, array):
+        """Subsample array based on arange method.
+
+        Parameters
+        ----------
+        array : array-like, shape=[..., n]
+            Array to subsample.
+
+        Returns
+        -------
+        array : array-like, shape=[...,n]
+            Subsampled array.
+        """
         indices = np.arange(0, array.shape[self.axis], self.subsample_step)
         slc = [slice(None)] * array.ndim
         slc[self.axis] = indices
@@ -37,6 +50,7 @@ class Normalizer(abc.ABC):
 
     @abc.abstractmethod
     def __call__(self, shape, array):
+        """Normalize array."""
         pass
 
 
@@ -44,6 +58,20 @@ class L2InnerNormalizer(Normalizer):
     """L2 inner normalizer."""
 
     def __call__(self, shape, array):
+        """Normalize array with respect to L2 inner product.
+
+        Parameters
+        ----------
+        shape : Shape
+            Shape.
+        array : array-like, shape=[..., n]
+            Array to normalize.
+
+        Returns
+        -------
+        array : array-like, shape=[..., n]
+            Normalized array.
+        """
         coeff = np.sqrt(
             np.einsum(
                 "...n,...n->...",
@@ -67,6 +95,18 @@ class DescriptorPipeline:
         return np.r_[current, new]
 
     def apply(self, shape):
+        """Apply descriptor pipeline.
+
+        Parameters
+        ----------
+        shape : Shape
+            Shape to apply pipeline to.
+
+        Returns
+        -------
+        descr : array-like, shape=[..., n]
+            Descriptor.
+        """
         descr = None
         for step in self.steps:
             if isinstance(step, Descriptor):
