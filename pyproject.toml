@@ -18,7 +18,14 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 requires-python = ">= 3.9"
-dependencies = ["numpy", "scipy", "scikit-learn", "meshio", "pyfmaps"]
+dependencies = [
+    "numpy",
+    "scipy",
+    "scikit-learn",
+    "meshio",
+    "pyfmaps",
+    "geomstats@git+https://github.com/geomstats/geomstats.git@main",
+]
 
 [project.optional-dependencies]
 lapl = ["robust-laplacian", "libigl"]
@@ -32,10 +39,16 @@ opt = ["geomfum[lapl,metric,sampling,rematching,sinkhorn]"]
 fun = [
     "geopext@git+https://github.com/luisfpereira/geopext.git@2b7a7be1a8fdc6e5755e5f4bda88bc284065e829",
 ]
-test-scripts = ["nbformat", "nbconvert", "ipykernel", "ipython", "pyvista","plotly"]
+test-scripts = [
+    "nbformat",
+    "nbconvert",
+    "ipykernel",
+    "ipython",
+    "pyvista",
+    "plotly",
+]
 test = [
     "pytest",
-    "geomstats",
     "polpo@git+https://github.com/geometric-intelligence/polpo.git@main",
     "geomfum[opt,test-scripts]",
 ]
