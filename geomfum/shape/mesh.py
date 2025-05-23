@@ -2,7 +2,7 @@
 
 import geomstats.backend as gs
 
-import geomfum.backend as gf
+import geomfum.backend as xgs
 from geomfum.io import load_mesh
 from geomfum.operator import (
     FaceDivergenceOperator,
@@ -187,7 +187,7 @@ class TriangleMesh(Shape):
             gs.broadcast_to(gs.expand_dims(area, axis=-1), (self.n_faces, 3)),
             (-1,),
         )
-        incident_areas = gf.scatter_sum_1d(
+        incident_areas = xgs.scatter_sum_1d(
             index=id_vertices,
             src=val,
         )

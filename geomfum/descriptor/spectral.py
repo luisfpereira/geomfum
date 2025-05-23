@@ -2,7 +2,7 @@
 
 import geomstats.backend as gs
 
-import geomfum.backend as gf
+import geomfum.backend as xgs
 import geomfum.linalg as la
 from geomfum._registry import (
     HeatKernelSignatureRegistry,
@@ -29,7 +29,7 @@ def hks_default_domain(shape, n_domain):
         Time points.
     """
     nonzero_vals = shape.basis.nonzero_vals
-    return gf.geomspace(
+    return xgs.geomspace(
         4 * gs.log(10) / nonzero_vals[-1], 4 * gs.log(10) / nonzero_vals[0], n_domain
     )
 
@@ -126,7 +126,7 @@ class HeatKernelSignature(WhichRegistryMixins, SpectralDescriptor):
         domain = self.domain(shape) if callable(self.domain) else self.domain
 
         vals_term = gs.exp(-la.scalarvecmul(domain, shape.basis.vals))
-        vecs_term = gf.square(shape.basis.vecs)
+        vecs_term = xgs.square(shape.basis.vecs)
 
         if self.scale:
             vals_term = la.scale_to_unit_sum(vals_term)
@@ -167,11 +167,11 @@ class WaveKernelSignature(WhichRegistryMixins, SpectralDescriptor):
             domain = self.domain
             sigma = self.sigma
 
-        exp_arg = -gf.square(gs.log(shape.basis.nonzero_vals) - domain[:, None]) / (
+        exp_arg = -xgs.square(gs.log(shape.basis.nonzero_vals) - domain[:, None]) / (
             2 * sigma**2
         )
         vals_term = gs.exp(exp_arg)
-        vecs_term = gf.square(shape.basis.nonzero_vecs)
+        vecs_term = xgs.square(shape.basis.nonzero_vecs)
 
         if self.scale:
             vals_term = la.scale_to_unit_sum(vals_term)

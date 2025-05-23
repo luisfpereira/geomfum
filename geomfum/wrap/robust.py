@@ -3,7 +3,7 @@
 import geomstats.backend as gs
 import robust_laplacian
 
-import geomfum.backend as gf
+import geomfum.backend as xgs
 from geomfum.laplacian import BaseLaplacianFinder
 
 
@@ -40,7 +40,7 @@ class RobustMeshLaplacianFinder(BaseLaplacianFinder):
             mollify_factor=self.mollify_factor,
         )
 
-        return gf.sparse.from_scipy_csc(stiffness_matrix), gf.sparse.from_scipy_csc(
+        return xgs.sparse.from_scipy_csc(stiffness_matrix), xgs.sparse.from_scipy_csc(
             mass_matrix
         )
 

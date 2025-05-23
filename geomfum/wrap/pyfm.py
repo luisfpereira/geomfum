@@ -7,7 +7,7 @@ import pyFM.mesh.geometry
 import pyFM.signatures
 import scipy
 
-import geomfum.backend as gf
+import geomfum.backend as xgs
 from geomfum.descriptor._base import SpectralDescriptor
 from geomfum.descriptor.spectral import WksDefaultDomain, hks_default_domain
 from geomfum.laplacian import BaseLaplacianFinder
@@ -34,10 +34,10 @@ class PyfmMeshLaplacianFinder(BaseLaplacianFinder):
             Diagonal lumped mass matrix.
         """
         return (
-            gf.sparse.from_scipy_csc(
+            xgs.sparse.from_scipy_csc(
                 pyFM.mesh.laplacian.cotangent_weights(shape.vertices, shape.faces)
             ),
-            gf.sparse.from_scipy_dia(
+            xgs.sparse.from_scipy_dia(
                 pyFM.mesh.laplacian.dia_area_mat(shape.vertices, shape.faces)
             ),
         )
@@ -345,11 +345,11 @@ def get_orientation_op(
     Jn = gs.concatenate([J, I, I, J])
     Sn = gs.concatenate([Sij, Sji, -Sij, -Sji], axis=-1)
 
-    inv_area = gf.sparse.dia_matrix(1 / per_vert_area, shape=(n_vertices, n_vertices))
+    inv_area = xgs.sparse.dia_matrix(1 / per_vert_area, shape=(n_vertices, n_vertices))
 
     indices = gs.stack([In, Jn])
     if Sn.ndim == 1:
-        W = gf.sparse.csc_matrix(
+        W = xgs.sparse.csc_matrix(
             indices, Sn, shape=(n_vertices, n_vertices), coalesce=True
         )
 
@@ -357,7 +357,7 @@ def get_orientation_op(
 
     out = []
     for Sn_ in Sn:
-        W = gf.sparse.csc_matrix(
+        W = xgs.sparse.csc_matrix(
             indices, Sn_, shape=(n_vertices, n_vertices), coalesce=True
         )
         out.append(inv_area @ W)
