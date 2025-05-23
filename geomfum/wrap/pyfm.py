@@ -1,5 +1,6 @@
 """pyFM wrapper."""
 
+import geomstats.backend as gs
 import numpy as np
 import pyFM.mesh
 import pyFM.mesh.geometry
@@ -81,17 +82,21 @@ class PyfmHeatKernelSignature(SpectralDescriptor):
         domain = self.domain(shape) if callable(self.domain) else self.domain
 
         if self.use_landmarks:
-            return pyFM.signatures.lm_HKS(
-                shape.basis.vals,
-                shape.basis.vecs,
-                shape.landmark_indices,
-                domain,
-                scaled=self.scale,
-            ).T
+            return gs.from_numpy(
+                pyFM.signatures.lm_HKS(
+                    shape.basis.vals,
+                    shape.basis.vecs,
+                    shape.landmark_indices,
+                    domain,
+                    scaled=self.scale,
+                ).T
+            )
 
-        return pyFM.signatures.HKS(
-            shape.basis.vals, shape.basis.vecs, domain, scaled=self.scale
-        ).T
+        return gs.from_numpy(
+            pyFM.signatures.HKS(
+                shape.basis.vals, shape.basis.vecs, domain, scaled=self.scale
+            ).T
+        )
 
 
 class PyfmWaveKernelSignature(SpectralDescriptor):
