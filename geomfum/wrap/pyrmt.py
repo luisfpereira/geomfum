@@ -1,5 +1,6 @@
 """pyRMT wrapper."""
 
+import geomstats.backend as gs
 import numpy as np
 from PyRMT import RMTMesh
 
@@ -40,8 +41,8 @@ class PyrmtHierarchicalMesh(HierarchicalShape):
         super().__init__(low=low, high=mesh)
 
     def _remesh(self, mesh, min_n_samples):
-        vertices = mesh.vertices
-        faces = mesh.faces
+        vertices = gs.to_numpy(mesh.vertices)
+        faces = gs.to_numpy(mesh.faces)
 
         if vertices.dtype != np.float64:
             vertices = vertices.astype(np.float64)
@@ -65,7 +66,7 @@ class PyrmtHierarchicalMesh(HierarchicalShape):
         self._rlow = rlow
         self._baryc_map = rlow.baryc_map(vertices)
 
-        return TriangleMesh(np.array(rlow.vertices), np.array(rlow.triangles))
+        return TriangleMesh(gs.asarray(rlow.vertices), gs.asarray(rlow.triangles))
 
     def scalar_low_high(self, scalar):
         """Transfer scalar from low-resolution to high.
