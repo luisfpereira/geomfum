@@ -3,7 +3,7 @@
 import abc
 import logging
 
-import numpy as np
+import geomstats.backend as gs
 
 from geomfum.operator import Laplacian
 
@@ -66,7 +66,7 @@ class Shape(abc.ABC):
             Whether to append landmarks to already-existing ones.
         """
         if append:
-            self.landmark_indices = np.stack(self.landmark_indices, landmark_indices)
+            self.landmark_indices = gs.stack(self.landmark_indices, landmark_indices)
 
         else:
             self.landmark_indices = landmark_indices

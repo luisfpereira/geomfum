@@ -1,8 +1,9 @@
 """Python Optimal Trasport wrapper."""
 
-import numpy as np
+import geomstats.backend as gs
 import ot
 
+import geomfum.backend as xgs
 from geomfum.convert import BaseNeighborFinder
 
 
@@ -63,20 +64,20 @@ class PotSinkhornNeighborFinder(BaseNeighborFinder):
         indices : array-like, shape=[n_points_y, n_neighbors]
             Indices of the nearest neighbors.
         """
-        M = np.exp(-self.lambd * ot.dist(X, self.X_))
+        M = gs.exp(-self.lambd * ot.dist(X, self.X_))
 
         n, m = M.shape
-        a = np.ones(n) / n
-        b = np.ones(m) / m
+        a = gs.ones(n) / n
+        b = gs.ones(m) / m
 
         # TODO: implement as sinkhorn solver?
         Gs = ot.sinkhorn(a, b, M, self.lambd, self.method, self.max_iter)
 
-        indices = np.argsort(Gs, axis=1)[:, : self.n_neighbors]
+        indices = xgs.argsort(Gs, axis=1)[:, : self.n_neighbors]
 
         if not return_distance:
             return indices
 
-        distances = np.array([M[i, indices[i]] for i in range(X.shape[0])])
+        distances = gs.array([M[i, indices[i]] for i in range(X.shape[0])])
 
         return distances, indices

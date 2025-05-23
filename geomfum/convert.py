@@ -2,6 +2,7 @@
 
 import abc
 
+import geomstats.backend as gs
 import scipy
 from sklearn.neighbors import NearestNeighbors
 
@@ -75,10 +76,11 @@ class P2pFromFmConverter(BaseP2pFromFmConverter):
         if self.bijective:
             emb1, emb2 = emb2, emb1
 
+        # TODO: update neighbor finder instead
         self.neighbor_finder.fit(emb1)
         p2p_21 = self.neighbor_finder.kneighbors(emb2, return_distance=False)
 
-        return p2p_21[:, 0]
+        return gs.from_numpy(p2p_21[:, 0])
 
 
 class BaseNeighborFinder(abc.ABC):
@@ -216,7 +218,7 @@ class FmFromP2pConverter(BaseFmFromP2pConverter):
         if self.pseudo_inverse:
             return basis_b.vecs.T @ (basis_b._shape.laplacian.mass_matrix @ evects1_pb)
 
-        return scipy.linalg.lstsq(basis_b.vecs, evects1_pb)[0]
+        return gs.from_numpy(scipy.linalg.lstsq(basis_b.vecs, evects1_pb)[0])
 
 
 class FmFromP2pBijectiveConverter(BaseFmFromP2pConverter):
@@ -243,4 +245,4 @@ class FmFromP2pBijectiveConverter(BaseFmFromP2pConverter):
             Functional map matrix.
         """
         evects2_pb = basis_b.vecs[p2p, :]
-        return scipy.linalg.lstsq(evects2_pb, basis_a.vecs)[0]
+        return gs.from_numpy(scipy.linalg.lstsq(evects2_pb, basis_a.vecs)[0])

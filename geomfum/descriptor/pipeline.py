@@ -2,7 +2,7 @@
 
 import abc
 
-import numpy as np
+import geomstats.backend as gs
 
 import geomfum.linalg as la
 
@@ -56,7 +56,7 @@ class ArangeSubsampler(Subsampler):
         array : array-like, shape=[..., d, ...]
             Subsampled array.
         """
-        indices = np.arange(0, array.shape[self.axis], self.subsample_step)
+        indices = gs.arange(0, array.shape[self.axis], self.subsample_step)
         slc = [slice(None)] * array.ndim
         slc[self.axis] = indices
 
@@ -102,8 +102,8 @@ class L2InnerNormalizer(Normalizer):
         array : array-like, shape=[..., n]
             Normalized array.
         """
-        coeff = np.sqrt(
-            np.einsum(
+        coeff = gs.sqrt(
+            gs.einsum(
                 "...n,...n->...",
                 array,
                 la.matvecmul(shape.laplacian.mass_matrix, array),
@@ -128,7 +128,7 @@ class DescriptorPipeline:
     def _update_descr(self, current, new):
         if current is None:
             return new
-        return np.r_[current, new]
+        return gs.vstack([current, new])
 
     def apply(self, shape):
         """Apply descriptor pipeline.
