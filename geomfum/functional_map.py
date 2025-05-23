@@ -2,6 +2,7 @@
 
 import abc
 
+import geomstats.backend as gs
 import numpy as np
 
 import geomfum.linalg as la
@@ -102,7 +103,7 @@ class SpectralDescriptorPreservation(WeightedFactor):
         energy_gradient : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Weighted energy gradient wrt functional map matrix.
         """
-        out = la.outer(
+        out = gs.outer(
             la.matvecmul(fmap_matrix, self.sdescr_a) - self.sdescr_b, self.sdescr_a
         )
 
