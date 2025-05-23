@@ -48,13 +48,13 @@ class PyrmtHierarchicalMesh(HierarchicalShape):
             vertices = vertices.astype(np.float64)
 
         if not vertices.flags.f_contiguous:
-            vertices = np.asfortranarray(vertices)
+            vertices = np.asfortranarray(vertices, dtype=np.float64)
 
         if faces.dtype != np.int32:
             faces = faces.astype(np.int32)
 
         if not faces.flags.f_contiguous:
-            faces = np.asfortranarray(faces)
+            faces = np.asfortranarray(faces, dtype=np.int32)
 
         rhigh = RMTMesh(vertices, faces)
         rhigh.make_manifold()
@@ -66,7 +66,7 @@ class PyrmtHierarchicalMesh(HierarchicalShape):
         self._rlow = rlow
         self._baryc_map = rlow.baryc_map(vertices)
 
-        return TriangleMesh(gs.asarray(rlow.vertices), gs.asarray(rlow.triangles))
+        return TriangleMesh(gs.array(rlow.vertices), gs.array(rlow.triangles))
 
     def scalar_low_high(self, scalar):
         """Transfer scalar from low-resolution to high.
