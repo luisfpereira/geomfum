@@ -1,6 +1,8 @@
 import numpy as _np
 import scipy as _scipy
 
+from . import sparse
+
 
 def scatter_sum_1d(index, src, size=None):
     shape = None if size is None else (size, 1)

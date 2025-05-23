@@ -18,6 +18,16 @@ BACKEND_ATTRIBUTES = {
     "": [
         "scatter_sum_1d",
     ],
+    "sparse": [
+        "to_dense",
+        "from_scipy_coo",
+        "from_scipy_csc",
+        "from_scipy_dia",
+        "csr_matrix",
+        "csc_matrix",
+        "coo_matrix",
+        "dia_matrix",
+    ],
 }
 
 

@@ -1,5 +1,7 @@
 import torch as _torch
 
+from . import sparse
+
 
 def scatter_sum_1d(index, src, size=None):
     if size is None:
