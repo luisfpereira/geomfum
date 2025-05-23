@@ -16,3 +16,7 @@ def scatter_sum_1d(index, src, size=None):
             shape=shape,
         ).todense()
     ).flatten()
+
+
+def argsort(a, axis=-1):
+    return _np.argsort(a, axis=axis)

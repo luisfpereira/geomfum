@@ -15,3 +15,7 @@ def scatter_sum_1d(index, src, size=None):
 
 def geomspace(start, stop, num, *, dtype=None):
     return gs.exp(gs.linspace(gs.log(start), gs.log(stop), num))
+
+
+def argsort(a, axis=-1):
+    return _torch.argsort(a, dim=axis)
