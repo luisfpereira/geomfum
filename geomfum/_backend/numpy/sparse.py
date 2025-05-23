@@ -17,6 +17,14 @@ def from_scipy_dia(array):
     return array
 
 
+def to_scipy_csc(array):
+    return array
+
+
+def to_scipy_dia(array):
+    return array
+
+
 def coo_matrix(indices, values, shape=None, dtype=None, coalesce=False):
     if not coalesce:
         return _scipy.sparse.coo_matrix((values, indices), shape=shape, dtype=dtype)

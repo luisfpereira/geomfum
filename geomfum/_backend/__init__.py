@@ -23,6 +23,8 @@ BACKEND_ATTRIBUTES = {
         "from_scipy_coo",
         "from_scipy_csc",
         "from_scipy_dia",
+        "to_scipy_csc",
+        "to_scipy_dia",
         "csr_matrix",
         "csc_matrix",
         "coo_matrix",
