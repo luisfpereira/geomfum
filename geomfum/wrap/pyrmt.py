@@ -81,4 +81,4 @@ class PyrmtHierarchicalMesh(HierarchicalShape):
         high_scalar : array-like, shape=[..., high.n_vertices]
             Scalar map on the high-resolution shape.
         """
-        return la.matvecmul(self._baryc_map, scalar)
+        return gs.asarray(la.matvecmul(self._baryc_map, scalar))
