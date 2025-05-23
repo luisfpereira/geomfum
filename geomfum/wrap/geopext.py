@@ -1,9 +1,10 @@
 """geopext wrapper."""
 
+import geomstats.backend as gs
 import geopext
 import numpy as np
-import scipy
 
+import geomfum.backend as gf
 from geomfum.laplacian import BaseLaplacianFinder
 
 
@@ -42,7 +43,9 @@ class GeopextMeshLaplacianFinder(BaseLaplacianFinder):
             Diagonal lumped mass matrix.
         """
         stiff_dict, mass_vec = geopext.mesh_laplacian(
-            shape.vertices, shape.faces.ravel().astype(np.uintp), self.data_struct
+            gs.to_numpy(shape.vertices),
+            gs.to_numpy(shape.faces).ravel().astype(np.uintp),
+            self.data_struct,
         )
 
         indices_i = []
@@ -54,13 +57,19 @@ class GeopextMeshLaplacianFinder(BaseLaplacianFinder):
 
             values.append(-value)
 
-        stiffness_matrix = scipy.sparse.coo_matrix(
-            (values, (indices_i, indices_j)), shape=(shape.n_vertices, shape.n_vertices)
-        ).tocsc()
+        stiffness_matrix = gf.sparse.csc_matrix(
+            gs.array([indices_i, indices_j]),
+            values,
+            shape=(shape.n_vertices, shape.n_vertices),
+            coalesce=True,
+        )
 
         indices = range(shape.n_vertices)
-        mass_matrix = scipy.sparse.coo_matrix(
-            (mass_vec, (indices, indices)), shape=(shape.n_vertices, shape.n_vertices)
-        ).tocsc()
+        mass_matrix = gf.sparse.csc_matrix(
+            gs.array([indices, indices]),
+            mass_vec,
+            shape=(shape.n_vertices, shape.n_vertices),
+            coalesce=True,
+        )
 
         return stiffness_matrix, mass_matrix

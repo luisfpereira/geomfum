@@ -6,6 +6,7 @@ import pyFM.mesh.geometry
 import pyFM.signatures
 import scipy
 
+import geomfum.backend as gf
 from geomfum.descriptor._base import SpectralDescriptor
 from geomfum.descriptor.spectral import WksDefaultDomain, hks_default_domain
 from geomfum.laplacian import BaseLaplacianFinder
@@ -26,14 +27,18 @@ class PyfmMeshLaplacianFinder(BaseLaplacianFinder):
 
         Returns
         -------
-        stiffness_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
+        stiffness_matrix : sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Stiffness matrix.
-        mass_matrix : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
+        mass_matrix : sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Diagonal lumped mass matrix.
         """
         return (
-            pyFM.mesh.laplacian.cotangent_weights(shape.vertices, shape.faces),
-            pyFM.mesh.laplacian.dia_area_mat(shape.vertices, shape.faces),
+            gf.sparse.from_scipy_csc(
+                pyFM.mesh.laplacian.cotangent_weights(shape.vertices, shape.faces)
+            ),
+            gf.sparse.from_scipy_dia(
+                pyFM.mesh.laplacian.dia_area_mat(shape.vertices, shape.faces)
+            ),
         )
 
 
