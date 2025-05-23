@@ -1,4 +1,6 @@
+import geomstats.backend as gs
 import torch as _torch
+from torch import square
 
 from . import sparse
 
@@ -9,3 +11,7 @@ def scatter_sum_1d(index, src, size=None):
 
     array = _torch.zeros(size, dtype=src.dtype)
     return _torch.scatter_add(array, -1, index, src)
+
+
+def geomspace(start, stop, num, *, dtype=None):
+    return gs.exp(gs.linspace(gs.log(start), gs.log(stop), num))

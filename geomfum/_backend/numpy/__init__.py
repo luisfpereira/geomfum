@@ -1,5 +1,6 @@
 import numpy as _np
 import scipy as _scipy
+from numpy import geomspace, square
 
 from . import sparse
 
