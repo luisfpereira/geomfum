@@ -234,7 +234,13 @@ class WhichRegistryMixins:
         obj : BaseHeatKernelSignature
             Instantiated object.
         """
-        return cls._Registry.get(which)(*args, **kwargs)
+        instantiator = cls._Registry.get(which)
+        if instantiator is None:
+            obj = cls.__new__(cls)
+            obj.__init__(*args, **kwargs)
+            return obj
+
+        return instantiator(*args, **kwargs)
 
 
 class MeshWhichRegistryMixins:
@@ -262,7 +268,9 @@ class MeshWhichRegistryMixins:
         """
         instantiator = cls._Registry.get(mesh, which)
         if instantiator is None:
-            return cls.__new__(cls, *args, **kwargs)
+            obj = cls.__new__(cls)
+            obj.__init__(*args, **kwargs)
+            return obj
 
         return instantiator(*args, **kwargs)
 
