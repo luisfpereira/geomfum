@@ -4,7 +4,7 @@ https://github.com/nmwsharp/potpourri3d
 by Nicholas Sharp.
 """
 
-import numpy as np
+import geomstats.backend as gs
 import potpourri3d as pp3d
 
 from geomfum.metric.mesh import FinitePointSetMetric, _SingleDispatchMixins
@@ -27,7 +27,9 @@ class Pp3dHeatDistanceMetric(_SingleDispatchMixins, FinitePointSetMetric):
 
     def __init__(self, shape):
         super().__init__(shape)
-        self.solver = pp3d.MeshHeatMethodDistanceSolver(shape.vertices, shape.faces)
+        self.solver = pp3d.MeshHeatMethodDistanceSolver(
+            gs.to_numpy(shape.vertices), gs.to_numpy(shape.faces)
+        )
 
     def dist_matrix(self):
         """Distance between mesh vertices.
@@ -45,7 +47,7 @@ class Pp3dHeatDistanceMetric(_SingleDispatchMixins, FinitePointSetMetric):
         for i in range(self._shape.n_vertices):
             dist_mat.append(self.solver.compute_distance(i))
 
-        return np.stack(dist_mat)
+        return gs.stack(dist_mat)
 
     def _dist_from_source_single(self, source_point):
         """Distance between mesh vertices.
@@ -64,9 +66,9 @@ class Pp3dHeatDistanceMetric(_SingleDispatchMixins, FinitePointSetMetric):
         """
         dist = self.solver.compute_distance(source_point.item())
 
-        target_point = np.arange(self._shape.n_vertices)
+        target_point = gs.arange(self._shape.n_vertices)
 
-        return dist, target_point
+        return gs.asarray(dist), target_point
 
     def _dist_single(self, point_a, point_b):
         """Distance between mesh vertices.
@@ -85,4 +87,4 @@ class Pp3dHeatDistanceMetric(_SingleDispatchMixins, FinitePointSetMetric):
         """
         dist = self.solver.compute_distance(point_a)[point_b]
 
-        return dist
+        return gs.asarray(dist)
