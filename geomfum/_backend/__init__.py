@@ -15,11 +15,7 @@ BACKEND_NAME = get_backend_name()
 
 
 BACKEND_ATTRIBUTES = {
-    "": [
-        "geomspace",
-        "scatter_sum_1d",
-        "square",
-    ],
+    "": ["geomspace", "scatter_sum_1d", "square", "argsort"],
     "sparse": [
         "to_dense",
         "from_scipy_coo",
