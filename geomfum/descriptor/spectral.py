@@ -1,7 +1,8 @@
 """Spectral descriptors."""
 
-import numpy as np
+import geomstats.backend as gs
 
+import geomfum.backend as xgs
 import geomfum.linalg as la
 from geomfum._registry import (
     HeatKernelSignatureRegistry,
@@ -28,8 +29,8 @@ def hks_default_domain(shape, n_domain):
         Time points.
     """
     nonzero_vals = shape.basis.nonzero_vals
-    return np.geomspace(
-        4 * np.log(10) / nonzero_vals[-1], 4 * np.log(10) / nonzero_vals[0], n_domain
+    return xgs.geomspace(
+        4 * gs.log(10) / nonzero_vals[-1], 4 * gs.log(10) / nonzero_vals[0], n_domain
     )
 
 
@@ -70,7 +71,7 @@ class WksDefaultDomain:
         """
         nonzero_vals = shape.basis.nonzero_vals
 
-        e_min, e_max = np.log(nonzero_vals[0]), np.log(nonzero_vals[-1])
+        e_min, e_max = gs.log(nonzero_vals[0]), gs.log(nonzero_vals[-1])
 
         sigma = (
             self.n_overlap * (e_max - e_min) / self.n_domain
@@ -81,7 +82,7 @@ class WksDefaultDomain:
         e_min += self.n_trans * sigma
         e_max -= self.n_trans * sigma
 
-        energy = np.linspace(e_min, e_max, self.n_domain)
+        energy = gs.linspace(e_min, e_max, self.n_domain)
 
         return energy, sigma
 
@@ -124,13 +125,13 @@ class HeatKernelSignature(WhichRegistryMixins, SpectralDescriptor):
         """
         domain = self.domain(shape) if callable(self.domain) else self.domain
 
-        vals_term = np.exp(-la.scalarvecmul(domain, shape.basis.vals))
-        vecs_term = np.square(shape.basis.vecs)
+        vals_term = gs.exp(-la.scalarvecmul(domain, shape.basis.vals))
+        vecs_term = xgs.square(shape.basis.vecs)
 
         if self.scale:
             vals_term = la.scale_to_unit_sum(vals_term)
 
-        return np.einsum("...j,ij->...i", vals_term, vecs_term)
+        return gs.einsum("...j,ij->...i", vals_term, vecs_term)
 
 
 class WaveKernelSignature(WhichRegistryMixins, SpectralDescriptor):
@@ -166,13 +167,13 @@ class WaveKernelSignature(WhichRegistryMixins, SpectralDescriptor):
             domain = self.domain
             sigma = self.sigma
 
-        exp_arg = -np.square(np.log(shape.basis.nonzero_vals) - domain[:, None]) / (
+        exp_arg = -xgs.square(gs.log(shape.basis.nonzero_vals) - domain[:, None]) / (
             2 * sigma**2
         )
-        vals_term = np.exp(exp_arg)
-        vecs_term = np.square(shape.basis.nonzero_vecs)
+        vals_term = gs.exp(exp_arg)
+        vecs_term = xgs.square(shape.basis.nonzero_vecs)
 
         if self.scale:
             vals_term = la.scale_to_unit_sum(vals_term)
 
-        return np.einsum("...j,ij->...i", vals_term, vecs_term)
+        return gs.einsum("...j,ij->...i", vals_term, vecs_term)
