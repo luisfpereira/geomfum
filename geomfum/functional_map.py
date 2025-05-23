@@ -3,8 +3,8 @@
 import abc
 
 import geomstats.backend as gs
-import numpy as np
 
+import geomfum.backend as gf
 import geomfum.linalg as la
 
 
@@ -34,7 +34,6 @@ class WeightedFactor(abc.ABC):
         weighted_energy : float
             Weighted energy associated with the factor.
         """
-        pass
 
     @abc.abstractmethod
     def gradient(self, fmap_matrix):
@@ -50,7 +49,6 @@ class WeightedFactor(abc.ABC):
         energy_gradient : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Weighted energy gradient wrt functional map matrix.
         """
-        pass
 
 
 class SpectralDescriptorPreservation(WeightedFactor):
@@ -84,7 +82,7 @@ class SpectralDescriptorPreservation(WeightedFactor):
         weighted_energy : float
             Weighted descriptor preservation squared norm.
         """
-        out = 0.5 * np.square(la.matvecmul(fmap_matrix, self.sdescr_a) - self.sdescr_b)
+        out = 0.5 * gf.square(la.matvecmul(fmap_matrix, self.sdescr_a) - self.sdescr_b)
         if out.ndim > 0:
             out = out.sum()
 
@@ -129,7 +127,7 @@ class LBCommutativityEnforcing(WeightedFactor):
 
     @staticmethod
     def from_bases(basis_a, basis_b, weight=1.0):
-        vals_sqdiff = np.square(basis_a.vals[None, :] - basis_b.vals[:, None])
+        vals_sqdiff = gf.square(basis_a.vals[None, :] - basis_b.vals[:, None])
         vals_sqdiff /= vals_sqdiff.sum()
         return LBCommutativityEnforcing(vals_sqdiff, weight=weight)
 
@@ -146,7 +144,7 @@ class LBCommutativityEnforcing(WeightedFactor):
         weighted_energy : float
             Weighted LB commutativity squared norm.
         """
-        return self.weight * 0.5 * (np.square(fmap_matrix) * self.vals_sqdiff).sum()
+        return self.weight * 0.5 * (gf.square(fmap_matrix) * self.vals_sqdiff).sum()
 
     def gradient(self, fmap_matrix):
         """Compute energy gradient wrt functional map matrix.
@@ -255,7 +253,7 @@ class OperatorCommutativityEnforcing(WeightedFactor):
 
         orients = shape.face_orientation_operator(grads)
         if descr.ndim > 1:
-            return np.stack(
+            return gs.stack(
                 [sign * pinv @ orient @ shape.basis.vecs for orient in orients]
             )
 
@@ -317,7 +315,7 @@ class OperatorCommutativityEnforcing(WeightedFactor):
         return (
             self.weight
             * 0.5
-            * np.square(fmap_matrix @ self.oper_a - self.oper_b @ fmap_matrix).sum()
+            * gf.square(fmap_matrix @ self.oper_a - self.oper_b @ fmap_matrix).sum()
         )
 
     def gradient(self, fmap_matrix):
@@ -365,7 +363,9 @@ class FactorSum(WeightedFactor):
         weighted_energy : float
             Weighted energy associated with the factor.
         """
-        return self.weight * np.sum([factor(fmap_matrix) for factor in self.factors])
+        return self.weight * gs.sum(
+            gs.array([factor(fmap_matrix) for factor in self.factors])
+        )
 
     def gradient(self, fmap_matrix):
         """Compute energy gradient wrt functional map matrix.
@@ -380,6 +380,6 @@ class FactorSum(WeightedFactor):
         energy_gradient : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Weighted energy gradient wrt functional map matrix.
         """
-        return self.weight * np.sum(
-            [factor.gradient(fmap_matrix) for factor in self.factors], axis=0
+        return self.weight * gs.sum(
+            gs.stack([factor.gradient(fmap_matrix) for factor in self.factors]), axis=0
         )
