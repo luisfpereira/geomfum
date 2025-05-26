@@ -3,20 +3,35 @@
 import abc
 
 import networkx as nx
-import numpy as np
+import numpy as gs
+import geomstats.backend as gs
 
 from geomfum._registry import HeatDistanceMetricRegistry, WhichRegistryMixins
 from geomfum.numerics.graph import single_source_partial_dijkstra_path_length
 
 
 def to_nx_edge_graph(shape):
+    """Convert a shape to a networkx graph.
+
+    Parameters
+    ----------
+    shape : Shape
+        Shape.
+
+    Returns
+    -------
+    graph : networkx.Graph
+        Graph.
+    """
     # TODO: move to utils? circular imports
     vertex_a, vertex_b = shape.edges.T
     lengths = VertexEuclideanMetric(shape).dist(vertex_a, vertex_b)
 
     weighted_edges = [
         (vertex_a_, vertex_b_, length)
-        for vertex_a_, vertex_b_, length in zip(vertex_a, vertex_b, lengths)
+        for vertex_a_, vertex_b_, length in zip(
+            gs.to_numpy(vertex_a), gs.to_numpy(vertex_b), gs.to_numpy(lengths)
+        )
     ]
 
     graph = nx.Graph()
@@ -107,7 +122,7 @@ class VertexEuclideanMetric(FinitePointSetMetric):
         vertices = self._shape.vertices
 
         diff = vertices[point_a] - vertices[point_b]
-        return np.linalg.norm(diff, axis=diff.ndim - 1)
+        return gs.linalg.norm(diff, axis=diff.ndim - 1)
 
     def dist_from_source(self, source_point):
         """Distance from source point.
@@ -128,15 +143,15 @@ class VertexEuclideanMetric(FinitePointSetMetric):
 
         source_vertices = vertices[source_point]
         if source_vertices.ndim > 1:
-            source_vertices = np.expand_dims(source_vertices, 1)
+            source_vertices = gs.expand_dims(source_vertices, 1)
 
         diff = source_vertices - vertices
 
-        dist = np.linalg.norm(diff, axis=diff.ndim - 1)
+        dist = gs.linalg.norm(diff, axis=diff.ndim - 1)
 
-        target_point = np.arange(self._shape.n_vertices)
+        target_point = gs.arange(self._shape.n_vertices)
         if diff.ndim > 1:
-            target_point = np.broadcast_to(
+            target_point = gs.broadcast_to(
                 target_point, dist.shape[:-1] + target_point.shape
             )
 
@@ -150,7 +165,7 @@ class VertexEuclideanMetric(FinitePointSetMetric):
         dist_matrix : array-like, shape=[n_vertices, n_vertices]
             Distance matrix.
         """
-        return self.dist_from_source(np.arange(self._shape.n_vertices))[0]
+        return self.dist_from_source(gs.arange(self._shape.n_vertices))[0]
 
 
 class _SingleDispatchMixins:
@@ -169,14 +184,14 @@ class _SingleDispatchMixins:
         dist : array-like, shape=[...,]
             Distance.
         """
-        point_a = np.asarray(point_a)
-        point_b = np.asarray(point_b)
+        point_a = gs.asarray(point_a)
+        point_b = gs.asarray(point_b)
 
         if point_a.ndim == 0 and point_b.ndim == 0:
             return self._dist_single(point_a, point_b)
 
-        point_a, point_b = np.broadcast_arrays(point_a, point_b)
-        return np.stack(
+        point_a, point_b = gs.broadcast_arrays(point_a, point_b)
+        return gs.stack(
             [
                 self._dist_single(point_a_, point_b_)
                 for point_a_, point_b_ in zip(point_a, point_b)
@@ -198,7 +213,7 @@ class _SingleDispatchMixins:
         target_point : array-like, shape=[n_targets,] or list[array-like]
             Target index.
         """
-        source_point = np.asarray(source_point)
+        source_point = gs.asarray(source_point)
         if source_point.ndim == 0:
             return self._dist_from_source_single(source_point)
 
@@ -233,11 +248,11 @@ class _NxDijkstraMixins(_SingleDispatchMixins):
         all_pairs = nx.all_pairs_dijkstra_path_length(self._graph)
 
         n_vertices = self._shape.n_vertices
-        dist_mat = np.empty((n_vertices, n_vertices))
+        dist_mat = gs.empty((n_vertices, n_vertices))
 
         for node_index, all_dict in all_pairs:
-            dists = np.array(list(all_dict.values()))
-            indices = np.array(list(all_dict.keys()))
+            dists = gs.array(list(all_dict.values()))
+            indices = gs.array(list(all_dict.keys()))
             dist_mat[node_index, indices] = dists
 
         return dist_mat
@@ -266,8 +281,8 @@ class _NxDijkstraMixins(_SingleDispatchMixins):
                 weight="weight",
             )
         except nx.NetworkXNoPath:
-            dist = np.inf
-        return dist
+            dist = float("inf")
+        return gs.asarray(dist)
 
 
 class GraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
@@ -307,7 +322,7 @@ class GraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
         dist_dict = nx.single_source_dijkstra_path_length(
             self._graph, source_point.item(), cutoff=self.cutoff, weight="weight"
         )
-        return np.array(list(dist_dict.values())), np.array(list(dist_dict.keys()))
+        return gs.array(list(dist_dict.values())), gs.array(list(dist_dict.keys()))
 
 
 class KClosestGraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
@@ -345,7 +360,7 @@ class KClosestGraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
         dist_dict = single_source_partial_dijkstra_path_length(
             self._graph, source_point.item(), self.k_closest, weight="weight"
         )
-        return np.array(list(dist_dict.values())), np.array(list(dist_dict.keys()))
+        return gs.array(list(dist_dict.values())), gs.array(list(dist_dict.keys()))
 
 
 class HeatDistanceMetric(WhichRegistryMixins):

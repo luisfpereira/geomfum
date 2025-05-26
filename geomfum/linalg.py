@@ -1,6 +1,6 @@
 """Linear algebra utils."""
 
-import numpy as np
+import geomstats.backend as gs
 
 
 def _prefix_with_ellipsis(string):
@@ -8,12 +8,40 @@ def _prefix_with_ellipsis(string):
 
 
 def normalize(array, axis=-1):
+    """Normalize array along axis.
+
+    Parameters
+    ----------
+    array : array-like, shape=[..., n, ...]
+        Array to normalize.
+    axis : int
+        Axis to use for normalization.
+
+    Returns
+    -------
+    array : array-like, shape=[..., n, ...]
+        Normalized array.
+    """
     # TODO: handle norm zero?
-    return array / np.linalg.norm(array, axis=axis, keepdims=True)
+    return array / gs.linalg.norm(array, axis=axis, keepdims=True)
 
 
 def scale_to_unit_sum(array, axis=-1):
-    return array / np.sum(array, axis=axis, keepdims=True)
+    """Scale array to sum one along axis.
+
+    Parameters
+    ----------
+    array : array-like, shape=[..., n, ...]
+        Array to normalize.
+    axis : int
+        Axis to use for normalization.
+
+    Returns
+    -------
+    array : array-like, shape=[..., n, ...]
+        Scaled array.
+    """
+    return array / gs.sum(array, axis=axis, keepdims=True)
 
 
 def _axiswise_scaling(vec, mat, axis=0):
@@ -44,7 +72,7 @@ def _axiswise_scaling(vec, mat, axis=0):
         second_term = _prefix_with_ellipsis(second_term)
         rhs = _prefix_with_ellipsis(rhs)
 
-    return np.einsum(f"{first_term},{second_term}->{rhs}", vec, mat)
+    return gs.einsum(f"{first_term},{second_term}->{rhs}", vec, mat)
 
 
 def columnwise_scaling(vec, mat):
@@ -96,7 +124,7 @@ def scalarvecmul(scalar, vec):
     scaled_vec : array-like, shape=[..., n]
         Scaled vector.
     """
-    return np.einsum("...,...i->...i", scalar, vec)
+    return gs.einsum("...,...i->...i", scalar, vec)
 
 
 def matvecmul(mat, vec):
@@ -130,29 +158,4 @@ def matvecmul(mat, vec):
 
         return out
 
-    return np.einsum("...ij,...j->...i", mat, vec)
-
-
-def outer(vec_a, vec_b):
-    """Outer product of two vectors.
-
-    Parameters
-    ----------
-    vec_a : array-like, shape=[..., n]
-        Vector.
-    vec_b : array-like, shape=[..., m]
-        Vector.
-
-    Returns
-    -------
-    mat : array-like, shape=[..., n, m]
-        Matrix.
-    """
-    if vec_a.ndim > 1 and vec_b.ndim > 1:
-        return np.einsum("...i,...j->...ij", vec_a, vec_b)
-
-    out = np.multiply.outer(vec_a, vec_b)
-    if vec_b.ndim > 1:
-        out = out.swapaxes(0, -2)
-
-    return out
+    return gs.einsum("...ij,...j->...i", mat, vec)

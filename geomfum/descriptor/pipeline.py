@@ -2,7 +2,7 @@
 
 import abc
 
-import numpy as np
+import geomstats.backend as gs
 
 import geomfum.linalg as la
 
@@ -14,18 +14,49 @@ class Subsampler(abc.ABC):
 
     @abc.abstractmethod
     def __call__(self, array):
-        pass
+        """Subsample array.
+
+        Parameters
+        ----------
+        array : array-like
+            Array to subsample.
+
+        Returns
+        -------
+        array : array-like
+            Subsampled array.
+        """
 
 
 class ArangeSubsampler(Subsampler):
-    """Subsampler based on arange method."""
+    """Subsampler based on arange method.
+
+    Parameters
+    ----------
+    subsample_step : int
+        Arange step.
+    axis : int
+        Axis from which to subsample.
+    """
 
     def __init__(self, subsample_step=1, axis=0):
         self.subsample_step = subsample_step
         self.axis = axis
 
     def __call__(self, array):
-        indices = np.arange(0, array.shape[self.axis], self.subsample_step)
+        """Subsample array based on arange method.
+
+        Parameters
+        ----------
+        array : array-like, shape=[..., n, ...]
+            Array to subsample.
+
+        Returns
+        -------
+        array : array-like, shape=[..., d, ...]
+            Subsampled array.
+        """
+        indices = gs.arange(0, array.shape[self.axis], self.subsample_step)
         slc = [slice(None)] * array.ndim
         slc[self.axis] = indices
 
@@ -37,15 +68,42 @@ class Normalizer(abc.ABC):
 
     @abc.abstractmethod
     def __call__(self, shape, array):
-        pass
+        """Normalize array.
+
+        Parameters
+        ----------
+        shape : Shape
+            Shape.
+        array : array-like
+            Array to normalize.
+
+        Returns
+        -------
+        array : array-like
+            Normalized array.
+        """
 
 
 class L2InnerNormalizer(Normalizer):
     """L2 inner normalizer."""
 
     def __call__(self, shape, array):
-        coeff = np.sqrt(
-            np.einsum(
+        """Normalize array with respect to L2 inner product.
+
+        Parameters
+        ----------
+        shape : Shape
+            Shape.
+        array : array-like, shape=[..., n]
+            Array to normalize.
+
+        Returns
+        -------
+        array : array-like, shape=[..., n]
+            Normalized array.
+        """
+        coeff = gs.sqrt(
+            gs.einsum(
                 "...n,...n->...",
                 array,
                 la.matvecmul(shape.laplacian.mass_matrix, array),
@@ -55,18 +113,36 @@ class L2InnerNormalizer(Normalizer):
 
 
 class DescriptorPipeline:
-    """Descriptor pipeline."""
+    """Descriptor pipeline.
 
-    # steps: descriptor, subsampler, normalizer
+    Parameters
+    ----------
+    steps : list or tuple
+        Steps to apply.
+        Include: descriptor, subsampler, normalizer.
+    """
+
     def __init__(self, steps):
         self.steps = steps
 
     def _update_descr(self, current, new):
         if current is None:
             return new
-        return np.r_[current, new]
+        return gs.vstack([current, new])
 
     def apply(self, shape):
+        """Apply descriptor pipeline.
+
+        Parameters
+        ----------
+        shape : Shape
+            Shape to apply pipeline to.
+
+        Returns
+        -------
+        descr : array-like, shape=[..., n]
+            Descriptor.
+        """
         descr = None
         for step in self.steps:
             if isinstance(step, Descriptor):

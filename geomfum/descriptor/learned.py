@@ -50,7 +50,7 @@ class LearnedDescriptor(Descriptor, abc.ABC):
         """
         with torch.no_grad():
             features = self.feature_extractor(shape)
-        features = features.squeeze().T.cpu().numpy()
+        features = features.squeeze().T
         return features
 
     def load_from_path(self, path):

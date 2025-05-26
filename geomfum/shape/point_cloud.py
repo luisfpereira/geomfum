@@ -1,6 +1,6 @@
 """Definition of point cloud."""
 
-import numpy as np
+import geomstats.backend as gs
 
 from geomfum.io import load_pointcloud
 
@@ -18,7 +18,7 @@ class PointCloud(Shape):
 
     def __init__(self, vertices):
         super().__init__(is_mesh=False)
-        self.vertices = np.asarray(vertices)
+        self.vertices = gs.asarray(vertices)
 
     @classmethod
     def from_file(cls, filename):
