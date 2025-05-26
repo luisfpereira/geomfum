@@ -23,3 +23,12 @@ def argsort(a, axis=-1):
 
 def to_torch(a):
     return a
+
+
+def diag(array):
+    if array.ndim == 1:
+        return _torch.diag(array)
+    elif array.ndim == 2:
+        return _torch.diag(_torch.diagonal(array))
+    else:
+        raise ValueError("Input must be a 1D or 2D tensor.")

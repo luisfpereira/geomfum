@@ -24,3 +24,7 @@ def argsort(a, axis=-1):
 
 def to_torch(a):
     return _torch.tensor(a)
+
+
+def diag(array):
+    return _np.diag(array)

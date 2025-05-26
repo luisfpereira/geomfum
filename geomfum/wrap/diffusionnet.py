@@ -11,14 +11,10 @@ https://arxiv.org/abs/2012.00888
 
 """
 
-import geomstats.backend as gs
-
-import geomfum.backend as xgs
-import numpy as np
-import scipy
 import torch
 import torch.nn as nn
 
+import geomfum.backend as xgs
 from geomfum.descriptor.learned import BaseFeatureExtractor
 
 
