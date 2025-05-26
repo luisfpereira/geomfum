@@ -36,6 +36,30 @@ def to_scipy_csc(array):
     )
 
 
+def to_coo(array):
+    return array.to_sparse_coo()
+
+
+def to_csc(array):
+    return array.to_sparse_csc()
+
+
+def to_csr(array):
+    return array.to_sparse_csr()
+
+
+def to_torch_csc(array):
+    return array
+
+
+def to_torch_dia(array):
+    return array
+
+
+def to_torch_coo(array):
+    return array
+
+
 def to_scipy_dia(array):
     # assumes:
     # 1. torch uses csc (consistency with from_scipy_dia)

@@ -11,6 +11,9 @@ https://arxiv.org/abs/2012.00888
 
 """
 
+import geomstats.backend as gs
+
+import geomfum.backend as xgs
 import numpy as np
 import scipy
 import torch
@@ -87,21 +90,25 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         self.diffusion_method = diffusion_method
         self.k_eig = k_eig
         self.cache_dir = cache_dir
-        self.model = DiffusionNet(
-            in_channels=self.in_channels,
-            out_channels=self.out_channels,
-            hidden_channels=self.hidden_channels,
-            n_block=self.n_block,
-            last_activation=self.last_activation,
-            mlp_hidden_channels=self.mlp_hidden_channels,
-            output_at=self.output_at,
-            dropout=self.dropout,
-            with_gradient_features=self.with_gradient_features,
-            with_gradient_rotations=self.with_gradient_rotations,
-            diffusion_method=self.diffusion_method,
-            k_eig=self.k_eig,
-            cache_dir=self.cache_dir,
-        ).to(device)
+        self.model = (
+            DiffusionNet(
+                in_channels=self.in_channels,
+                out_channels=self.out_channels,
+                hidden_channels=self.hidden_channels,
+                n_block=self.n_block,
+                last_activation=self.last_activation,
+                mlp_hidden_channels=self.mlp_hidden_channels,
+                output_at=self.output_at,
+                dropout=self.dropout,
+                with_gradient_features=self.with_gradient_features,
+                with_gradient_rotations=self.with_gradient_rotations,
+                diffusion_method=self.diffusion_method,
+                k_eig=self.k_eig,
+                cache_dir=self.cache_dir,
+            )
+            .to(device)
+            .float()
+        )
 
         self.n_features = self.out_channels
         self.device = device
@@ -121,27 +128,28 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         torch.Tensor
             Extracted feature tensor of shape [1, V, out_channels].
         """
-        v = torch.tensor(shape.vertices).to(torch.float32).to(self.device)
-        f = torch.tensor(shape.faces).to(torch.int64).to(self.device)
+        v = xgs.to_torch(shape.vertices).float().to(self.device)
+        f = xgs.to_torch(shape.faces).int().to(self.device)
 
         # Compute spectral operators
         frames, mass, L, evals, evecs, gradX, gradY = self._get_operators(
             shape, k=self.k_eig
         )
         if v.dim() == 2:
-            v = v.unsqueeze(0)
-            f = f.unsqueeze(0)
+            v = v.unsqueeze(0).to(device=self.device, dtype=torch.float32)
+            f = f.unsqueeze(0).to(device=self.device, dtype=torch.float32)
             frames = frames.unsqueeze(0)
             mass = mass.unsqueeze(0)
             L = L.unsqueeze(0)
             evals = evals.unsqueeze(0)
             evecs = evecs.unsqueeze(0)
             gradX = gradX.unsqueeze(0)
+
             gradY = gradY.unsqueeze(0)
 
         # TODO: add possibility of using other features as input
         self.features = self.model(
-            v, f, None, frames, mass, L, evals, evecs, gradX, gradY
+            v, f, None, None, mass, L, evals, evecs, gradX, gradY
         )
         return self.features
 
@@ -200,25 +208,29 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
 
         frames = mesh.vertex_tangent_frames
         L, M = mesh.laplacian.find()
-        massvec_np = M.diagonal().astype(np.float32)
 
         if k > 0:
             evals, evecs = mesh.laplacian.find_spectrum(spectrum_size=k)
 
-        grad_mat = mesh.gradient_matrix
-        gradX_np = np.real(grad_mat)
-        gradY_np = np.imag(grad_mat)
+        grad = mesh.gradient_matrix
+        grad_scipy = xgs.sparse.to_scipy_csc(grad)
 
-        frames = torch.from_numpy(frames).to(device=self.device, dtype=torch.float32)
-        massvec = torch.from_numpy(massvec_np).to(
+        frames = xgs.to_torch(frames)
+        massvec = torch.tensor(xgs.sparse.to_scipy_csc(M).diagonal()).to(
             device=self.device, dtype=torch.float32
         )
-        L = sparse_np_to_torch(L).to(device=self.device, dtype=torch.float32)
-        evals = torch.from_numpy(evals).to(device=self.device, dtype=torch.float32)
-        evecs = torch.from_numpy(evecs).to(device=self.device, dtype=torch.float32)
-        gradX = sparse_np_to_torch(gradX_np).to(device=self.device, dtype=torch.float32)
-        gradY = sparse_np_to_torch(gradY_np).to(device=self.device, dtype=torch.float32)
 
+        L = xgs.sparse.to_torch_coo(xgs.sparse.to_coo(L)).to(
+            device=self.device, dtype=torch.float32
+        )
+        evals = xgs.to_torch(evals).to(device=self.device, dtype=torch.float32)
+        evecs = xgs.to_torch(evecs).to(device=self.device, dtype=torch.float32)
+        gradX = xgs.sparse.to_torch_coo(
+            xgs.sparse.to_coo(xgs.sparse.from_scipy_csc(grad_scipy.real))
+        ).to(device=self.device, dtype=torch.float32)
+        gradY = xgs.sparse.to_torch_coo(
+            xgs.sparse.to_coo(xgs.sparse.from_scipy_csc(grad_scipy.imag))
+        ).to(device=self.device, dtype=torch.float32)
         return frames, massvec, L, evals, evecs, gradX, gradY
 
 
@@ -226,51 +238,6 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
 Original implementation from
 https://github.com/dongliangcao/Self-Supervised-Multimodal-Shape-Matching by Dongliang Cao
 """
-
-
-# TODO: FIND A PLACE FOR THESE FUNCTIONS
-def sparse_np_to_torch(A):
-    """Convert scipy sparse matrix to torch sparse tensor.
-
-    Parameters
-    ----------
-    A : scipy.sparse.spmatrix
-        Input sparse matrix.
-
-    Returns
-    -------
-    torch.Tensor
-        Sparse tensor representation.
-    """
-    Acoo = A.tocoo()
-    values = Acoo.data
-    indices = np.vstack((Acoo.row, Acoo.col))
-    shape = Acoo.shape
-    return torch.sparse_coo_tensor(
-        torch.LongTensor(indices), torch.FloatTensor(values), torch.Size(shape)
-    ).coalesce()
-
-
-def sparse_torch_to_np(A):
-    """Convert torch sparse tensor to scipy sparse matrix.
-
-    Parameters
-    ----------
-    A : torch.Tensor
-        Input sparse tensor.
-
-    Returns
-    -------
-    scipy.sparse.csc_matrix
-        Sparse matrix representation.
-    """
-    assert len(A.shape) == 2
-
-    indices = A.indices().detach().cpu().numpy()
-    values = A.values().detach().cpu().numpy()
-
-    mat = scipy.sparse.coo_matrix((values, indices), shape=A.shape).tocsc()
-    return mat
 
 
 class DiffusionNet(nn.Module):
@@ -425,13 +392,12 @@ class DiffusionNet(nn.Module):
         if faces is not None:
             assert faces.dim() == 3, "Only support batch operation"
 
-        mass = mass.to(device=verts.device)
-        L = L.to(device=verts.device)
-        evals = evals.to(device=verts.device)
-        evecs = evecs.to(device=verts.device)
-        gradX = gradX.to(device=verts.device)
-        gradY = gradY.to(device=verts.device)
-
+        mass = mass
+        L = L
+        evals = evals
+        evecs = evecs
+        gradX = gradX
+        gradY = gradY
         if feats is not None:
             x = feats
         else:

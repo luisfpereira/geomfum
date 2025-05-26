@@ -15,7 +15,7 @@ BACKEND_NAME = get_backend_name()
 
 
 BACKEND_ATTRIBUTES = {
-    "": ["geomspace", "scatter_sum_1d", "square", "argsort"],
+    "": ["geomspace", "scatter_sum_1d", "square", "argsort", "to_torch"],
     "sparse": [
         "to_dense",
         "from_scipy_coo",
@@ -27,6 +27,12 @@ BACKEND_ATTRIBUTES = {
         "csc_matrix",
         "coo_matrix",
         "dia_matrix",
+        "to_torch_csc",
+        "to_torch_dia",
+        "to_torch_coo",
+        "to_coo",
+        "to_csc",
+        "to_csr",
     ],
 }
 

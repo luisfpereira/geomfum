@@ -8,6 +8,9 @@ References
     https://github.com/riccardomarin/Diff-FMaps by Riccardo Marin
 """
 
+import geomstats.backend as gs
+import geomfum.backend as xgs
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -44,13 +47,17 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         device=None,
     ):
         self.device = device or torch.device("cpu")
-        self.model = PointNet(
-            conv_channels=conv_channels,
-            mlp_dims=mlp_dims,
-            head_channels=head_channels,
-            out_features=n_features,
-            dropout=dropout,
-        ).to(self.device)
+        self.model = (
+            PointNet(
+                conv_channels=conv_channels,
+                mlp_dims=mlp_dims,
+                head_channels=head_channels,
+                out_features=n_features,
+                dropout=dropout,
+            )
+            .to(self.device)
+            .float()
+        )
 
     def __call__(self, shape):
         """Extract point-wise features from a shape.
@@ -65,7 +72,8 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         torch.Tensor
             Feature tensor of shape (1, N, n_features).
         """
-        vertices = torch.tensor(shape.vertices, dtype=torch.float32).to(self.device)
+        vertices = xgs.to_torch(shape.vertices)
+        vertices = vertices.float().to(self.device)
         vertices = vertices.unsqueeze(0).transpose(2, 1).contiguous()
         features = self.model(vertices)
         return features

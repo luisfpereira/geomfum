@@ -19,3 +19,7 @@ def geomspace(start, stop, num, *, dtype=None):
 
 def argsort(a, axis=-1):
     return _torch.argsort(a, dim=axis)
+
+
+def to_torch(a):
+    return a

@@ -1,6 +1,7 @@
 """Definition of triangle mesh."""
 
 import geomstats.backend as gs
+import scipy
 
 import geomfum.backend as xgs
 from geomfum.io import load_mesh
@@ -173,6 +174,39 @@ class TriangleMesh(Shape):
         return self._face_areas
 
     @property
+    def vertex_normals(self):
+        """Compute vertex normals of a triangular mesh.
+
+        Returns
+        -------
+        normals : array-like, shape=[n_vertices, 3]
+            Normalized per-vertex normals.
+        """
+        if self._vertex_normals is None:
+            I = gs.concatenate([self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]])
+            J = gs.zeros(len(I))
+
+            normals_repeated = gs.vstack([self.face_normals] * 3)
+
+            vertex_normals = gs.zeros_like(self.vertices)
+            for c in range(3):
+                V = normals_repeated[:, c]
+
+                vertex_normals[:, c] = gs.array(
+                    scipy.sparse.coo_matrix((V, (I, J)), shape=(self.n_vertices, 1))
+                    .toarray()
+                    .flatten()
+                )
+
+            vertex_normals = vertex_normals / (
+                gs.linalg.norm(vertex_normals, axis=1, keepdims=True) + 1e-12
+            )
+
+            self._vertex_normals = vertex_normals
+
+        return self._vertex_normals
+
+    @property
     def vertex_areas(self):
         """Compute per-vertex areas.
 
@@ -210,25 +244,25 @@ class TriangleMesh(Shape):
         """
         if self._vertex_tangent_frames is None:
             normals = self.vertex_normals
-            tangent_frame = np.zeros((self.n_vertices, 3, 3))
+            tangent_frame = gs.zeros((self.n_vertices, 3, 3))
 
             tangent_frame[:, 2, :] = normals
 
-            basis_cand1 = np.tile([1, 0, 0], (self.n_vertices, 1))
-            basis_cand2 = np.tile([0, 1, 0], (self.n_vertices, 1))
+            basis_cand1 = gs.tile([1, 0, 0], (self.n_vertices, 1))
+            basis_cand2 = gs.tile([0, 1, 0], (self.n_vertices, 1))
 
-            dot_products = np.sum(normals * basis_cand1, axis=1, keepdims=True)
-            basis_x = np.where(np.abs(dot_products) < 0.9, basis_cand1, basis_cand2)
+            dot_products = gs.sum(normals * basis_cand1, axis=1, keepdims=True)
+            basis_x = gs.where(gs.abs(dot_products) < 0.9, basis_cand1, basis_cand2)
 
             normal_projections = (
-                np.sum(basis_x * normals, axis=1, keepdims=True) * normals
+                gs.sum(basis_x * normals, axis=1, keepdims=True) * normals
             )
             basis_x = basis_x - normal_projections
 
-            basis_x_norm = np.linalg.norm(basis_x, axis=1, keepdims=True)
+            basis_x_norm = gs.linalg.norm(basis_x, axis=1, keepdims=True)
             basis_x = basis_x / (basis_x_norm + 1e-12)
 
-            basis_y = np.cross(normals, basis_x)
+            basis_y = gs.cross(normals, basis_x)
 
             tangent_frame[:, 0, :] = basis_x
             tangent_frame[:, 1, :] = basis_y
@@ -257,10 +291,10 @@ class TriangleMesh(Shape):
             basis_y = frames[edges[:, 0], 1, :]
 
             # Project edge vectors onto the local tangent plane
-            comp_x = np.sum(edge_vecs * basis_x, axis=1)
-            comp_y = np.sum(edge_vecs * basis_y, axis=1)
+            comp_x = gs.sum(edge_vecs * basis_x, axis=1)
+            comp_y = gs.sum(edge_vecs * basis_y, axis=1)
 
-            self._edge_tangent_vectors = np.stack((comp_x, comp_y), axis=-1)
+            self._edge_tangent_vectors = gs.stack((comp_x, comp_y), axis=-1)
 
         return self._edge_tangent_vectors
 
@@ -306,8 +340,8 @@ class TriangleMesh(Shape):
                 if n_neigh == 0:
                     continue
 
-                lhs_mat = np.zeros((n_neigh, 2))
-                rhs_mat = np.zeros((n_neigh, n_neigh + 1))
+                lhs_mat = gs.zeros((n_neigh, 2))
+                rhs_mat = gs.zeros((n_neigh, n_neigh + 1))
                 ind_lookup = [iv]
 
                 for i_neigh in range(n_neigh):
@@ -323,9 +357,7 @@ class TriangleMesh(Shape):
                     rhs_mat[i_neigh][i_neigh + 1] = w_e * 1
 
                 lhs_T = lhs_mat.T
-                lhs_inv = (
-                    np.linalg.inv(lhs_T @ lhs_mat + eps_reg * np.identity(2)) @ lhs_T
-                )
+                lhs_inv = gs.linalg.inv(lhs_T @ lhs_mat + eps_reg * gs.eye(2)) @ lhs_T
 
                 sol_mat = lhs_inv @ rhs_mat
                 sol_coefs = (sol_mat[0, :] + 1j * sol_mat[1, :]).T
@@ -338,12 +370,12 @@ class TriangleMesh(Shape):
                     data_vals.append(sol_coefs[i_neigh])
 
             # Build the sparse matrix
-            row_inds = np.array(row_inds)
-            col_inds = np.array(col_inds)
-            data_vals = np.array(data_vals)
+            row_inds = gs.array(row_inds)
+            col_inds = gs.array(col_inds)
+            data_vals = gs.array(data_vals)
 
             self._gradient_matrix = scipy.sparse.coo_matrix(
                 (data_vals, (row_inds, col_inds)), shape=(V, V)
             ).tocsc()
 
-        return self._gradient_matrix
+        return xgs.sparse.from_scipy_csc(self._gradient_matrix)
