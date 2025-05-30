@@ -315,7 +315,9 @@ class TriangleMesh(Shape):
         """
         if self._gradient_matrix is None:
             verts = self.vertices
-            edges = self.edges.T  # Transpose to match the [2, E] format expected
+            edges = gs.transpose(
+                self.edges
+            )  # Transpose to match the [2, E] format expected
             edge_tangent_vecs = self.edge_tangent_vectors
 
             # Build outgoing neighbor lists
@@ -356,11 +358,11 @@ class TriangleMesh(Shape):
                     rhs_mat[i_neigh][0] = w_e * (-1)
                     rhs_mat[i_neigh][i_neigh + 1] = w_e * 1
 
-                lhs_T = lhs_mat.T
+                lhs_T = gs.transpose(gs.lhs_mat, (-1, -2))
                 lhs_inv = gs.linalg.inv(lhs_T @ lhs_mat + eps_reg * gs.eye(2)) @ lhs_T
 
                 sol_mat = lhs_inv @ rhs_mat
-                sol_coefs = (sol_mat[0, :] + 1j * sol_mat[1, :]).T
+                sol_coefs = gs.transpose((sol_mat[0, :] + 1j * sol_mat[1, :]), (-1, -2))
 
                 for i_neigh in range(n_neigh + 1):
                     i_glob = ind_lookup[i_neigh]
