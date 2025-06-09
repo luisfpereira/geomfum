@@ -282,8 +282,7 @@ class TriangleMesh(Shape):
         # TODO: Implement this as operator
         """Compute the gradient operator as a complex sparse matrix.
 
-        The gradient operator maps scalar functions defined on vertices to
-        vector fields in the tangent plane at each vertex.
+        This code locally fits a linear function to the scalar values at each vertex and its neighbors, extracts the gradient in the tangent plane, and assembles the global sparse matrix that acts as the discrete gradient operator on the mesh.
 
         Returns
         -------
@@ -293,70 +292,76 @@ class TriangleMesh(Shape):
             and the imaginary part corresponds to the Y component.
         """
         if self._gradient_matrix is None:
-            verts = self.vertices
-            edges = self.edges.T  # Transpose to match the [2, E] format expected
-            edge_tangent_vecs = self.edge_tangent_vectors
-
-            # Build outgoing neighbor lists
-            V = verts.shape[0]
-            vert_edge_outgoing = [[] for _ in range(V)]
-            for e in range(edges.shape[1]):
-                tail_ind = edges[0, e]
-                tip_ind = edges[1, e]
+            # 1. Build a list of outgoing edges for each vertex (neighbor list)
+            outgoing_edges_per_vertex = [[] for _ in range(self.n_vertices)]
+            for edge_index in range(self.edges.shape[0]):
+                tail_ind = self.edges[edge_index, 0]
+                tip_ind = self.edges[edge_index, 1]
                 if tip_ind != tail_ind:
-                    vert_edge_outgoing[tail_ind].append(e)
+                    outgoing_edges_per_vertex[tail_ind].append(edge_index)
 
-            # Build local inversion matrix for each vertex
+            # Prepare lists to build the sparse matrix
             row_inds = []
             col_inds = []
             data_vals = []
-            eps_reg = 1e-5
+            eps_reg = 1e-5  # Regularization for numerical stability
 
-            for iv in range(V):
-                n_neigh = len(vert_edge_outgoing[iv])
+            # 2. For each vertex, fit a local linear function 'f' to its neighbors
+            for vertex_idx in range(self.n_vertices):
+                num_neighbors = len(outgoing_edges_per_vertex[vertex_idx])
 
-                # Skip vertices with no outgoing edges
-                if n_neigh == 0:
+                # Skip isolated vertices
+                if num_neighbors == 0:
                     continue
 
-                lhs_mat = np.zeros((n_neigh, 2))
-                rhs_mat = np.zeros((n_neigh, n_neigh + 1))
-                ind_lookup = [iv]
+                # 2a. Set up the least squares system for the local neighborhood
+                lhs_mat = np.zeros((num_neighbors, 2))  # Edge tangent vectors
+                rhs_mat = np.zeros(
+                    (num_neighbors, num_neighbors + 1)
+                )  # FInite Difference matrix rhs_mat[i,j] = f(j) - f(i)
+                lookup_vertices_idx = [
+                    vertex_idx
+                ]  # List of involved vertices (center + neighbors)
 
-                for i_neigh in range(n_neigh):
-                    ie = vert_edge_outgoing[iv][i_neigh]
-                    jv = edges[1, ie]
-                    ind_lookup.append(jv)
+                # for each row of the rhs_mat, we have the following:
+                # - rhs_mat[i, 0] = -f(center) (the value at the center vertex)
+                # - rhs_mat[i, i + 1] = +f(neighbor) (the value at the neighbor vertex)
+                # - rhs_mat[i, j] = 0 for j != 0, i + 1 (no other values)
+                for neighbor_index in range(num_neighbors):
+                    edge_index = outgoing_edges_per_vertex[vertex_idx][neighbor_index]
+                    neigbor_vertex_idx = self.edges[edge_index, 1]
+                    lookup_vertices_idx.append(neigbor_vertex_idx)
 
-                    edge_vec = edge_tangent_vecs[ie][:]
-                    w_e = 1.0
+                    edge_vec = self.edge_tangent_vectors[edge_index][:]
+                    w_e = 1.0  # Edge weight (can be changed for weighted fits)
+                    lhs_mat[neighbor_index][:] = (
+                        w_e * edge_vec
+                    )  # Edge vector in tangent plane
+                    rhs_mat[neighbor_index][0] = w_e * (-1)  # -f(center)
+                    rhs_mat[neighbor_index][neighbor_index + 1] = (
+                        w_e * 1
+                    )  # +f(neighbor)
 
-                    lhs_mat[i_neigh][:] = w_e * edge_vec
-                    rhs_mat[i_neigh][0] = w_e * (-1)
-                    rhs_mat[i_neigh][i_neigh + 1] = w_e * 1
-
+                # Solve the least squares problem
                 lhs_T = lhs_mat.T
-                lhs_inv = (
-                    np.linalg.inv(lhs_T @ lhs_mat + eps_reg * np.identity(2)) @ lhs_T
-                )
-
+                lhs_inv = np.linalg.inv(lhs_T @ lhs_mat + eps_reg * np.eye(2)) @ lhs_T
                 sol_mat = lhs_inv @ rhs_mat
                 sol_coefs = (sol_mat[0, :] + 1j * sol_mat[1, :]).T
 
-                for i_neigh in range(n_neigh + 1):
-                    i_glob = ind_lookup[i_neigh]
-
-                    row_inds.append(iv)
+                # Store the coefficients in the sparse matrix format
+                for i_neigh in range(num_neighbors + 1):
+                    i_glob = lookup_vertices_idx[i_neigh]
+                    row_inds.append(vertex_idx)
                     col_inds.append(i_glob)
                     data_vals.append(sol_coefs[i_neigh])
 
-            # Build the sparse matrix
+            # 3. Assemble the global sparse gradient operator matrix
             row_inds = np.array(row_inds)
             col_inds = np.array(col_inds)
             data_vals = np.array(data_vals)
 
             self._gradient_matrix = scipy.sparse.coo_matrix(
-                (data_vals, (row_inds, col_inds)), shape=(V, V)
+                (data_vals, (row_inds, col_inds)),
+                shape=(self.n_vertices, self.n_vertices),
             ).tocsc()
-
         return self._gradient_matrix
