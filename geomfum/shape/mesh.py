@@ -333,14 +333,12 @@ class TriangleMesh(Shape):
                     lookup_vertices_idx.append(neigbor_vertex_idx)
 
                     edge_vec = self.edge_tangent_vectors[edge_index][:]
-                    w_e = 1.0  # Edge weight (can be changed for weighted fits)
+
                     lhs_mat[neighbor_index][:] = (
-                        w_e * edge_vec
-                    )  # Edge vector in tangent plane
-                    rhs_mat[neighbor_index][0] = w_e * (-1)  # -f(center)
-                    rhs_mat[neighbor_index][neighbor_index + 1] = (
-                        w_e * 1
-                    )  # +f(neighbor)
+                        edge_vec  # Edge vector in tangent plane
+                    )
+                    rhs_mat[neighbor_index][0] = -1  # -f(center)
+                    rhs_mat[neighbor_index][neighbor_index + 1] = 1  # +f(neighbor)
 
                 # Solve the least squares problem
                 lhs_T = lhs_mat.T
