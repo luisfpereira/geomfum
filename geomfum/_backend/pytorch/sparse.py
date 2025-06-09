@@ -22,6 +22,14 @@ def from_scipy_csc(array):
     return _torch.sparse_csc_tensor(ccol_indices, row_indices, values, size=array.shape)
 
 
+def from_scipy_csr(array):
+    values = gs.from_numpy(array.data)
+    crow_indices = gs.from_numpy(array.indptr)
+    col_indices = gs.from_numpy(array.indices)
+
+    return _torch.sparse_csr_tensor(crow_indices, col_indices, values, size=array.shape)
+
+
 def from_scipy_dia(array):
     return from_scipy_csc(array.tocsc())
 

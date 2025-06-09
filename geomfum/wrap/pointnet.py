@@ -18,7 +18,7 @@ import torch.nn.functional as F
 from geomfum.descriptor.learned import BaseFeatureExtractor
 
 
-class PointnetFeatureExtractor(BaseFeatureExtractor):
+class PointnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
     """Feature extractor using PointNet architecture.
 
     Parameters
@@ -39,20 +39,21 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
 
     def __init__(
         self,
-        n_features=128,
+        out_channels=128,
         conv_channels=[64, 64, 128],
         mlp_dims=[512, 256, 128],
         head_channels=[256, 128],
         dropout=0.3,
         device=None,
     ):
+        super(PointnetFeatureExtractor, self).__init__()
         self.device = device or torch.device("cpu")
         self.model = (
             PointNet(
                 conv_channels=conv_channels,
                 mlp_dims=mlp_dims,
                 head_channels=head_channels,
-                out_features=n_features,
+                out_features=out_channels,
                 dropout=dropout,
             )
             .to(self.device)
@@ -64,18 +65,27 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
 
         Parameters
         ----------
-        shape : object
-            An object with a `vertices` attribute of shape (N, 3).
+        shape : object or dict
+            An object with a `vertices` attribute of shape (N, 3), or a dict with a 'vertices' key.
 
         Returns
         -------
         torch.Tensor
             Feature tensor of shape (1, N, n_features).
         """
-        vertices = xgs.to_torch(shape.vertices)
+        # Accept both Shape objects and dicts
+        if isinstance(shape, dict):
+            vertices = xgs.to_torch(shape["vertices"])
+        else:
+            vertices = xgs.to_torch(shape.vertices)
+
         vertices = vertices.float().to(self.device)
-        vertices = vertices.unsqueeze(0).transpose(2, 1).contiguous()
+
+        if vertices.dim() == 2:
+            vertices = vertices.unsqueeze(0)
+        vertices = vertices.transpose(2, 1).contiguous()
         features = self.model(vertices)
+
         return features
 
     def load_from_path(self, path):

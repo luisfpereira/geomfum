@@ -15,6 +15,10 @@ def from_scipy_csc(array):
     return array
 
 
+def from_scipy_csr(array):
+    return array
+
+
 def from_scipy_dia(array):
     return array
 

@@ -11,15 +11,20 @@ https://arxiv.org/abs/2012.00888
 
 """
 
+import os
+
+import geomstats.backend as gs
+import numpy as np
 import torch
 import torch.nn as nn
 
 import geomfum.backend as xgs
 from geomfum.descriptor.learned import BaseFeatureExtractor
+from geomfum.shape.mesh import TriangleMesh
 
 
 # TODO: Implement betching operations. for now diffusionnet accept just one mesh as input
-class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
+class DiffusionnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
     """Feature extractor that uses DiffusionNet for geometric deep learning on 3D mesh data.
 
     Parameters
@@ -109,13 +114,13 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         self.n_features = self.out_channels
         self.device = device
 
-    def __call__(self, shape):
+    def forward(self, shape):
         """Call pass through the DiffusionNet model.
 
         Parameters
         ----------
-        shape : Shape
-            A shape object.
+        shape : Shape or dict
+            A shape object or a dict with required attributes.
         feats : torch.Tensor, optional
             Input features. Default is None.
 
@@ -124,12 +129,19 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         torch.Tensor
             Extracted feature tensor of shape [1, V, out_channels].
         """
-        v = xgs.to_torch(shape.vertices).float().to(self.device)
-        f = xgs.to_torch(shape.faces).int().to(self.device)
+        # Support both Shape and dict
+        if isinstance(shape, dict):
+            v = xgs.to_torch(shape["vertices"]).float().to(self.device)
+            f = xgs.to_torch(shape["faces"]).int().to(self.device)
+            op_source = shape
+        else:
+            v = xgs.to_torch(shape.vertices).float().to(self.device)
+            f = xgs.to_torch(shape.faces).int().to(self.device)
+            op_source = shape
 
         # Compute spectral operators
         frames, mass, L, evals, evecs, gradX, gradY = self._get_operators(
-            shape, k=self.k_eig
+            op_source, k=self.k_eig
         )
         if v.dim() == 2:
             v = v.unsqueeze(0).to(device=self.device, dtype=torch.float32)
@@ -140,7 +152,6 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
             evals = evals.unsqueeze(0)
             evecs = evecs.unsqueeze(0)
             gradX = gradX.unsqueeze(0)
-
             gradY = gradY.unsqueeze(0)
 
         # TODO: add possibility of using other features as input
@@ -171,13 +182,12 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         torch.save(self.model.state_dict(), path)
 
     def _get_operators(self, mesh, k=200):
-        # TODO: add cache_dir
         """Compute the spectral operators for the input mesh.
 
         Parameters
         ----------
-        mesh : TriangleMesh
-            Input mesh.
+        mesh : TriangleMesh or dict
+            Input mesh or dict with cached operators.
         k : int
             Number of eigenvalues/eigenvectors to compute diffusion. Default 200.
 
@@ -198,24 +208,23 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         gradY : torch.SparseTensor
             Imaginary part of gradient matrix [B, V, V].
         """
-        assert k >= 0, (
-            f"Number of eigenvalues/vectors should be non-negative, bug get {k}"
-        )
+        if isinstance(mesh, dict):
+            return self._get_operators_from_dict(mesh, k=k)
+        else:
+            return self._get_operators_from_shape_class(mesh, k=k)
 
+    def _get_operators_from_shape_class(self, mesh, k=200):
+        """Compute the spectral operators for the input mesh if the input is from the shape class."""
         frames = mesh.vertex_tangent_frames
         L, M = mesh.laplacian.find()
-
         if k > 0:
             evals, evecs = mesh.laplacian.find_spectrum(spectrum_size=k)
-
         grad = mesh.gradient_matrix
         grad_scipy = xgs.sparse.to_scipy_csc(grad)
-
         frames = xgs.to_torch(frames)
         massvec = torch.tensor(xgs.sparse.to_scipy_csc(M).diagonal()).to(
             device=self.device, dtype=torch.float32
         )
-
         L = xgs.sparse.to_torch_coo(xgs.sparse.to_coo(L)).to(
             device=self.device, dtype=torch.float32
         )
@@ -228,6 +237,122 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
             xgs.sparse.to_coo(xgs.sparse.from_scipy_csc(grad_scipy.imag))
         ).to(device=self.device, dtype=torch.float32)
         return frames, massvec, L, evals, evecs, gradX, gradY
+
+    def _get_operators_from_dict(self, mesh, k=200):
+        """Compute the spectral operators for the input mesh dict, supporting batching."""
+        # Detect batch: if mesh['vertices'] is 3D (B, V, 3), batch mode; else single mesh
+        verts = mesh["vertices"]
+        faces = mesh["faces"]
+        ids = mesh["id"] if "id" in mesh else None
+
+        is_batched = verts.ndim == 3
+        if not is_batched:
+            # Single mesh, use original logic
+            return self._get_operators_from_dict_single(mesh, k=k)
+
+        B = verts.shape[0]
+        frames, mass, L, evals, evecs, gradX, gradY = [], [], [], [], [], [], []
+
+        for i in range(B):
+            mesh_i = {
+                "vertices": verts[i],
+                "faces": faces[i],
+                "id": ids[i] if ids is not None else None,
+            }
+            out = self._get_operators_from_dict_single(mesh_i, k=k)
+            frames.append(out[0])
+            mass.append(out[1])
+            # L, gradX, gradY are assumed to be CSC matrices, so convert to torch COO here
+            L.append(
+                xgs.sparse.to_coo(xgs.sparse.from_scipy_csr(out[2]))
+                .coalesce()
+                .to(device=self.device, dtype=torch.float32)
+            )
+            evals.append(out[3])
+            evecs.append(out[4])
+            gradX.append(
+                xgs.sparse.to_coo(xgs.sparse.from_scipy_csr(out[5]))
+                .coalesce()
+                .to(device=self.device, dtype=torch.float32)
+            )
+            gradY.append(
+                xgs.sparse.to_coo(xgs.sparse.from_scipy_csr(out[6]))
+                .coalesce()
+                .to(device=self.device, dtype=torch.float32)
+            )
+
+        frames = torch.stack(frames)
+        mass = torch.stack(mass)
+        L = torch.stack(L)
+        evals = torch.stack(evals)
+        evecs = torch.stack(evecs)
+        gradX = torch.stack(gradX)
+        gradY = torch.stack(gradY)
+        return frames, mass, L, evals, evecs, gradX, gradY
+
+    def _get_operators_from_dict_single(self, mesh, k=200):
+        """Single-mesh version of _get_operators_from_dict (for internal use)."""
+        if "id" not in mesh or self.cache_dir is None:
+            raise ValueError(
+                "Mesh dict must contain 'id' and self.cache_dir must be set."
+            )
+
+        cache_path = os.path.join(self.cache_dir, f"{mesh['id']}.npz")
+        device = self.device
+        dtype = torch.float32
+
+        if os.path.isfile(cache_path):
+            npzfile = np.load(cache_path, allow_pickle=True)
+            frames = torch.from_numpy(npzfile["frames"]).to(device=device, dtype=dtype)
+            mass = torch.from_numpy(npzfile["mass"]).to(device=device, dtype=dtype)
+            evals = torch.from_numpy(npzfile["evals"]).to(device=device, dtype=dtype)
+            evecs = torch.from_numpy(npzfile["evecs"]).to(device=device, dtype=dtype)
+            import scipy.sparse
+
+            def read_sp_mat(prefix):
+                data = npzfile[f"{prefix}_data"]
+                indices = npzfile[f"{prefix}_indices"]
+                indptr = npzfile[f"{prefix}_indptr"]
+                shape = npzfile[f"{prefix}_shape"]
+                return scipy.sparse.csc_matrix((data, indices, indptr), shape=shape)
+
+            # L, gradX, gradY are returned as CSC matrices
+            L = read_sp_mat("L")
+            gradX = read_sp_mat("gradX")
+            gradY = read_sp_mat("gradY")
+            return frames, mass, L, evals, evecs, gradX, gradY
+        else:
+            verts = mesh["vertices"].cpu()
+            faces = mesh["faces"].cpu()
+            mesh_obj = TriangleMesh(verts, faces)
+            frames, mass, L, evals, evecs, gradX, gradY = (
+                self._get_operators_from_shape_class(mesh_obj, k=k)
+            )
+
+            # Save L, gradX, gradY as CSC matrices
+            L_csr = xgs.sparse.to_scipy_csc(xgs.sparse.to_csc(L)).tocsr()
+            gradX_csr = xgs.sparse.to_scipy_csc(xgs.sparse.to_csc(gradX)).tocsr()
+            gradY_csr = xgs.sparse.to_scipy_csc(xgs.sparse.to_csc(gradY)).tocsr()
+            np.savez(
+                cache_path,
+                frames=gs.to_numpy(frames.cpu()),
+                mass=gs.to_numpy(mass.cpu()),
+                evals=gs.to_numpy(evals.cpu()),
+                evecs=gs.to_numpy(evecs.cpu()),
+                L_data=L_csr.data,
+                L_indices=L_csr.indices,
+                L_indptr=L_csr.indptr,
+                L_shape=L_csr.shape,
+                gradX_data=gradX_csr.data,
+                gradX_indices=gradX_csr.indices,
+                gradX_indptr=gradX_csr.indptr,
+                gradX_shape=gradX_csr.shape,
+                gradY_data=gradY_csr.data,
+                gradY_indices=gradY_csr.indices,
+                gradY_indptr=gradY_csr.indptr,
+                gradY_shape=gradY_csr.shape,
+            )
+            return frames, mass, L_csr, evals, evecs, gradX_csr, gradY_csr
 
 
 """

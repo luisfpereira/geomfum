@@ -9,12 +9,14 @@ References
 
 import abc
 
+import torch.nn as nn
+
 from geomfum.descriptor.learned import FeatureExtractor, LearnedDescriptor
 from geomfum.forward_functional_map import ForwardFunctionalMap
 from geomfum.refine import ProperRefiner
 
 
-class BaseModel(abc.ABC):
+class BaseModel(abc.ABC, nn.Module):
     """Base class for all models."""
 
 
@@ -42,7 +44,7 @@ class FMNet(BaseModel):
         )
         self.fmap_module = fmap_module
 
-    def __call__(self, mesh_a, mesh_b):
+    def forward(self, mesh_a, mesh_b):
         """Compute the functional map between two shapes.
 
         Args
@@ -61,9 +63,10 @@ class FMNet(BaseModel):
         """
         desc_a = self.descriptors_module(mesh_a)
         desc_b = self.descriptors_module(mesh_b)
+
         fmap12, fmap21 = self.fmap_module(mesh_a, mesh_b, desc_a, desc_b)
 
-        return fmap12, fmap21
+        return {"fmap12": fmap12, "fmap21": fmap21}
 
 
 class ProperMapNet(BaseModel):
@@ -92,7 +95,7 @@ class ProperMapNet(BaseModel):
         self.fmap_module = fmap_module
         self.refiner = refiner
 
-    def __call__(self, mesh_a, mesh_b):
+    def forward(self, mesh_a, mesh_b):
         """Compute the functional map between two shapes.
 
         Args
@@ -118,4 +121,4 @@ class ProperMapNet(BaseModel):
         if self.fmap_module.bijective:
             fmap21 = self.refiner(fmap21, mesh_b.basis, mesh_a.basis)
 
-        return fmap12, fmap21
+        return {"fmap12": fmap12, "fmap21": fmap21}

@@ -20,6 +20,7 @@ BACKEND_ATTRIBUTES = {
         "to_dense",
         "from_scipy_coo",
         "from_scipy_csc",
+        "from_scipy_csr",
         "from_scipy_dia",
         "to_scipy_csc",
         "to_scipy_dia",

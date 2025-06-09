@@ -5,6 +5,7 @@ The learned descriptor is a descriptor that uses a neural network to compute fea
 
 import abc
 
+import geomstats.backend as gs
 import torch
 
 from geomfum._registry import FeatureExtractorRegistry, WhichRegistryMixins
@@ -48,9 +49,14 @@ class LearnedDescriptor(Descriptor, abc.ABC):
         shape : Shape.
             Shape.
         """
-        with torch.no_grad():
+        if isinstance(shape, dict):
             features = self.feature_extractor(shape)
-        features = features.squeeze().T
+            features = features.transpose(2, 1).double()
+        else:
+            with torch.no_grad():
+                features = self.feature_extractor(shape)
+            features = gs.asarray(features.squeeze().T).double()
+
         return features
 
     def load_from_path(self, path):
