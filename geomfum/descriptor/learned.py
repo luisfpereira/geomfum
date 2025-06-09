@@ -26,8 +26,6 @@ class LearnedDescriptor(Descriptor, abc.ABC):
 
     Parameters
     ----------
-    n_features : number of features
-        Number of features to compute.
     feature_extractor: Feature Extractor
         Feature extractor to use.
     """
