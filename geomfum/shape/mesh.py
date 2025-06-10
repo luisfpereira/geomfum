@@ -292,7 +292,7 @@ class TriangleMesh(Shape):
             and the imaginary part corresponds to the Y component.
         """
         if self._gradient_matrix is None:
-            # 1. Build a list of outgoing edges for each vertex (neighbor list)
+            # Build a list of outgoing edges for each vertex (neighbor list)
             outgoing_edges_per_vertex = [[] for _ in range(self.n_vertices)]
             for edge_index in range(self.edges.shape[0]):
                 tail_ind = self.edges[edge_index, 0]
@@ -300,13 +300,12 @@ class TriangleMesh(Shape):
                 if tip_ind != tail_ind:
                     outgoing_edges_per_vertex[tail_ind].append(edge_index)
 
-            # Prepare lists to build the sparse matrix
             row_inds = []
             col_inds = []
             data_vals = []
             eps_reg = 1e-5  # Regularization for numerical stability
 
-            # 2. For each vertex, fit a local linear function 'f' to its neighbors
+            # For each vertex, fit a local linear function 'f' to its neighbors
             for vertex_idx in range(self.n_vertices):
                 num_neighbors = len(outgoing_edges_per_vertex[vertex_idx])
 
@@ -314,14 +313,12 @@ class TriangleMesh(Shape):
                 if num_neighbors == 0:
                     continue
 
-                # 2a. Set up the least squares system for the local neighborhood
+                # Set up the least squares system for the local neighborhood
                 lhs_mat = np.zeros((num_neighbors, 2))  # Edge tangent vectors
                 rhs_mat = np.zeros(
                     (num_neighbors, num_neighbors + 1)
-                )  # FInite Difference matrix rhs_mat[i,j] = f(j) - f(i)
-                lookup_vertices_idx = [
-                    vertex_idx
-                ]  # List of involved vertices (center + neighbors)
+                )  # Finite Difference matrix rhs_mat[i,j] = f(j) - f(i)
+                lookup_vertices_idx = [vertex_idx]
 
                 # for each row of the rhs_mat, we have the following:
                 # - rhs_mat[i, 0] = -f(center) (the value at the center vertex)
@@ -334,26 +331,23 @@ class TriangleMesh(Shape):
 
                     edge_vec = self.edge_tangent_vectors[edge_index][:]
 
-                    lhs_mat[neighbor_index][:] = (
-                        edge_vec  # Edge vector in tangent plane
-                    )
-                    rhs_mat[neighbor_index][0] = -1  # -f(center)
-                    rhs_mat[neighbor_index][neighbor_index + 1] = 1  # +f(neighbor)
+                    lhs_mat[neighbor_index][:] = edge_vec
+                    rhs_mat[neighbor_index][0] = -1
+                    rhs_mat[neighbor_index][neighbor_index + 1] = 1
 
-                # Solve the least squares problem
+                # Solve
                 lhs_T = lhs_mat.T
                 lhs_inv = np.linalg.inv(lhs_T @ lhs_mat + eps_reg * np.eye(2)) @ lhs_T
                 sol_mat = lhs_inv @ rhs_mat
                 sol_coefs = (sol_mat[0, :] + 1j * sol_mat[1, :]).T
 
-                # Store the coefficients in the sparse matrix format
                 for i_neigh in range(num_neighbors + 1):
                     i_glob = lookup_vertices_idx[i_neigh]
                     row_inds.append(vertex_idx)
                     col_inds.append(i_glob)
                     data_vals.append(sol_coefs[i_neigh])
 
-            # 3. Assemble the global sparse gradient operator matrix
+            # Assemble the global sparse gradient operator matrix
             row_inds = np.array(row_inds)
             col_inds = np.array(col_inds)
             data_vals = np.array(data_vals)
