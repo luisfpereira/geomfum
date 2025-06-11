@@ -360,7 +360,7 @@ class TriangleMesh(Shape):
                 lhs_inv = gs.linalg.inv(lhs_T @ lhs_mat + eps_reg * gs.eye(2)) @ lhs_T
 
                 sol_mat = lhs_inv @ rhs_mat
-                sol_coefs = (sol_mat[0, :] + 1j * sol_mat[1, :]).T
+                sol_coefs = gs.transpose((sol_mat[0, :] + 1j * sol_mat[1, :]))
 
                 for i_neigh in range(n_neigh + 1):
                     i_glob = ind_lookup[i_neigh]

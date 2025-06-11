@@ -11,9 +11,12 @@ import abc
 
 import torch.nn as nn
 
+from geomfum.convert import P2pFromFmConverter
 from geomfum.descriptor.learned import FeatureExtractor, LearnedDescriptor
 from geomfum.forward_functional_map import ForwardFunctionalMap
 from geomfum.refine import ProperRefiner
+import torch
+from geomfum.basis import EigenBasis
 
 
 class BaseModel(abc.ABC, nn.Module):
@@ -35,6 +38,7 @@ class FMNet(BaseModel):
         self,
         feature_extractor=FeatureExtractor.from_registry(which="diffusionnet"),
         fmap_module=ForwardFunctionalMap(),
+        converter=P2pFromFmConverter(),
     ):
         super(FMNet, self).__init__()
 
@@ -43,6 +47,7 @@ class FMNet(BaseModel):
             feature_extractor=self.feature_extractor
         )
         self.fmap_module = fmap_module
+        self.converter = converter
 
     def forward(self, mesh_a, mesh_b):
         """Compute the functional map between two shapes.
@@ -66,7 +71,44 @@ class FMNet(BaseModel):
 
         fmap12, fmap21 = self.fmap_module(mesh_a, mesh_b, desc_a, desc_b)
 
-        return {"fmap12": fmap12, "fmap21": fmap21}
+        if not self.training:
+            if desc_a.dim() == 3:
+                p2p12 = []
+                p2p21 = []
+                for i in range(desc_a.shape[0]):
+                    basis_a = EigenBasis(
+                        mesh_a["evals"][i].cpu(), mesh_a["evecs"][i].cpu()
+                    )
+                    basis_b = EigenBasis(
+                        mesh_b["evals"][i].cpu(), mesh_b["evecs"][i].cpu()
+                    )
+
+                    p2p12.append(self.converter(fmap12[i].cpu(), basis_a, basis_b))
+                    p2p21.append(self.converter(fmap21[i].cpu(), basis_b, basis_a))
+                p2p12 = torch.stack(p2p12, dim=0)
+                p2p21 = torch.stack(p2p21, dim=0)
+            else:
+                basis_a = (
+                    EigenBasis(mesh_a["evals"], mesh_a["evecs"])
+                    if isinstance(mesh_a, dict)
+                    else mesh_a.basis
+                )
+                basis_b = (
+                    EigenBasis(mesh_b["evals"], mesh_b["evecs"])
+                    if isinstance(mesh_b, dict)
+                    else mesh_b.basis
+                )
+
+                p2p21 = self.converter(fmap12, basis_a, basis_b)
+                p2p12 = self.converter(fmap21, basis_b, basis_a)
+            return {
+                "fmap12": fmap12,
+                "fmap21": fmap21,
+                "p2p12": p2p12,
+                "p2p21": p2p21,
+            }
+        else:
+            return {"fmap12": fmap12, "fmap21": fmap21}
 
 
 class ProperMapNet(BaseModel):

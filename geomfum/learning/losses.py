@@ -203,8 +203,26 @@ class GeodesicError(nn.Module):
 
     required_inputs = ["p2p21", "source", "target"]
 
+    def _compute_geodesic_loss(self, p2p, source_dist, source_corr, target_corr):
+        """Compute the geodesic loss for batched inputs."""
+        return torch.mean(source_dist[p2p.long()[target_corr], source_corr])
+
     def forward(self, p2p21, source, target):
         """Forward pass."""
-        return torch.mean(
-            source["distances"][p2p21.long()[target["corr"]], source["corr"]]
-        )
+        if p2p21.ndim == 2:
+            loss = 0
+            for b in range(p2p21.shape[0]):
+                p2p = p2p21[b]
+                source_dist = source["distances"][b]
+                target_corr = target["corr"][b]
+                source_corr = source["corr"][b]
+                loss += self._compute_geodesic_loss(
+                    p2p, source_dist, source_corr, target_corr
+                )
+            loss /= p2p21.shape[0]
+        else:
+            loss = self._compute_geodesic_loss(
+                p2p21, source["distances"], source["corr"], target["corr"]
+            )
+
+        return loss

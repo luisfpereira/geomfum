@@ -4,15 +4,7 @@ import logging
 
 import torch
 from tqdm import tqdm
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
-"""Trainer for Deep Functional Maps (DFM) using PyTorch."""
-
-import logging
+import torch.nn as nn
 
 # Configure logging
 logging.basicConfig(

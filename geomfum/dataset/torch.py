@@ -12,7 +12,7 @@ import torch
 from torch.utils.data import Dataset
 
 import geomfum.backend as xgs
-from geomfum.metric.mesh import HeatDistanceMetric
+from geomfum.metric.mesh import ScipyGraphShortestPathMetric
 from geomfum.shape.mesh import TriangleMesh
 
 
@@ -40,15 +40,29 @@ class ShapeDataset(Dataset):
         Whether to compute geodesic distance matrices.
     k : int
         Number of eigenvectors to use for the spectral features.
+    indices : list[int], optional
+        List of indices to select a subset of the dataset.
     device : torch.device, optional
         Device to move the data to.
     """
 
-    def __init__(self, shape_dir, spectral=True, distances=False, k=200, device=None):
+    def __init__(
+        self,
+        shape_dir,
+        spectral=False,
+        distances=False,
+        k=200,
+        indices=None,
+        device=None,
+    ):
         self.shape_dir = shape_dir
-        self.shape_files = sorted(
+        all_shape_files = sorted(
             [f for f in os.listdir(shape_dir) if f.endswith(".off")]
-        )  # off but we can accept also other kind of files TODO: generalize
+        )
+        if indices is not None:
+            self.shape_files = [all_shape_files[i] for i in indices]
+        else:
+            self.shape_files = all_shape_files
 
         self.device = (
             device
@@ -117,16 +131,24 @@ class ShapeDataset(Dataset):
         if self.distances:
             dist_path = mesh.mat_dist_path
             if os.path.exists(dist_path):
-                mesh.geod_distance_matrix = scipy.io.loadmat(dist_path)["D"]
+                mat_contents = scipy.io.loadmat(dist_path)
+                if "D" in mat_contents:
+                    geod_distance_matrix = mat_contents["D"]
+                else:
+                    metric = ScipyGraphShortestPathMetric(mesh)
+                    geod_distance_matrix = metric.dist_matrix()
+                    mat_contents["D"] = gs.to_numpy(geod_distance_matrix)
+                    os.makedirs(os.path.dirname(dist_path), exist_ok=True)
+                    scipy.io.savemat(dist_path, mat_contents)
             else:
-                metric = HeatDistanceMetric.from_registry(mesh, which="pp3d")
-                mesh.geod_distance_matrix = metric.dist_matrix()
+                metric = ScipyGraphShortestPathMetric(mesh)
+                geod_distance_matrix = metric.dist_matrix()
                 os.makedirs(os.path.dirname(dist_path), exist_ok=True)
                 scipy.io.savemat(
                     dist_path,
-                    {"D": gs.to_numpy(mesh.geod_distance_matrix)},
+                    {"D": gs.to_numpy(geod_distance_matrix)},
                 )
-            data.update({"distances": xgs.to_torch(mesh.geod_distance_matrix)})
+            data.update({"distances": xgs.to_torch(geod_distance_matrix)})
 
         return data
 
