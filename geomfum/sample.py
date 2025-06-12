@@ -1,3 +1,5 @@
+"""Sampling methods."""
+
 import abc
 
 import numpy as np
