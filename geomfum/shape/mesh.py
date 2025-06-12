@@ -147,17 +147,21 @@ class TriangleMesh(Shape):
             Normalized per-vertex normals.
         """
         if self._vertex_normals is None:
-            I = np.concatenate([self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]])
-            J = np.zeros(len(I))
+            vind012 = np.concatenate(
+                [self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]]
+            )
+            zeros = np.zeros(len(vind012))
 
             normals_repeated = np.vstack([self.face_normals] * 3)
 
             vertex_normals = np.zeros_like(self.vertices)
             for c in range(3):
-                V = normals_repeated[:, c]
+                normals = normals_repeated[:, c]
 
                 vertex_normals[:, c] = (
-                    scipy.sparse.coo_matrix((V, (I, J)), shape=(self.n_vertices, 1))
+                    scipy.sparse.coo_matrix(
+                        (normals, (vind012, zeros)), shape=(self.n_vertices, 1)
+                    )
                     .toarray()
                     .flatten()
                 )
@@ -203,13 +207,13 @@ class TriangleMesh(Shape):
             vind012 = np.concatenate(
                 [self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]]
             )
-            vind120 = np.zeros_like(vind012)
+            zeros = np.zeros_like(vind012)
 
             areas = np.tile(self.face_areas / 3, 3)
 
             self._vertex_areas = np.array(
                 scipy.sparse.coo_matrix(
-                    (areas, (vind012, vind120)), shape=(self.n_vertices, 1)
+                    (areas, (vind012, zeros)), shape=(self.n_vertices, 1)
                 ).todense()
             ).flatten()
 
@@ -264,7 +268,6 @@ class TriangleMesh(Shape):
         -------
         edge_tangent_vectors : array-like, shape=[n_edges, 2]
             Tangent vectors of the edges, projected onto the local tangent plane.
-            Each vector has x and y components in the local tangent frame.
         """
         if self._edge_tangent_vectors is None:
             edges = self.edges
@@ -285,7 +288,7 @@ class TriangleMesh(Shape):
 
     @property
     def gradient_matrix(self):
-        # TODO: Implement this as operator
+        # TODO: Implement this as operator?
         """Compute the gradient operator as a complex sparse matrix.
 
         This code locally fits a linear function to the scalar values at each vertex and its neighbors, extracts the gradient in the tangent plane, and assembles the global sparse matrix that acts as the discrete gradient operator on the mesh.
@@ -309,13 +312,12 @@ class TriangleMesh(Shape):
             row_inds = []
             col_inds = []
             data_vals = []
-            eps_reg = 1e-5  # Regularization for numerical stability
+            eps_reg = 1e-5
 
             # For each vertex, fit a local linear function 'f' to its neighbors
             for vertex_idx in range(self.n_vertices):
                 num_neighbors = len(outgoing_edges_per_vertex[vertex_idx])
 
-                # Skip isolated vertices
                 if num_neighbors == 0:
                     continue
 
@@ -353,7 +355,6 @@ class TriangleMesh(Shape):
                     col_inds.append(i_glob)
                     data_vals.append(sol_coefs[i_neigh])
 
-            # Assemble the global sparse gradient operator matrix
             row_inds = np.array(row_inds)
             col_inds = np.array(col_inds)
             data_vals = np.array(data_vals)
