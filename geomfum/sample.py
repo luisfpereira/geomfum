@@ -1,4 +1,5 @@
 import abc
+import warnings
 
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
@@ -29,13 +30,11 @@ class FarthestPointSampler(BaseSampler):
     ----------
     min_n_samples : int
         Minimum number of samples to target.
-    metric : class, optional 
-        A metric class, if None uses the default metric class (Euclidean distance).
     """
 
-    def __init__(self, n_samples):
+    def __init__(self, min_n_samples):
         super().__init__()
-        self.n_samples = n_samples
+        self.min_n_samples = min_n_samples
 
     def sample(self, shape, first_point=None, points_pool=None):
         """
@@ -52,23 +51,17 @@ class FarthestPointSampler(BaseSampler):
 
         Returns
         -------
-        samples : array-like of shape (n_samples, 3)
-            Coordinates of the sampled points.
+        samples : array-like of shape (min_n_samples,)
+            Indices of sampled points.
         """
-        if points_pool is None:
-            return self._farthest_point_sampling_call(
-                shape,
-                points_pool = shape.n_vertices,
-                first_index = first_point,
-            )
-        else:
-            return self._farthest_point_sampling_call_sub(
-                shape,
-                points_pool = points_pool,
-                first_index = first_point,
-            )
+        return self._farthest_point_sampling_call(
+            shape,
+            points_pool = points_pool,
+            first_index = first_point,
+        )
+
    
-    def _farthest_point_sampling_call(self, mesh, points_pool= None, first_index=None,):
+    def _farthest_point_sampling_call(self, mesh, points_pool = None, first_index=None,):
         """Sample points using farthest point sampling.
 
         Parameters
@@ -76,7 +69,7 @@ class FarthestPointSampler(BaseSampler):
         mesh : TriangleMesh
             Mesh to sample from.
         points_pool : array, optional
-            The set of points (all mesh vertices) from which to sample. 
+            The set of points from which to sample. If None, selects all mesh vertices.  
         first_index : int 
             Index of the first point to sample. If None, samples randomly
 
@@ -84,63 +77,27 @@ class FarthestPointSampler(BaseSampler):
         -------
         fps : (k,) array of indices of sampled points
         """
-        dist_func = mesh.metric.dist_from_source
         if mesh.metric is None:
             raise ValueError("d_func should be a callable")
-
-        if first_index is None:
-            rng = np.random.default_rng()
-            inds = [rng.integers(points_pool).item(0)]
-        else:
-            inds = [first_index]
-
-        dists = dist_func(inds[0])
-        iterable = range(self.n_samples-1)
-        for i in iterable:
-            if i == self.n_samples-1:
-                continue
-            newid = np.argmax(dists[0])
-            inds.append(newid)
-            new_dists = dist_func(newid)
-            minimum_dists = np.minimum(dists[0], new_dists[0])
-            dists = (minimum_dists, dists[1])
-
-        return np.asarray(inds)
-    
-    def _farthest_point_sampling_call_sub(self, mesh, points_pool, first_index=None) :       
-        """
-        Sample points using farthest point sampling.
-
-        Parameters
-        ----------
-        mesh : TriangleMesh
-            Mesh to sample from.
-        points_pool : array
-            The subset of points from which to sample. 
-        first_index : int 
-            Index of the first point to sample. If None, samples randomly
-
-        Returns
-        -------
-        fps : (k,) array of indices of sampled points
-        """
         dist_func = mesh.metric.dist_from_source
-        sub_points = np.array(points_pool)
+
+        sub_points = np.arange(mesh.n_vertices) if points_pool is None else np.array(points_pool)
 
         if first_index is None:
             rng = np.random.default_rng()
-            start_subid = rng.choice(sub_points)
-            inds = [start_subid]
+            inds = [rng.choice(sub_points)]
         else:
+            if first_index not in sub_points:
+                warnings.warn(f"First index {first_index} is not in the points pool {sub_points}.", UserWarning)
+            sub_points = np.append(sub_points, first_index)
             inds = [first_index]
+
 
         dists = dist_func(inds[0])[0][sub_points]
 
-        iterable = range(self.n_samples - 1)
-        for i in iterable:
-            if i == self.n_samples - 1:
+        for i in range(self.min_n_samples-1):
+            if i == self.min_n_samples-1:
                 continue
-
             new_subid = np.argmax(dists)
             newid = sub_points[new_subid]
             inds.append(newid)

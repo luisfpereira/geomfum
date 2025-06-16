@@ -27,7 +27,7 @@ class TriangleMesh(Shape):
         A metric class to use for the mesh. If None, uses the default metric (Euclidean distance).
     """
 
-    def __init__(self, vertices, faces, metric = VertexEuclideanMetric):
+    def __init__(self, vertices, faces,):
         super().__init__(is_mesh=True)
         self.vertices = np.asarray(vertices)
         self.faces = np.asarray(faces)
@@ -37,13 +37,9 @@ class TriangleMesh(Shape):
         self._face_normals = None
         self._face_areas = None
         self._vertex_areas = None
-        self._d_matrix = None
-        
-        if metric == HeatDistanceMetric:
-            self.metric = metric.from_registry(which="pp3d",shape = self)
-        else:
-            self.metric = metric(self)
-
+        self._dist_matrix = None
+        self.metric = None
+    
         self._at_init()
 
     def _at_init(self):
@@ -58,7 +54,7 @@ class TriangleMesh(Shape):
         )
 
     @classmethod
-    def from_file(cls, filename, metric = VertexEuclideanMetric):
+    def from_file(cls, filename,):
         """Instantiate given a file.
 
         Parameters
@@ -76,7 +72,7 @@ class TriangleMesh(Shape):
             A triangle mesh.
         """
         vertices, faces = load_mesh(filename)
-        return cls(vertices, faces, metric)
+        return cls(vertices, faces)
 
     @property
     def n_vertices(self):
@@ -193,7 +189,7 @@ class TriangleMesh(Shape):
         return self._vertex_areas
 
     @property   #ToDo
-    def distance_matrix(self):
+    def dist_matrix(self):
         """Compute metric distance matrix.
 
         Returns
@@ -206,3 +202,17 @@ class TriangleMesh(Shape):
                 raise ValueError("Metric is not set.")
             self._d_matrix = self.metric.dist_matrix()
         return self._d_matrix
+
+    def equip_with_metric(self, metric):
+        """Set the metric for the mesh.
+
+        Parameters
+        ----------
+        metric : class
+            A metric class to use for the mesh.
+        """
+        if metric == HeatDistanceMetric:
+            self.metric = metric.from_registry(which="pp3d",shape = self)
+        else:
+            self.metric = metric(self)
+        self._dist_matrix = None
