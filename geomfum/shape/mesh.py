@@ -4,7 +4,7 @@ import numpy as np
 import scipy
 
 from geomfum.io import load_mesh
-from geomfum.metric.mesh import HeatDistanceMetric, VertexEuclideanMetric
+from geomfum.metric.mesh import HeatDistanceMetric
 from geomfum.operator import (
     FaceDivergenceOperator,
     FaceOrientationOperator,
@@ -23,8 +23,6 @@ class TriangleMesh(Shape):
         Vertices of the mesh.
     faces : array-like, shape=[n_faces, 3]
         Faces of the mesh.
-    metric : class, optional
-        A metric class to use for the mesh. If None, uses the default metric (Euclidean distance).
     """
 
     def __init__(self, vertices, faces,):
@@ -60,11 +58,7 @@ class TriangleMesh(Shape):
         Parameters
         ----------
         filename : str
-            Path to the mesh file.
-        metric : class, optional
-        A metric class to use for the mesh. If None, uses the default metric (Euclidean distance).
-
-        
+            Path to the mesh file.     
 
         Returns
         -------
