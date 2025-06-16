@@ -4,6 +4,7 @@ import numpy as np
 import scipy
 
 from geomfum.io import load_mesh
+from geomfum.metric.mesh import HeatDistanceMetric, VertexEuclideanMetric
 from geomfum.operator import (
     FaceDivergenceOperator,
     FaceOrientationOperator,
@@ -22,17 +23,26 @@ class TriangleMesh(Shape):
         Vertices of the mesh.
     faces : array-like, shape=[n_faces, 3]
         Faces of the mesh.
+    metric : class, optional
+        A metric class to use for the mesh. If None, uses the default metric (Euclidean distance).
     """
 
-    def __init__(self, vertices, faces):
+    def __init__(self, vertices, faces, metric = VertexEuclideanMetric):
         super().__init__(is_mesh=True)
         self.vertices = np.asarray(vertices)
         self.faces = np.asarray(faces)
+
 
         self._edges = None
         self._face_normals = None
         self._face_areas = None
         self._vertex_areas = None
+        self._d_matrix = None
+        
+        if metric == HeatDistanceMetric:
+            self.metric = metric.from_registry(which="pp3d",shape = self)
+        else:
+            self.metric = metric(self)
 
         self._at_init()
 
@@ -48,8 +58,17 @@ class TriangleMesh(Shape):
         )
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename, metric = VertexEuclideanMetric):
         """Instantiate given a file.
+
+        Parameters
+        ----------
+        filename : str
+            Path to the mesh file.
+        metric : class, optional
+        A metric class to use for the mesh. If None, uses the default metric (Euclidean distance).
+
+        
 
         Returns
         -------
@@ -57,7 +76,7 @@ class TriangleMesh(Shape):
             A triangle mesh.
         """
         vertices, faces = load_mesh(filename)
-        return cls(vertices, faces)
+        return cls(vertices, faces, metric)
 
     @property
     def n_vertices(self):
@@ -172,3 +191,18 @@ class TriangleMesh(Shape):
             ).flatten()
 
         return self._vertex_areas
+
+    @property   #ToDo
+    def distance_matrix(self):
+        """Compute metric distance matrix.
+
+        Returns
+        -------
+        d_matrix : array-like, shape=[n_vertices, n_vertices]
+            Metric distance matrix.
+        """
+        if self._d_matrix is None:
+            if self.metric is None:
+                raise ValueError("Metric is not set.")
+            self._d_matrix = self.metric.dist_matrix()
+        return self._d_matrix

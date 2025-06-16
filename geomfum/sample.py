@@ -8,7 +8,6 @@ from geomfum._registry import (
     PoissonSamplerRegistry,
     WhichRegistryMixins,
 )
-from geomfum.metric.mesh import HeatDistanceMetric
 
 
 class BaseSampler(abc.ABC):
@@ -24,7 +23,7 @@ class PoissonSampler(WhichRegistryMixins):
     _Registry = PoissonSamplerRegistry
 
 class FarthestPointSampler(BaseSampler):
-    """Farthest point Euclidean sampling.
+    """Farthest point sampling.
 
     Parameters
     ----------
@@ -34,66 +33,68 @@ class FarthestPointSampler(BaseSampler):
         A metric class, if None uses the default metric class (Euclidean distance).
     """
 
-    def __init__(self, n_samples, metric = None):
+    def __init__(self, n_samples):
         super().__init__()
         self.n_samples = n_samples
-        self._metric = metric
-        self.metric = None
 
-    def sample(self, shape, first_point=None):
-        """Sample using farthest point sampling.
+    def sample(self, shape, first_point=None, points_pool=None):
+        """
+        Perform farthest point sampling on a mesh.
 
         Parameters
         ----------
         shape : TriangleMesh
-            Mesh.
+            The mesh to sample points from.
         first_point : int, optional
-            Index of the first point to sample. If None, samples randomly.
+            Index of the initial point to start sampling from. If None, a random point is chosen.
+        points_pool : array-like or int, optional
+            Pool of candidate points to sample from. If None, all vertices in the mesh are used.
 
         Returns
         -------
-        samples : array-like, shape=[n_samples, 3]
-            Coordinates of samples.
+        samples : array-like of shape (n_samples, 3)
+            Coordinates of the sampled points.
         """
-        if self._metric == HeatDistanceMetric:
-            self.metric = self._metric.from_registry(which="pp3d",shape = shape)
+        if points_pool is None:
+            return self._farthest_point_sampling_call(
+                shape,
+                points_pool = shape.n_vertices,
+                first_index = first_point,
+            )
         else:
-            self.metric = self._metric(shape)
-        return self._farthest_point_sampling_call(
-            points_pool=self.metric._shape.n_vertices,
-            first_index = first_point,
-        )
+            return self._farthest_point_sampling_call_sub(
+                shape,
+                points_pool = points_pool,
+                first_index = first_point,
+            )
    
-    def _farthest_point_sampling_call(self, points_pool=None, first_index=None,):
+    def _farthest_point_sampling_call(self, mesh, points_pool= None, first_index=None,):
         """Sample points using farthest point sampling.
 
         Parameters
         ----------
-        d_func   : callable - for index i, d_func(i) is a (points_pool,) array of geodesic distance 
-                to other points
-        k        : int - number of points to sample
-        points_pool : Number of points. If not specified, checks d_func(0)
-        first_index : int - index of the first point to sample. If None, samples randomly
+        mesh : TriangleMesh
+            Mesh to sample from.
+        points_pool : array, optional
+            The set of points (all mesh vertices) from which to sample. 
+        first_index : int 
+            Index of the first point to sample. If None, samples randomly
 
         Returns
         -------
         fps : (k,) array of indices of sampled points
         """
-        dist_func = self.metric.dist_from_source
-        if self.metric is None:
+        dist_func = mesh.metric.dist_from_source
+        if mesh.metric is None:
             raise ValueError("d_func should be a callable")
+
         if first_index is None:
             rng = np.random.default_rng()
             inds = [rng.integers(points_pool).item(0)]
         else:
             inds = [first_index]
 
-        if points_pool is None:
-            points_pool = dist_func(0)[0].shape
-        else:
-            assert points_pool > 0
         dists = dist_func(inds[0])
-
         iterable = range(self.n_samples-1)
         for i in iterable:
             if i == self.n_samples-1:
@@ -103,6 +104,47 @@ class FarthestPointSampler(BaseSampler):
             new_dists = dist_func(newid)
             minimum_dists = np.minimum(dists[0], new_dists[0])
             dists = (minimum_dists, dists[1])
+
+        return np.asarray(inds)
+    
+    def _farthest_point_sampling_call_sub(self, mesh, points_pool, first_index=None) :       
+        """
+        Sample points using farthest point sampling.
+
+        Parameters
+        ----------
+        mesh : TriangleMesh
+            Mesh to sample from.
+        points_pool : array
+            The subset of points from which to sample. 
+        first_index : int 
+            Index of the first point to sample. If None, samples randomly
+
+        Returns
+        -------
+        fps : (k,) array of indices of sampled points
+        """
+        dist_func = mesh.metric.dist_from_source
+        sub_points = np.array(points_pool)
+
+        if first_index is None:
+            rng = np.random.default_rng()
+            start_subid = rng.choice(sub_points)
+            inds = [start_subid]
+        else:
+            inds = [first_index]
+
+        dists = dist_func(inds[0])[0][sub_points]
+
+        iterable = range(self.n_samples - 1)
+        for i in iterable:
+            if i == self.n_samples - 1:
+                continue
+
+            new_subid = np.argmax(dists)
+            newid = sub_points[new_subid]
+            inds.append(newid)
+            dists = np.minimum(dists, dist_func(newid)[0][sub_points])
 
         return np.asarray(inds)
 
