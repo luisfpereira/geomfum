@@ -104,6 +104,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         ).to(device)
 
         self.n_features = self.out_channels
+        self.features = None
         self.device = device
 
     def __call__(self, shape):
@@ -113,8 +114,6 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         ----------
         shape : Shape
             A shape object.
-        feats : torch.Tensor, optional
-            Input features. Default is None.
 
         Returns
         -------
@@ -153,10 +152,10 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         """
         try:
             self.model.load_state_dict(torch.load(path, map_location=self.device))
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Model file not found: {path}")
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"Model file not found: {path}") from e
         except Exception as e:
-            raise ValueError(f"Failed to load model: {str(e)}")
+            raise ValueError(f"Failed to load model from {path}: {e}") from e
 
     def save(self, path):
         """Save model parameters to the specified file path.

@@ -78,10 +78,10 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         """
         try:
             self.model.load_state_dict(torch.load(path, map_location=self.device))
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Model file not found: {path}")
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"Model file not found: {path}") from e
         except Exception as e:
-            raise ValueError(f"Failed to load model: {str(e)}")
+            raise ValueError(f"Failed to load model from {path}: {e}") from e
 
     def save(self, path):
         """Save model parameters to the specified file path.
