@@ -188,14 +188,14 @@ class TriangleMesh(Shape):
 
         Returns
         -------
-        d_matrix : array-like, shape=[n_vertices, n_vertices]
+        _dist_matrix : array-like, shape=[n_vertices, n_vertices]
             Metric distance matrix.
         """
-        if self._d_matrix is None:
+        if self._dist_matrix is None:
             if self.metric is None:
                 raise ValueError("Metric is not set.")
-            self._d_matrix = self.metric.dist_matrix()
-        return self._d_matrix
+            self._dist_matrix = self.metric.dist_matrix()
+        return self._dist_matrix
 
     def equip_with_metric(self, metric):
         """Set the metric for the mesh.
