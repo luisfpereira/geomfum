@@ -1,3 +1,5 @@
+"""Optimization routines."""
+
 import logging
 
 import numpy as np

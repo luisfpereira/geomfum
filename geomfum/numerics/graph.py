@@ -1,3 +1,5 @@
+"""Routines for working with graphs."""
+
 import heapq
 
 from networkx.algorithms.shortest_paths.weighted import _weight_function

@@ -104,6 +104,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         ).to(device)
 
         self.n_features = self.out_channels
+        self.features = None
         self.device = device
 
     def __call__(self, shape):
@@ -113,8 +114,6 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         ----------
         shape : Shape
             A shape object.
-        feats : torch.Tensor, optional
-            Input features. Default is None.
 
         Returns
         -------
@@ -126,7 +125,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
 
         # Compute spectral operators
         frames, mass, L, evals, evecs, gradX, gradY = self._get_operators(
-            shape, k=self.k_eig
+            shape, k_eig=self.k_eig
         )
         if v.dim() == 2:
             v = v.unsqueeze(0)
@@ -145,28 +144,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         )
         return self.features
 
-    def load_from_path(self, path):
-        """Load model parameters from the provided file path.
-
-        Args:
-            path (str): Path to the saved model parameters
-        """
-        try:
-            self.model.load_state_dict(torch.load(path, map_location=self.device))
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Model file not found: {path}")
-        except Exception as e:
-            raise ValueError(f"Failed to load model: {str(e)}")
-
-    def save(self, path):
-        """Save model parameters to the specified file path.
-
-        Args:
-        path (str): Path to the saved model parameters
-        """
-        torch.save(self.model.state_dict(), path)
-
-    def _get_operators(self, mesh, k=200):
+    def _get_operators(self, mesh, k_eig=200):
         # TODO: add cache_dir
         """Compute the spectral operators for the input mesh.
 
@@ -174,7 +152,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         ----------
         mesh : TriangleMesh
             Input mesh.
-        k : int
+        k_eig : int
             Number of eigenvalues/eigenvectors to compute diffusion. Default 200.
 
         Returns
@@ -182,28 +160,27 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         frames : torch.Tensor
             Tangent frames for vertices.
         mass : torch.Tensor
-            Diagonal elements in mass matrix [B, V].
+            Diagonal elements in mass matrix [..., n_vertices].
         L : torch.SparseTensor
-            Sparse Laplacian matrix [B, V, V].
+            Sparse Laplacian matrix [..., n_vertices, n_vertices].
         evals : torch.Tensor
-            Eigenvalues of Laplacian Matrix [B, K].
+            Eigenvalues of Laplacian Matrix [..., spectrum_dim].
         evecs : torch.Tensor
-            Eigenvectors of Laplacian Matrix [B, V, K].
+            Eigenvectors of Laplacian Matrix [..., n_vertices, spectrum_dim].
         gradX : torch.SparseTensor
-            Real part of gradient matrix [B, V, V].
+            Real part of gradient matrix [..., n_vertices, n_vertices].
         gradY : torch.SparseTensor
-            Imaginary part of gradient matrix [B, V, V].
+            Imaginary part of gradient matrix [..., n_vertices, n_vertices].
         """
-        assert k >= 0, (
-            f"Number of eigenvalues/vectors should be non-negative, bug get {k}"
+        assert k_eig > 0, (
+            f"Number of eigenvalues/vectors should be positive, bug get {k_eig}"
         )
 
         frames = mesh.vertex_tangent_frames
         L, M = mesh.laplacian.find()
         massvec_np = M.diagonal().astype(np.float32)
 
-        if k > 0:
-            evals, evecs = mesh.laplacian.find_spectrum(spectrum_size=k)
+        evals, evecs = mesh.laplacian.find_spectrum(spectrum_size=k_eig)
 
         grad_mat = mesh.gradient_matrix
         gradX_np = np.real(grad_mat)
@@ -223,7 +200,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
 
 
 """
-Original implementation from
+Implementation from
 https://github.com/dongliangcao/Self-Supervised-Multimodal-Shape-Matching by Dongliang Cao
 """
 
