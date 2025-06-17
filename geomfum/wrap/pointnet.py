@@ -131,8 +131,6 @@ class PointNet(nn.Module):
 
     Parameters
     ----------
-    feature_transform : bool
-        Not used currently. Placeholder for future extension.
     conv_channels : list of int
         Output dimensions of initial PointNet convolution layers.
     mlp_dims : list of int
@@ -147,7 +145,6 @@ class PointNet(nn.Module):
 
     def __init__(
         self,
-        feature_transform=False,
         conv_channels=[64, 64, 128, 128, 1024],
         mlp_dims=[1024, 256, 256],
         head_channels=[512, 256, 256],
