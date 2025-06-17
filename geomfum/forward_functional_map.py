@@ -10,12 +10,12 @@ class ForwardFunctionalMap(abc.ABC):
 
     Parameters
     ----------
-    lmbda : float.
-        Weight of the mask.
-    resolvant_gamma: float.
-        Resolvant of the regularized functional map.
-    bijective: bool.
-        Whether we compute the map inboth the directions.
+    lmbda : float
+        Weight of the mask (default: 1e3).
+    resolvent_gamma: float
+        Resolvant of the regularized functional map (default: 1).
+    bijective: bool
+        Whether we compute the map in both the directions (default: True).
     """
 
     def __init__(self, lmbda=1e3, resolvent_gamma=1, bijective=True):
@@ -27,8 +27,8 @@ class ForwardFunctionalMap(abc.ABC):
     def _compute_functional_map(self, sdescr_a, sdescr_b, mask):
         """Compute the functional map between two shapes.
 
-        Args
-        -------
+        Parameters
+        ----------
         sdescr_a : array-like, shape=[..., spectrum_size_a]
             Spectral descriptors on first basis.
         sdescr_b : array-like, shape=[..., spectrum_size_b]
@@ -62,8 +62,8 @@ class ForwardFunctionalMap(abc.ABC):
     def __call__(self, mesh_a, mesh_b, descr_a, descr_b):
         """Compute the functional map between two shapes.
 
-        Args
-        -------
+        Parameters
+        ----------
         mesh_a : TriangleMesh
             Mesh object representing the first shape.
         mesh_b : TriangleMesh
@@ -86,21 +86,19 @@ class ForwardFunctionalMap(abc.ABC):
             mesh_a.basis.vals, mesh_b.basis.vals, self.resolvent_gamma
         )
         fmap_12 = self._compute_functional_map(sdescr_a, sdescr_b, mask)
-
+        fmap_21 = None
         if self.bijective:
             mask = self._compute_mask(
                 mesh_b.basis.vals, mesh_a.basis.vals, self.resolvent_gamma
             )
             fmap_21 = self._compute_functional_map(sdescr_b, sdescr_a, mask)
-        else:
-            fmap_21 = None
         return fmap_12, fmap_21
 
     def _compute_mask(self, evals_a, evals_b, resolvant_gamma):
         """Compute the mask for the functional map.
 
-        Args
-        -------
+        Parameters
+        ----------
         evals_a : array-like, shape=[..., spectrum_size_a]
             Eigenvalues of the first shape.
         evals_b : array-like, shape=[..., spectrum_size_b]
