@@ -54,43 +54,20 @@ class FarthestPointSampler(BaseSampler):
         samples : array-like of shape (min_n_samples,)
             Indices of sampled points.
         """
-        return self._farthest_point_sampling_call(
-            shape,
-            points_pool = points_pool,
-            first_index = first_point,
-        )
-
-   
-    def _farthest_point_sampling_call(self, mesh, points_pool = None, first_index=None,):
-        """Sample points using farthest point sampling.
-
-        Parameters
-        ----------
-        mesh : TriangleMesh
-            Mesh to sample from.
-        points_pool : array, optional
-            The set of points from which to sample. If None, selects all mesh vertices.  
-        first_index : int 
-            Index of the first point to sample. If None, samples randomly
-
-        Returns
-        -------
-        fps : (k,) array of indices of sampled points
-        """
-        if mesh.metric is None:
+        if shape.metric is None:
             raise ValueError("d_func should be a callable")
-        dist_func = mesh.metric.dist_from_source
+        dist_func = shape.metric.dist_from_source
 
-        sub_points = np.arange(mesh.n_vertices) if points_pool is None else np.array(points_pool)
+        sub_points = np.arange(shape.n_vertices) if points_pool is None else np.array(points_pool)
 
-        if first_index is None:
+        if first_point is None:
             rng = np.random.default_rng()
             inds = [rng.choice(sub_points)]
         else:
-            if first_index not in sub_points:
-                warnings.warn(f"First index {first_index} is not in the points pool {sub_points}.", UserWarning)
-            sub_points = np.append(sub_points, first_index)
-            inds = [first_index]
+            if first_point not in sub_points:
+                warnings.warn(f"First index {first_point} is not in the points pool {sub_points}.", UserWarning)
+            sub_points = np.append(sub_points, first_point)
+            inds = [first_point]
 
 
         dists = dist_func(inds[0])[0][sub_points]
