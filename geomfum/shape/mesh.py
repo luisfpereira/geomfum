@@ -4,6 +4,7 @@ import numpy as np
 import scipy
 
 from geomfum.io import load_mesh
+from geomfum.metric.mesh import HeatDistanceMetric
 from geomfum.operator import (
     FaceDivergenceOperator,
     FaceOrientationOperator,
@@ -24,10 +25,11 @@ class TriangleMesh(Shape):
         Faces of the mesh.
     """
 
-    def __init__(self, vertices, faces):
+    def __init__(self, vertices, faces,):
         super().__init__(is_mesh=True)
         self.vertices = np.asarray(vertices)
         self.faces = np.asarray(faces)
+
 
         self._edges = None
         self._face_normals = None
@@ -37,6 +39,10 @@ class TriangleMesh(Shape):
         self._vertex_tangent_frames = None
         self._edge_tangent_vectors = None
         self._gradient_matrix = None
+        self._dist_matrix = None
+        self.metric = None
+    
+
         self._at_init()
 
     def _at_init(self):
@@ -51,8 +57,13 @@ class TriangleMesh(Shape):
         )
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename,):
         """Instantiate given a file.
+
+        Parameters
+        ----------
+        filename : str
+            Path to the mesh file.     
 
         Returns
         -------
@@ -81,7 +92,7 @@ class TriangleMesh(Shape):
         n_faces : int
         """
         return self.faces.shape[0]
-
+    
     @property
     def edges(self):
         """Edges of the mesh.
@@ -364,3 +375,32 @@ class TriangleMesh(Shape):
                 shape=(self.n_vertices, self.n_vertices),
             ).tocsc()
         return self._gradient_matrix
+    
+    @property   #ToDo
+    def dist_matrix(self):
+        """Compute metric distance matrix.
+
+        Returns
+        -------
+        _dist_matrix : array-like, shape=[n_vertices, n_vertices]
+            Metric distance matrix.
+        """
+        if self._dist_matrix is None:
+            if self.metric is None:
+                raise ValueError("Metric is not set.")
+            self._dist_matrix = self.metric.dist_matrix()
+        return self._dist_matrix
+
+    def equip_with_metric(self, metric):
+        """Set the metric for the mesh.
+
+        Parameters
+        ----------
+        metric : class
+            A metric class to use for the mesh.
+        """
+        if metric == HeatDistanceMetric:
+            self.metric = metric.from_registry(which="pp3d",shape = self)
+        else:
+            self.metric = metric(self)
+        self._dist_matrix = None

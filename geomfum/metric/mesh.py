@@ -1,4 +1,4 @@
-"""Module that metrics for calcualte distances on a mesh."""
+"""Module containing metrics to calcualte distances on a mesh."""
 
 import abc
 
@@ -315,11 +315,18 @@ class GraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
             Distance.
         target_point : array-like, shape=[n_targets]
             Target index.
+
+        Notes
+        -----
+        The Distances are ordered following the order of the indices.
         """
         dist_dict = nx.single_source_dijkstra_path_length(
             self._graph, source_point.item(), cutoff=self.cutoff, weight="weight"
         )
-        return np.array(list(dist_dict.values())), np.array(list(dist_dict.keys()))
+        indices = np.array(list(dist_dict.keys()))
+        distances = np.array(list(dist_dict.values()))
+        sort_order = np.argsort(indices)
+        return np.array(list(distances[sort_order])), np.array(list(indices[sort_order]))
 
 
 class KClosestGraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):

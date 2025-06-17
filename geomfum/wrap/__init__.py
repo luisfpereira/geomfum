@@ -2,7 +2,6 @@ from geomfum._registry import (
     register_face_divergence_operator,
     register_face_orientation_operator,
     register_face_valued_gradient,
-    register_farthest_point_sampler,
     register_feature_extractor,
     register_heat_distance_metric,
     register_heat_kernel_signature,
@@ -66,10 +65,6 @@ register_hierarchical_mesh(
 
 register_poisson_sampler(
     "pymeshlab", "PymeshlabPoissonSampler", requires="pymeshlab", as_default=True
-)
-
-register_farthest_point_sampler(
-    "pyfm", "PyfmEuclideanFarthestVertexSampler", requires="pyFM", as_default=True
 )
 
 register_mesh_plotter("plotly", "PlotlyMeshPlotter", requires="plotly", as_default=True)
