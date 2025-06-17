@@ -3,6 +3,7 @@ from geomfum._registry import (
     register_face_orientation_operator,
     register_face_valued_gradient,
     register_farthest_point_sampler,
+    register_feature_extractor,
     register_heat_distance_metric,
     register_heat_kernel_signature,
     register_hierarchical_mesh,
@@ -77,6 +78,14 @@ register_mesh_plotter("pyvista", "PvMeshPlotter", requires="pyvista", as_default
 
 register_mesh_plotter(
     "polyscope", "PsMeshPlotter", requires="polyscope", as_default=False
+)
+
+register_feature_extractor(
+    "pointnet", "PointnetFeatureExtractor", requires="torch", as_default=False
+)
+
+register_feature_extractor(
+    "diffusionnet", "DiffusionnetFeatureExtractor", requires="torch", as_default=True
 )
 
 register_sinkhorn_neighbor_finder(
