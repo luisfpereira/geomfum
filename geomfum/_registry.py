@@ -318,6 +318,10 @@ class FarthestPointSamplerRegistry(Registry):
     MAP = {}
 
 
+class FeatureExtractorRegistry(Registry):
+    MAP = {}
+
+
 class SinkhornNeighborFinderRegistry(Registry):
     MAP = {}
 

@@ -10,6 +10,18 @@ from geomfum.numerics.graph import single_source_partial_dijkstra_path_length
 
 
 def to_nx_edge_graph(shape):
+    """Convert a shape to a networkx graph.
+
+    Parameters
+    ----------
+    shape : Shape
+        Shape.
+
+    Returns
+    -------
+    graph : networkx.Graph
+        Graph.
+    """
     # TODO: move to utils? circular imports
     vertex_a, vertex_b = shape.edges.T
     lengths = VertexEuclideanMetric(shape).dist(vertex_a, vertex_b)
