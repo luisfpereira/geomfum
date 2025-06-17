@@ -147,8 +147,10 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
     def load_from_path(self, path):
         """Load model parameters from the provided file path.
 
-        Args:
-            path (str): Path to the saved model parameters
+        Parameters
+        ----------
+        path : str
+            Path to the saved model parameters
         """
         try:
             self.model.load_state_dict(torch.load(path, map_location=self.device))
@@ -160,8 +162,10 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
     def save(self, path):
         """Save model parameters to the specified file path.
 
-        Args:
-        path (str): Path to the saved model parameters
+        Parameters
+        ----------
+        path : str
+            Path to the saved model parameters
         """
         torch.save(self.model.state_dict(), path)
 
@@ -181,17 +185,17 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         frames : torch.Tensor
             Tangent frames for vertices.
         mass : torch.Tensor
-            Diagonal elements in mass matrix [B, V].
+            Diagonal elements in mass matrix [..., n_vertices].
         L : torch.SparseTensor
-            Sparse Laplacian matrix [B, V, V].
+            Sparse Laplacian matrix [..., n_vertices, n_vertices].
         evals : torch.Tensor
-            Eigenvalues of Laplacian Matrix [B, K].
+            Eigenvalues of Laplacian Matrix [..., spectrum_dim].
         evecs : torch.Tensor
-            Eigenvectors of Laplacian Matrix [B, V, K].
+            Eigenvectors of Laplacian Matrix [..., n_vertices, spectrum_dim].
         gradX : torch.SparseTensor
-            Real part of gradient matrix [B, V, V].
+            Real part of gradient matrix [..., n_vertices, n_vertices].
         gradY : torch.SparseTensor
-            Imaginary part of gradient matrix [B, V, V].
+            Imaginary part of gradient matrix [..., n_vertices, n_vertices].
         """
         assert k >= 0, (
             f"Number of eigenvalues/vectors should be non-negative, bug get {k}"
@@ -222,7 +226,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
 
 
 """
-Original implementation from
+Implementation from
 https://github.com/dongliangcao/Self-Supervised-Multimodal-Shape-Matching by Dongliang Cao
 """
 
