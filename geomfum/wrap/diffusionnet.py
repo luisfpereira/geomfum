@@ -144,31 +144,6 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         )
         return self.features
 
-    def load_from_path(self, path):
-        """Load model parameters from the provided file path.
-
-        Parameters
-        ----------
-        path : str
-            Path to the saved model parameters
-        """
-        try:
-            self.model.load_state_dict(torch.load(path, map_location=self.device))
-        except FileNotFoundError as e:
-            raise FileNotFoundError(f"Model file not found: {path}") from e
-        except Exception as e:
-            raise ValueError(f"Failed to load model from {path}: {e}") from e
-
-    def save(self, path):
-        """Save model parameters to the specified file path.
-
-        Parameters
-        ----------
-        path : str
-            Path to the saved model parameters
-        """
-        torch.save(self.model.state_dict(), path)
-
     def _get_operators(self, mesh, k=200):
         # TODO: add cache_dir
         """Compute the spectral operators for the input mesh.

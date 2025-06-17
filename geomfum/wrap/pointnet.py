@@ -58,38 +58,17 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         Parameters
         ----------
         shape : object
-            An object with a `vertices` attribute of shape (N, 3).
+            An object with a `vertices` attribute of shape (n_vertices, 3).
 
         Returns
         -------
         torch.Tensor
-            Feature tensor of shape (1, N, n_features).
+            Feature tensor of shape (1, n_vertices, n_features).
         """
         vertices = torch.tensor(shape.vertices, dtype=torch.float32).to(self.device)
         vertices = vertices.unsqueeze(0).transpose(2, 1).contiguous()
         features = self.model(vertices)
         return features
-
-    def load_from_path(self, path):
-        """Load model parameters from the provided file path.
-
-        Args:
-            path (str): Path to the saved model parameters
-        """
-        try:
-            self.model.load_state_dict(torch.load(path, map_location=self.device))
-        except FileNotFoundError as e:
-            raise FileNotFoundError(f"Model file not found: {path}") from e
-        except Exception as e:
-            raise ValueError(f"Failed to load model from {path}: {e}") from e
-
-    def save(self, path):
-        """Save model parameters to the specified file path.
-
-        Args:
-        path (str): Path to the saved model parameters
-        """
-        torch.save(self.model.state_dict(), path)
 
 
 class PointNetfeat(nn.Module):
@@ -131,12 +110,12 @@ class PointNetfeat(nn.Module):
         Parameters
         ----------
         x : torch.Tensor
-            Input point cloud of shape (B, 3, N), where B is the batch size and N is the number of points.
+            Input point cloud of shape [..., 3, n_vertices]
 
         Returns
         -------
         torch.Tensor
-            Concatenated global and point-wise features of shape (B, output_dim, N).
+            Concatenated global and point-wise features of shape [..., n_features, n_vertices].
         """
         for conv in self.conv_layers:
             x = F.relu(conv(x))
