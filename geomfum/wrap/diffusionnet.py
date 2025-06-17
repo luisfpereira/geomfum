@@ -125,7 +125,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
 
         # Compute spectral operators
         frames, mass, L, evals, evecs, gradX, gradY = self._get_operators(
-            shape, k=self.k_eig
+            shape, k_eig=self.k_eig
         )
         if v.dim() == 2:
             v = v.unsqueeze(0)
@@ -144,7 +144,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         )
         return self.features
 
-    def _get_operators(self, mesh, k=200):
+    def _get_operators(self, mesh, k_eig=200):
         # TODO: add cache_dir
         """Compute the spectral operators for the input mesh.
 
@@ -152,7 +152,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         ----------
         mesh : TriangleMesh
             Input mesh.
-        k : int
+        k_eig : int
             Number of eigenvalues/eigenvectors to compute diffusion. Default 200.
 
         Returns
@@ -172,16 +172,15 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         gradY : torch.SparseTensor
             Imaginary part of gradient matrix [..., n_vertices, n_vertices].
         """
-        assert k >= 0, (
-            f"Number of eigenvalues/vectors should be non-negative, bug get {k}"
+        assert k_eig > 0, (
+            f"Number of eigenvalues/vectors should be positive, bug get {k_eig}"
         )
 
         frames = mesh.vertex_tangent_frames
         L, M = mesh.laplacian.find()
         massvec_np = M.diagonal().astype(np.float32)
 
-        if k > 0:
-            evals, evecs = mesh.laplacian.find_spectrum(spectrum_size=k)
+        evals, evecs = mesh.laplacian.find_spectrum(spectrum_size=k_eig)
 
         grad_mat = mesh.gradient_matrix
         gradX_np = np.real(grad_mat)
