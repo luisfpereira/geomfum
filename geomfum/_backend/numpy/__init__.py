@@ -18,6 +18,10 @@ def scatter_sum_1d(index, src, size=None):
     ).flatten()
 
 
+def to_device(a, device):
+    return a
+
+
 def argsort(a, axis=-1):
     return _np.argsort(a, axis=axis)
 

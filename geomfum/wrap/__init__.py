@@ -12,6 +12,7 @@ from geomfum._registry import (
     register_poisson_sampler,
     register_sinkhorn_neighbor_finder,
     register_wave_kernel_signature,
+    register_torch_neighbor_finder,
 )
 from geomfum._utils import has_package
 
@@ -91,6 +92,11 @@ register_feature_extractor(
 register_sinkhorn_neighbor_finder(
     "pot", "PotSinkhornNeighborFinder", requires="ot", as_default=True
 )
+
+register_torch_neighbor_finder(
+    "densemap", "DenseMapNeighborFinder", requires="densemaps", as_default=True
+)
+
 register_heat_distance_metric(
     "pp3d", "Pp3dHeatDistanceMetric", requires="potpourri3d", as_default=True
 )

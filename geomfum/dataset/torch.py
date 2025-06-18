@@ -16,17 +16,6 @@ from geomfum.metric.mesh import ScipyGraphShortestPathMetric
 from geomfum.shape.mesh import TriangleMesh
 
 
-def hash_arrays(arrs):
-    """Compute a hash for a list of numpy arrays."""
-    running_hash = hashlib.sha1()
-    for arr in arrs:
-        if arr is not None:
-            arr = np.ascontiguousarray(arr)
-            binarr = arr.view(np.uint8)
-            running_hash.update(binarr)
-    return running_hash.hexdigest()
-
-
 class ShapeDataset(Dataset):
     """ShapeDataset for loading and preprocessing shape data.
 
@@ -79,7 +68,7 @@ class ShapeDataset(Dataset):
             mesh = TriangleMesh.from_file(os.path.join(self.shape_dir, filename))
             # preprocess
             if spectral:
-                mesh.laplacian.find_spectrum(spectrum_size=self.k, set_as_basis=True)
+                mesh.laplacian.find_spectrum(spectrum_size=200, set_as_basis=True)
                 mesh.basis.use_k = self.k
             if distances:
                 mat_subfolder = os.path.join(self.shape_dir, "dist")
@@ -114,20 +103,8 @@ class ShapeDataset(Dataset):
 
         # the datas are stored in dictionaries
         data = {
-            "vertices": xgs.to_torch(mesh.vertices).to(self.device),
-            "faces": xgs.to_torch(mesh.faces).to(self.device),
             "corr": self.corrs[filename],
-            "id": str(hash_arrays(arrs=(mesh.vertices, mesh.faces))),
         }
-        if self.spectral:
-            mesh.use_k = self.k
-            data.update(
-                {
-                    "evals": xgs.to_torch(mesh.basis.vals).to(self.device),
-                    "evecs": xgs.to_torch(mesh.basis.vecs).to(self.device),
-                    "pinv": xgs.to_torch(mesh.basis.pinv).to(self.device),
-                }
-            )
         if self.distances:
             dist_path = mesh.mat_dist_path
             if os.path.exists(dist_path):
@@ -148,7 +125,18 @@ class ShapeDataset(Dataset):
                     dist_path,
                     {"D": gs.to_numpy(geod_distance_matrix)},
                 )
-            data.update({"distances": xgs.to_torch(geod_distance_matrix)})
+
+            data.update({"dist_matrix": gs.array(geod_distance_matrix)})
+
+        mesh.vertices = xgs.to_device(mesh.vertices, self.device)
+        mesh.faces = xgs.to_device(mesh.faces, self.device)
+        mesh.basis.full_vals = xgs.to_device(mesh.basis.full_vals, self.device)
+        mesh.basis.full_vecs = xgs.to_device(mesh.basis.full_vecs, self.device)
+        mesh.laplacian._mass_matrix = xgs.to_device(
+            mesh.laplacian._mass_matrix, self.device
+        )
+
+        data.update({"mesh": mesh})
 
         return data
 

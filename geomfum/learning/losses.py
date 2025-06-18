@@ -85,14 +85,10 @@ class OrthonormalityLoss(nn.Module):
     def forward(self, fmap12, fmap21):
         """Forward pass."""
         metric = SquaredFrobeniusLoss()
-        eye = (
-            torch.eye(fmap12.shape[1], device=fmap12.device)
-            .unsqueeze(0)
-            .expand(fmap12.shape[0], -1, -1)
-        )
+        eye = torch.eye(fmap12.shape[0], device=fmap12.device)
         return self.weight * (
-            metric(torch.bmm(fmap12.transpose(1, 2), fmap12), eye)
-            + metric(torch.bmm(fmap21.transpose(1, 2), fmap21), eye)
+            metric(torch.mm(fmap12.T, fmap12), eye)
+            + metric(torch.mm(fmap21.T, fmap21), eye)
         )
 
 
@@ -122,13 +118,9 @@ class BijectivityLoss(nn.Module):
     def forward(self, fmap12, fmap21):
         """Forward pass."""
         metric = SquaredFrobeniusLoss()
-        eye = (
-            torch.eye(fmap12.shape[1], device=fmap12.device)
-            .unsqueeze(0)
-            .expand(fmap12.shape[0], -1, -1)
-        )
-        return self.weight * metric(torch.bmm(fmap12, fmap21), eye) + metric(
-            torch.bmm(fmap21, fmap12), eye
+        eye = torch.eye(fmap12.shape[1], device=fmap12.device)
+        return self.weight * metric(torch.mm(fmap12, fmap21), eye) + metric(
+            torch.mm(fmap21, fmap12), eye
         )
 
 
@@ -155,14 +147,14 @@ class LaplacianCommutativityLoss(nn.Module):
         super().__init__()
         self.weight = weight
 
-    required_inputs = ["fmap12", "source", "target"]
+    required_inputs = ["fmap12", "mesh_a", "mesh_b"]
 
-    def forward(self, fmap12, source, target):
+    def forward(self, fmap12, mesh_a, mesh_b):
         """Forward pass."""
         metric = SquaredFrobeniusLoss()
         return self.weight * metric(
-            torch.einsum("abc,ac->abc", fmap12, source["evals"]),
-            torch.einsum("ab,abc->abc", target["evals"], fmap12),
+            torch.einsum("bc,c->bc", fmap12, mesh_a.basis.vals),
+            torch.einsum("b,bc->bc", mesh_b.basis.vals, fmap12),
         )
 
 
@@ -196,33 +188,23 @@ class Fmap_Supervision(nn.Module):
 
 
 class GeodesicError(nn.Module):
-    """Computes the accuracy of a correspondence by measuring the mean of the geodesic distancees between points of the predicted permuted target and the ground truth target."""
+    """Computes the accuracy of a correspondence by measuring the mean of the geodesic distances between points of the predicted permuted target and the ground truth target."""
 
     def __init__(self):
         super().__init__()
 
-    required_inputs = ["p2p21", "source", "target"]
+    required_inputs = [
+        "p2p12",
+        "dist_a",
+        "corr_a",
+        "corr_b",
+    ]
 
     def _compute_geodesic_loss(self, p2p, source_dist, source_corr, target_corr):
         """Compute the geodesic loss for batched inputs."""
-        return torch.mean(source_dist[p2p.long()[target_corr], source_corr])
+        return torch.mean(source_dist[p2p[target_corr], source_corr])
 
-    def forward(self, p2p21, source, target):
+    def forward(self, p2p12, dist_a, corr_a, corr_b):
         """Forward pass."""
-        if p2p21.ndim == 2:
-            loss = 0
-            for b in range(p2p21.shape[0]):
-                p2p = p2p21[b]
-                source_dist = source["distances"][b]
-                target_corr = target["corr"][b]
-                source_corr = source["corr"][b]
-                loss += self._compute_geodesic_loss(
-                    p2p, source_dist, source_corr, target_corr
-                )
-            loss /= p2p21.shape[0]
-        else:
-            loss = self._compute_geodesic_loss(
-                p2p21, source["distances"], source["corr"], target["corr"]
-            )
-
+        loss = self._compute_geodesic_loss(p2p12, dist_a, corr_a, corr_b)
         return loss

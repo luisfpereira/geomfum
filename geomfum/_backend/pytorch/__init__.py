@@ -25,6 +25,10 @@ def to_torch(a):
     return a
 
 
+def to_device(a, device):
+    return a.to(device)
+
+
 def diag(array):
     if array.ndim == 1:
         return _torch.diag(array)

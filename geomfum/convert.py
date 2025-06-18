@@ -3,11 +3,16 @@
 import abc
 
 import geomstats.backend as gs
+import geomfum.backend as xgs
 import scipy
 from sklearn.neighbors import NearestNeighbors
-
+import torch.nn as nn
 import geomfum.wrap as _wrap  # noqa (for register)
-from geomfum._registry import SinkhornNeighborFinderRegistry, WhichRegistryMixins
+from geomfum._registry import (
+    SinkhornNeighborFinderRegistry,
+    WhichRegistryMixins,
+    TorchNeighborFinderRegistry,
+)
 
 
 class BaseP2pFromFmConverter(abc.ABC):
@@ -77,8 +82,10 @@ class P2pFromFmConverter(BaseP2pFromFmConverter):
             emb1, emb2 = emb2, emb1
 
         # TODO: update neighbor finder instead
-        self.neighbor_finder.fit(emb1)
-        p2p_21 = self.neighbor_finder.kneighbors(emb2, return_distance=False)
+        self.neighbor_finder.fit(xgs.to_device(emb1, "cpu"))
+        p2p_21 = self.neighbor_finder.kneighbors(
+            xgs.to_device(emb2, "cpu"), return_distance=False
+        )
 
         return gs.from_numpy(p2p_21[:, 0])
 
@@ -127,6 +134,12 @@ class BaseNeighborFinder(abc.ABC):
         indices : array-like, shape=[n_points_y, n_neighbors]
             Indices of the nearest neighbors.
         """
+
+
+class TorchNeighborFinder(WhichRegistryMixins):
+    """Torch-based neighbor finder."""
+
+    _Registry = TorchNeighborFinderRegistry
 
 
 class SinkhornNeighborFinder(WhichRegistryMixins):

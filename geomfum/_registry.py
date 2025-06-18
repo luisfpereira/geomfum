@@ -342,6 +342,10 @@ class HeatDistanceMetricRegistry(Registry):
     MAP = {}
 
 
+class TorchNeighborFinderRegistry(Registry):
+    MAP = {}
+
+
 def _create_register_funcs(module):
     """Create ``register`` functions for each class registry in this module.
 

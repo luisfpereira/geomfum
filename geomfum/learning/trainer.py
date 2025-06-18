@@ -4,12 +4,12 @@ import logging
 
 import torch
 from tqdm import tqdm
-import torch.nn as nn
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+import random
 
 
 class DeepFunctionalMapTrainer:
@@ -21,10 +21,10 @@ class DeepFunctionalMapTrainer:
         The model to be trained, typically a subclass of nn.Module.
     Loss : LossManager
         Loss manager that computes the loss during training.
-    train_loader : DataLoader
-        DataLoader for the training dataset.
-    val_loader : DataLoader
-        DataLoader for the validation dataset.
+    train_set : PairDataset
+        Dataset for the training.
+    val_set : PairDataset
+        Dataset for the validation.
     optimizer : torch.optim.Optimizer
         Optimizer for updating model parameters.
     epochs : int, optional
@@ -36,8 +36,8 @@ class DeepFunctionalMapTrainer:
     def __init__(
         self,
         model,
-        train_loader,
-        val_loader,
+        train_set,
+        val_set,
         train_loss_manager=None,
         val_loss_manager=None,
         optimizer=None,
@@ -54,8 +54,8 @@ class DeepFunctionalMapTrainer:
         if self.val_loss_manager is None:
             self.val_loss_manager = train_loss_manager
 
-        self.train_loader = train_loader
-        self.val_loader = val_loader
+        self.train_set = train_set
+        self.val_set = val_set
         self.optimizer = optimizer
         if self.optimizer is None:
             self.optimizer = torch.optim.Adam(
@@ -71,22 +71,36 @@ class DeepFunctionalMapTrainer:
         """Train the model for one epoch."""
         self.model.train()
         running_loss = 0.0
+        indices = list(range(len(self.train_set)))
+        random.shuffle(indices)  # Shuffle indices
+
         with tqdm(
-            total=len(self.train_loader),
+            total=len(self.train_set),
             desc=f"Epoch {epoch + 1}/{self.epochs} (Train)",
             unit="batch",
         ) as pbar:
-            for batch_idx, pair in enumerate(self.train_loader):
+            for idx in indices:
+                pair = self.train_set[idx]  # Access item by index
                 self.optimizer.zero_grad()
-                outputs = self.model(pair["source"], pair["target"])
-                outputs.update({"source": pair["source"], "target": pair["target"]})
+                mesh_a = pair["source"]["mesh"]
+                mesh_b = pair["target"]["mesh"]
+                outputs = self.model(mesh_a, mesh_b)
+                outputs.update(
+                    {
+                        "mesh_a": mesh_a,
+                        "mesh_b": mesh_b,
+                        "corr_a": pair["source"]["corr"],
+                        "corr_b": pair["target"]["corr"],
+                    }
+                )
                 loss, loss_dict = self.train_loss_manager.compute_loss(outputs)
+
                 loss.backward()
                 self.optimizer.step()
                 running_loss += loss.item()
                 pbar.set_postfix({"Loss": f"{loss.item():.4f}"})
                 pbar.update(1)
-        avg_train_loss = running_loss / len(self.train_loader)
+        avg_train_loss = running_loss / len(self.train_set)
         return avg_train_loss
 
     def validate(self, return_metrics=False):
@@ -95,20 +109,29 @@ class DeepFunctionalMapTrainer:
         val_loss = 0.0
         metrics_sum = {}
         with torch.no_grad():
-            with tqdm(
-                total=len(self.val_loader), desc="Validation", unit="batch"
-            ) as pbar:
-                for batch_idx, pair in enumerate(self.val_loader):
-                    outputs = self.model(pair["source"], pair["target"])
-                    outputs.update({"source": pair["source"], "target": pair["target"]})
+            with tqdm(total=len(self.val_set), desc="Validation", unit="batch") as pbar:
+                for pair in self.val_set:
+                    mesh_a = pair["source"]["mesh"]
+                    mesh_b = pair["target"]["mesh"]
+                    outputs = self.model(mesh_a, mesh_b)
+                    outputs.update(
+                        {
+                            "mesh_a": mesh_a,
+                            "mesh_b": mesh_b,
+                            "corr_a": pair["source"]["corr"],
+                            "corr_b": pair["target"]["corr"],
+                            "dist_a": pair["source"]["dist_matrix"],
+                            "dist_b": pair["target"]["dist_matrix"],
+                        }
+                    )
                     loss, loss_dict = self.val_loss_manager.compute_loss(outputs)
                     val_loss += loss.item()
                     for k, v in loss_dict.items():
                         metrics_sum[k] = metrics_sum.get(k, 0.0) + v
                     pbar.set_postfix({"Loss": f"{loss.item():.4f}"})
                     pbar.update(1)
-        avg_val_loss = val_loss / len(self.val_loader)
-        avg_metrics = {k: v / len(self.val_loader) for k, v in metrics_sum.items()}
+        avg_val_loss = val_loss / len(self.val_set)
+        avg_metrics = {k: v / len(self.val_set) for k, v in metrics_sum.items()}
         if return_metrics:
             return avg_val_loss, avg_metrics
         return avg_val_loss

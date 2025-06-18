@@ -184,7 +184,7 @@ class TriangleMesh(Shape):
         """
         if self._vertex_normals is None:
             I = gs.concatenate([self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]])
-            J = gs.zeros(len(I))
+            J = gs.zeros_like(I)
 
             normals_repeated = gs.vstack([self.face_normals] * 3)
 
@@ -192,10 +192,12 @@ class TriangleMesh(Shape):
             for c in range(3):
                 V = normals_repeated[:, c]
 
-                vertex_normals[:, c] = gs.array(
-                    scipy.sparse.coo_matrix((V, (I, J)), shape=(self.n_vertices, 1))
-                    .toarray()
-                    .flatten()
+                vertex_normals[:, c] = gs.asarray(
+                    xgs.sparse.to_dense(
+                        xgs.sparse.coo_matrix(
+                            gs.stack([I, J]), V, shape=(self.n_vertices, 1)
+                        )
+                    ).flatten()
                 )
 
             vertex_normals = vertex_normals / (
@@ -244,12 +246,18 @@ class TriangleMesh(Shape):
         """
         if self._vertex_tangent_frames is None:
             normals = self.vertex_normals
-            tangent_frame = gs.zeros((self.n_vertices, 3, 3))
+            tangent_frame = xgs.to_device(
+                gs.zeros((self.n_vertices, 3, 3)), device=normals.device
+            )
 
             tangent_frame[:, 2, :] = normals
 
-            basis_cand1 = gs.tile([1, 0, 0], (self.n_vertices, 1))
-            basis_cand2 = gs.tile([0, 1, 0], (self.n_vertices, 1))
+            basis_cand1 = xgs.to_device(
+                gs.tile([1, 0, 0], (self.n_vertices, 1)), device=normals.device
+            )
+            basis_cand2 = xgs.to_device(
+                gs.tile([0, 1, 0], (self.n_vertices, 1)), device=normals.device
+            )
 
             dot_products = gs.sum(normals * basis_cand1, axis=1, keepdims=True)
             basis_x = gs.where(gs.abs(dot_products) < 0.9, basis_cand1, basis_cand2)
@@ -308,7 +316,7 @@ class TriangleMesh(Shape):
 
         Returns
         -------
-        grad_op : scipy.sparse.csc_matrix, shape=[n_vertices, n_vertices]
+        grad_op : xgs.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Complex sparse matrix representing the gradient operator.
             The real part corresponds to the X component in the local tangent frame,
             and the imaginary part corresponds to the Y component.
@@ -370,12 +378,13 @@ class TriangleMesh(Shape):
                     data_vals.append(sol_coefs[i_neigh])
 
             # Build the sparse matrix
-            row_inds = gs.array(row_inds)
-            col_inds = gs.array(col_inds)
-            data_vals = gs.array(data_vals)
+            row_inds = gs.asarray(row_inds)
+            col_inds = gs.asarray(col_inds)
+            data_vals = gs.asarray(data_vals)
 
-            self._gradient_matrix = scipy.sparse.coo_matrix(
-                (data_vals, (row_inds, col_inds)), shape=(V, V)
-            ).tocsc()
-
-        return xgs.sparse.from_scipy_csc(self._gradient_matrix)
+            self._gradient_matrix = xgs.sparse.to_csc(
+                xgs.sparse.coo_matrix(
+                    gs.stack([row_inds, col_inds]), data_vals, shape=(V, V)
+                )
+            )
+        return self._gradient_matrix
