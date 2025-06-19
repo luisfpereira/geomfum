@@ -53,6 +53,8 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         Path to cache directory for storing/loading spectral operators. Default is None.
     device : torch.device
         Device to run the model on. Default is CPU.
+    descriptor : Descriptor or None
+        Optional descriptor to compute input features. If None, uses vertex coordinates.
     """
 
     def __init__(
@@ -71,6 +73,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         k_eig=128,
         cache_dir=None,
         device=torch.device("cpu"),
+        descriptor=None,
     ):
         super(DiffusionnetFeatureExtractor, self).__init__()
 
@@ -102,9 +105,8 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
             k_eig=self.k_eig,
             cache_dir=self.cache_dir,
         ).to(device)
-
+        self.descriptor = descriptor
         self.n_features = self.out_channels
-        self.features = None
         self.device = device
 
     def __call__(self, shape):
@@ -138,11 +140,20 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
             gradX = gradX.unsqueeze(0)
             gradY = gradY.unsqueeze(0)
 
-        # TODO: add possibility of using other features as input
-        self.features = self.model(
-            v, f, None, frames, mass, L, evals, evecs, gradX, gradY
-        )
-        return self.features
+        if self.descriptor is None:
+            input_feat = None
+        else:
+            input_feat = self.descriptor(shape)
+            input_feat = torch.tensor(input_feat).to(torch.float32).to(self.device)
+            input_feat = input_feat.unsqueeze(0).transpose(2, 1)
+
+            if input_feat.shape[-1] != self.in_channels:
+                raise ValueError(
+                    f"Input shape has {input_feat.shape[-1]} channels, "
+                    f"but expected {self.in_channels} channels."
+                )
+
+        return self.model(v, f, input_feat, frames, mass, L, evals, evecs, gradX, gradY)
 
     def _get_operators(self, mesh, k_eig=200):
         # TODO: add cache_dir
