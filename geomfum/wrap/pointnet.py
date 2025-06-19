@@ -32,6 +32,9 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         Dropout probability.
     device : torch.device or str
         Device on which the model is allocated.
+    descriptor : Descriptor or None
+        Optional descriptor to compute input features. If None, uses vertex coordinates.
+
     """
 
     def __init__(

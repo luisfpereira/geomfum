@@ -53,6 +53,8 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         Path to cache directory for storing/loading spectral operators. Default is None.
     device : torch.device
         Device to run the model on. Default is CPU.
+    descriptor : Descriptor or None
+        Optional descriptor to compute input features. If None, uses vertex coordinates.
     """
 
     def __init__(
@@ -105,7 +107,6 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         ).to(device)
         self.descriptor = descriptor
         self.n_features = self.out_channels
-        self.features = None
         self.device = device
 
     def __call__(self, shape):
