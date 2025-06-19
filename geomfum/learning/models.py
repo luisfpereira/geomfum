@@ -49,6 +49,8 @@ class FMNet(BaseModel):
             The first shape, either as a TriangleMesh object or a dictionary containing 'basis', 'evals', and 'pinv'.
         mesh_b : TriangleMesh or dict
             The second shape, either as a TriangleMesh object or a dictionary containing 'basis', 'evals', and 'pinv'.
+        as_dict : bool, optional
+            If True, returns a dictionary with keys 'fmap12' and 'fmap21'. If False, returns a tuple of functional maps (fmap12, fmap21). Default is True.
 
         Returns
         -------
@@ -66,5 +68,3 @@ class FMNet(BaseModel):
                 "fmap21": fmap21,
             }
         return fmap12, fmap21
-
-
