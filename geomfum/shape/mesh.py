@@ -175,7 +175,7 @@ class TriangleMesh(Shape):
             Per-face areas.
         """
         if self._face_areas is None:
-            self._face_areas = 0.5 * gs.linalg.norm(self.face_normals, axis=1)
+            self._face_areas = 0.5 * gs.linalg.norm(self._face_area_vectors, axis=1)
 
         return self._face_areas
 
