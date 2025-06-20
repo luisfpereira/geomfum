@@ -56,6 +56,25 @@ class PvMeshPlotter(ShapePlotter):
 
         return self
 
+    def highlight_vertices(self, coords, color='red', size=0.01):
+        """
+        Highlight vertices on the mesh using PyVista.
+
+        Parameters
+        ----------
+        coords : array-like, shape = [n_vertices, 3]
+            Coordinates of vertices to highlight.
+        color : str or tuple
+            Color of the highlighted vertices.
+        size : float
+            Size of the highlighted vertices (radius of spheres).
+        """
+        name = 'Highlighted_points'
+        points = pv.PolyData(coords)
+        glyphs = points.glyph(scale=False, geom=pv.Sphere(radius=size))
+        self._plotter.add_mesh(glyphs, color=color, name=name)
+        return self
+
     def show(self):
         """Display plot."""
         self._add_mesh(self._mesh)

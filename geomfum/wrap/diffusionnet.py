@@ -15,6 +15,7 @@ import torch
 import torch.nn as nn
 
 import geomfum.backend as xgs
+import geomfum.backend as xgs
 from geomfum.descriptor.learned import BaseFeatureExtractor
 
 
@@ -52,6 +53,8 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
         Path to cache directory for storing/loading spectral operators. Default is None.
     device : torch.device
         Device to run the model on. Default is CPU.
+    descriptor : Descriptor or None
+        Optional descriptor to compute input features. If None, uses vertex coordinates.
     """
 
     def __init__(
@@ -70,6 +73,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
         k_eig=128,
         cache_dir=None,
         device=torch.device("cpu"),
+        descriptor=None,
     ):
         super(DiffusionnetFeatureExtractor, self).__init__()
 
@@ -87,23 +91,27 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
         self.k_eig = k_eig
         self.cache_dir = cache_dir
         self.model = (
+            (
             DiffusionNet(
-                in_channels=self.in_channels,
-                out_channels=self.out_channels,
-                hidden_channels=self.hidden_channels,
-                n_block=self.n_block,
-                last_activation=self.last_activation,
-                mlp_hidden_channels=self.mlp_hidden_channels,
-                output_at=self.output_at,
-                dropout=self.dropout,
-                with_gradient_features=self.with_gradient_features,
-                with_gradient_rotations=self.with_gradient_rotations,
-                diffusion_method=self.diffusion_method,
-                k_eig=self.k_eig,
-                cache_dir=self.cache_dir,
-            )
+                    in_channels=self.in_channels,
+                    out_channels=self.out_channels,
+                    hidden_channels=self.hidden_channels,
+                    n_block=self.n_block,
+                    last_activation=self.last_activation,
+                    mlp_hidden_channels=self.mlp_hidden_channels,
+                    output_at=self.output_at,
+                    dropout=self.dropout,
+                    with_gradient_features=self.with_gradient_features,
+                    with_gradient_rotations=self.with_gradient_rotations,
+                    diffusion_method=self.diffusion_method,
+                    k_eig=self.k_eig,
+                    cache_dir=self.cache_dir,
+                )
+            
             .to(device)
             .float()
+        )
+        self.descriptor = descriptor            .float()
         )
 
         self.n_features = self.out_channels
@@ -114,10 +122,8 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
 
         Parameters
         ----------
-        shape : Shape or dict
-            A shape object or a dict with required attributes.
-        feats : torch.Tensor, optional
-            Input features. Default is None.
+        shape : Shape
+            A shape object.
 
         Returns
         -------
@@ -130,53 +136,42 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
 
         # Compute spectral operators
         frames, mass, L, evals, evecs, gradX, gradY = self._get_operators(
-            shape, k=self.k_eig
+            shape, k_eig=self.k_eig
         )
-        v = v.unsqueeze(0).to(device=self.device, dtype=torch.float32)
-        f = f.unsqueeze(0).to(device=self.device, dtype=torch.float32)
-        frames = frames.unsqueeze(0)
-        mass = mass.unsqueeze(0)
-        L = L.unsqueeze(0)
-        evals = evals.unsqueeze(0)
-        evecs = evecs.unsqueeze(0)
-        gradX = gradX.unsqueeze(0)
-        gradY = gradY.unsqueeze(0)
+        v = v.unsqueeze(0).to(torch.float32)
+        f = f.unsqueeze(0).to(torch.float32)
+        frames = frames.unsqueeze(0).to(torch.float32)
+        mass = mass.unsqueeze(0).to(torch.float32)
+        L = L.unsqueeze(0).to(torch.float32)
+        evals = evals.unsqueeze(0).to(torch.float32)
+        evecs = evecs.unsqueeze(0).to(torch.float32)
+        gradX = gradX.unsqueeze(0).to(torch.float32)
+        gradY = gradY.unsqueeze(0).to(torch.float32)
 
-        # TODO: add possibility of using other features as input
-        self.features = self.model(
-            v, f, None, None, mass, L, evals, evecs, gradX, gradY
-        )
-        return self.features
+        if self.descriptor is None:
+            input_feat = None
+        else:
+            input_feat = self.descriptor(shape)
+            input_feat = torch.tensor(input_feat).to(torch.float32).to(self.device)
+            input_feat = input_feat.unsqueeze(0).transpose(2, 1)
 
-    def load_from_path(self, path):
-        """Load model parameters from the provided file path.
+            if input_feat.shape[-1] != self.in_channels:
+                raise ValueError(
+                    f"Input shape has {input_feat.shape[-1]} channels, "
+                    f"but expected {self.in_channels} channels."
+                )
 
-        Args:
-            path (str): Path to the saved model parameters
-        """
-        try:
-            self.model.load_state_dict(torch.load(path, map_location=self.device))
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Model file not found: {path}")
-        except Exception as e:
-            raise ValueError(f"Failed to load model: {str(e)}")
+        return self.model(v, f, input_feat, frames, mass, L, evals, evecs, gradX, gradY)
 
-    def save(self, path):
-        """Save model parameters to the specified file path.
-
-        Args:
-        path (str): Path to the saved model parameters
-        """
-        torch.save(self.model.state_dict(), path)
-
-    def _get_operators(self, mesh, k=200):
+    def _get_operators(self, mesh, k_eig=200):
+        # TODO: add cache_dir
         """Compute the spectral operators for the input mesh.
 
         Parameters
         ----------
-        mesh : TriangleMesh or dict
-            Input mesh or dict with cached operators.
-        k : int
+        mesh : TriangleMesh
+            Input mesh.
+        k_eig : int
             Number of eigenvalues/eigenvectors to compute diffusion. Default 200.
 
         Returns
@@ -184,22 +179,25 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
         frames : torch.Tensor
             Tangent frames for vertices.
         mass : torch.Tensor
-            Diagonal elements in mass matrix [B, V].
+            Diagonal elements in mass matrix [..., n_vertices].
         L : torch.SparseTensor
-            Sparse Laplacian matrix [B, V, V].
+            Sparse Laplacian matrix [..., n_vertices, n_vertices].
         evals : torch.Tensor
-            Eigenvalues of Laplacian Matrix [B, K].
+            Eigenvalues of Laplacian Matrix [..., spectrum_dim].
         evecs : torch.Tensor
-            Eigenvectors of Laplacian Matrix [B, V, K].
+            Eigenvectors of Laplacian Matrix [..., n_vertices, spectrum_dim].
         gradX : torch.SparseTensor
-            Real part of gradient matrix [B, V, V].
+            Real part of gradient matrix [..., n_vertices, n_vertices].
         gradY : torch.SparseTensor
-            Imaginary part of gradient matrix [B, V, V].
+            Imaginary part of gradient matrix [..., n_vertices, n_vertices].
         """
+        assert k_eig > 0, (
+            f"Number of eigenvalues/vectors should be positive, bug get {k_eig}"
+        )
+
         frames = mesh.vertex_tangent_frames
         L, M = mesh.laplacian.find()
-        if k > 0:
-            evals, evecs = mesh.laplacian.find_spectrum(spectrum_size=k)
+        evals, evecs = mesh.laplacian.find_spectrum(spectrum_size=k_eig)
         grad = mesh.gradient_matrix
         grad_scipy = xgs.sparse.to_scipy_csc(grad)
         frames = xgs.to_torch(frames)
@@ -221,7 +219,7 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
 
 
 """
-Original implementation from
+Implementation from
 https://github.com/dongliangcao/Self-Supervised-Multimodal-Shape-Matching by Dongliang Cao
 """
 

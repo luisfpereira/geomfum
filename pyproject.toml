@@ -24,6 +24,7 @@ dependencies = [
     "scikit-learn",
     "meshio",
     "pyfmaps",
+    "torch",
     "geomstats@git+https://github.com/geomstats/geomstats.git@main",
     "torch",
 ]
@@ -40,18 +41,11 @@ opt = ["geomfum[lapl,metric,sampling,rematching,sinkhorn]"]
 fun = [
     "geopext@git+https://github.com/luisfpereira/geopext.git@2b7a7be1a8fdc6e5755e5f4bda88bc284065e829",
 ]
-test-scripts = [
-    "nbformat",
-    "nbconvert",
-    "ipykernel",
-    "ipython",
-    "pyvista",
-    "plotly",
-]
+test-scripts = ["nbformat", "nbconvert", "ipykernel", "ipython", "pyvista", "plotly"]
 test = [
     "pytest",
     "polpo@git+https://github.com/geometric-intelligence/polpo.git@main",
-    "geomfum[opt,test-scripts]",
+    "geomfum[opt,test-scripts,plotting-all]",
 ]
 plotly = ["plotly", "nbformat"]
 pyvista = ["pyvista", "trame"]

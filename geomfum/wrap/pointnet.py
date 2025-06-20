@@ -33,25 +33,35 @@ class PointnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
         Dropout probability.
     device : torch.device or str
         Device on which the model is allocated.
+    descriptor : Descriptor or None
+        Optional descriptor to compute input features. If None, uses vertex coordinates.
+
     """
 
     def __init__(
         self,
+        in_channels=3,
         out_channels=128,
         conv_channels=[64, 64, 128],
         mlp_dims=[512, 256, 128],
         head_channels=[256, 128],
         dropout=0.3,
         device=None,
+        descriptor=None,
     ):
         super(PointnetFeatureExtractor, self).__init__()
         self.device = device or torch.device("cpu")
+        self.descriptor = descriptor
+
+        self.in_channels = in_channels
+
         self.model = (
             PointNet(
+                in_channels=self.in_channels,
                 conv_channels=conv_channels,
                 mlp_dims=mlp_dims,
                 head_channels=head_channels,
-                out_features=out_channels,
+                out_features=n_features,
                 dropout=dropout,
             )
             .to(self.device)
@@ -63,46 +73,29 @@ class PointnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
 
         Parameters
         ----------
-        shape : object or dict
-            An object with a `vertices` attribute of shape (N, 3), or a dict with a 'vertices' key.
+        shape : object
+            An object with a `vertices` attribute of shape (n_vertices, 3).
 
         Returns
         -------
         torch.Tensor
-            Feature tensor of shape (1, N, n_features).
+            Feature tensor of shape (1, n_vertices, n_features).
         """
-        # Accept both Shape objects and dicts
-        vertices = xgs.to_torch(shape.vertices)
+        if self.descriptor is None:
+            input_feat = shape.vertices.T
+        else:
+            input_feat = self.descriptor(shape)
 
-        vertices = vertices.float().to(self.device)
+        input_feat = xgs.to_torch(input_feat).to(self.device).float()
+        input_feat = input_feat.unsqueeze(0).contiguous()
 
-        if vertices.dim() == 2:
-            vertices = vertices.unsqueeze(0)
-        vertices = vertices.transpose(2, 1).contiguous()
-        features = self.model(vertices)
+        if input_feat.shape[1] != self.in_channels:
+            raise ValueError(
+                f"Input shape has {input_feat.shape[1]} channels, "
+                f"but expected {self.in_channels} channels."
+            )
 
-        return features
-
-    def load_from_path(self, path):
-        """Load model parameters from the provided file path.
-
-        Args:
-            path (str): Path to the saved model parameters
-        """
-        try:
-            self.model.load_state_dict(torch.load(path, map_location=self.device))
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Model file not found: {path}")
-        except Exception as e:
-            raise ValueError(f"Failed to load model: {str(e)}")
-
-    def save(self, path):
-        """Save model parameters to the specified file path.
-
-        Args:
-        path (str): Path to the saved model parameters
-        """
-        torch.save(self.model.state_dict(), path)
+        return self.model(input_feat)
 
 
 class PointNetfeat(nn.Module):
@@ -117,11 +110,13 @@ class PointNetfeat(nn.Module):
     """
 
     def __init__(
-        self, conv_channels=[64, 64, 128, 128, 1024], mlp_dims=[1024, 256, 256]
+        self,
+        in_channels=3,
+        conv_channels=[64, 64, 128, 128, 1024],
+        mlp_dims=[1024, 256, 256],
     ):
         super().__init__()
         self.conv_layers = nn.ModuleList()
-        in_channels = 3
 
         for out_channels in conv_channels:
             self.conv_layers.append(nn.Conv1d(in_channels, out_channels, 1))
@@ -144,12 +139,12 @@ class PointNetfeat(nn.Module):
         Parameters
         ----------
         x : torch.Tensor
-            Input point cloud of shape (B, 3, N), where B is the batch size and N is the number of points.
+            Input point cloud of shape [..., 3, n_vertices]
 
         Returns
         -------
         torch.Tensor
-            Concatenated global and point-wise features of shape (B, output_dim, N).
+            Concatenated global and point-wise features of shape [..., n_features, n_vertices].
         """
         for conv in self.conv_layers:
             x = F.relu(conv(x))
@@ -165,8 +160,6 @@ class PointNet(nn.Module):
 
     Parameters
     ----------
-    feature_transform : bool
-        Not used currently. Placeholder for future extension.
     conv_channels : list of int
         Output dimensions of initial PointNet convolution layers.
     mlp_dims : list of int
@@ -181,7 +174,7 @@ class PointNet(nn.Module):
 
     def __init__(
         self,
-        feature_transform=False,
+        in_channels=3,
         conv_channels=[64, 64, 128, 128, 1024],
         mlp_dims=[1024, 256, 256],
         head_channels=[512, 256, 256],
@@ -189,7 +182,7 @@ class PointNet(nn.Module):
         dropout=0.3,
     ):
         super().__init__()
-        self.feat = PointNetfeat(conv_channels, mlp_dims)
+        self.feat = PointNetfeat(in_channels, conv_channels, mlp_dims)
 
         head = []
         in_ch = self.feat.output_dim
