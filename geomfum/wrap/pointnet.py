@@ -61,7 +61,7 @@ class PointnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
                 conv_channels=conv_channels,
                 mlp_dims=mlp_dims,
                 head_channels=head_channels,
-                out_features=n_features,
+                out_features=out_channels,
                 dropout=dropout,
             )
             .to(self.device)
