@@ -10,7 +10,6 @@ import geomfum.backend as xgs
 import geomfum.wrap as _wrap  # noqa (for register)
 from geomfum._registry import (
     SinkhornNeighborFinderRegistry,
-    TorchNeighborFinderRegistry,
     WhichRegistryMixins,
 )
 
@@ -134,12 +133,6 @@ class BaseNeighborFinder(abc.ABC):
         indices : array-like, shape=[n_points_y, n_neighbors]
             Indices of the nearest neighbors.
         """
-
-
-class TorchNeighborFinder(WhichRegistryMixins):
-    """Torch-based neighbor finder."""
-
-    _Registry = TorchNeighborFinderRegistry
 
 
 class SinkhornNeighborFinder(WhichRegistryMixins):
