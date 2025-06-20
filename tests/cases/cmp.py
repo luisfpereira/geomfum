@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 from geomstats.test.test_case import TestCase
 
+import geomfum.backend as xgs
+
 
 class LaplacianFinderCmpCase(TestCase):
     """Laplacian finder comparison.
@@ -22,9 +24,15 @@ class LaplacianFinderCmpCase(TestCase):
         laplacian_matrix_, mass_matrix_ = self.finder_b(other_shape)
 
         self.assertAllClose(
-            laplacian_matrix.todense(), laplacian_matrix_.todense(), atol=atol
+            xgs.sparse.to_dense(laplacian_matrix),
+            xgs.sparse.to_dense(laplacian_matrix_),
+            atol=atol,
         )
-        self.assertAllClose(mass_matrix.todense(), mass_matrix_.todense(), atol=atol)
+        self.assertAllClose(
+            xgs.sparse.to_dense(mass_matrix),
+            xgs.sparse.to_dense(mass_matrix_),
+            atol=atol,
+        )
 
 
 class LaplacianSpectrumFinderCmpCase(TestCase):

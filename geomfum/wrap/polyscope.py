@@ -2,6 +2,7 @@
 
 import polyscope as ps
 
+import geomstats.backend as gs
 from geomfum.plot import ShapePlotter
 
 
@@ -28,7 +29,7 @@ class PsMeshPlotter(ShapePlotter):
         mesh : TriangleMesh
             Mesh to be plotted.
         """
-        self._plotter.register_surface_mesh(self._name, mesh.vertices, mesh.faces)
+        self._plotter.register_surface_mesh(self._name, gs.to_numpy(mesh.vertices), gs.to_numpy( mesh.faces))
         return self
 
     def set_vertex_scalars(self, scalars, name="scalars"):

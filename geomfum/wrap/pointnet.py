@@ -32,25 +32,39 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         Dropout probability.
     device : torch.device or str
         Device on which the model is allocated.
+    descriptor : Descriptor or None
+        Optional descriptor to compute input features. If None, uses vertex coordinates.
+
     """
 
     def __init__(
         self,
+        in_channels=3,
         n_features=128,
         conv_channels=[64, 64, 128],
         mlp_dims=[512, 256, 128],
         head_channels=[256, 128],
         dropout=0.3,
         device=None,
+        descriptor=None,
     ):
         self.device = device or torch.device("cpu")
-        self.model = PointNet(
-            conv_channels=conv_channels,
-            mlp_dims=mlp_dims,
-            head_channels=head_channels,
-            out_features=n_features,
-            dropout=dropout,
-        ).to(self.device)
+        self.descriptor = descriptor
+
+        self.in_channels = in_channels
+
+        self.model = (
+            PointNet(
+                in_channels=self.in_channels,
+                conv_channels=conv_channels,
+                mlp_dims=mlp_dims,
+                head_channels=head_channels,
+                out_features=n_features,
+                dropout=dropout,
+            )
+            .to(self.device)
+            .float()
+        )
 
     def __call__(self, shape):
         """Extract point-wise features from a shape.
@@ -65,10 +79,21 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         torch.Tensor
             Feature tensor of shape (1, n_vertices, n_features).
         """
-        vertices = torch.tensor(shape.vertices, dtype=torch.float32).to(self.device)
-        vertices = vertices.unsqueeze(0).transpose(2, 1).contiguous()
-        features = self.model(vertices)
-        return features
+        if self.descriptor is None:
+            input_feat = shape.vertices.T
+        else:
+            input_feat = self.descriptor(shape)
+
+        input_feat = torch.tensor(input_feat, dtype=torch.float32).to(self.device)
+        input_feat = input_feat.unsqueeze(0).contiguous()
+
+        if input_feat.shape[1] != self.in_channels:
+            raise ValueError(
+                f"Input shape has {input_feat.shape[1]} channels, "
+                f"but expected {self.in_channels} channels."
+            )
+
+        return self.model(input_feat)
 
 
 class PointNetfeat(nn.Module):
@@ -83,11 +108,13 @@ class PointNetfeat(nn.Module):
     """
 
     def __init__(
-        self, conv_channels=[64, 64, 128, 128, 1024], mlp_dims=[1024, 256, 256]
+        self,
+        in_channels=3,
+        conv_channels=[64, 64, 128, 128, 1024],
+        mlp_dims=[1024, 256, 256],
     ):
         super().__init__()
         self.conv_layers = nn.ModuleList()
-        in_channels = 3
 
         for out_channels in conv_channels:
             self.conv_layers.append(nn.Conv1d(in_channels, out_channels, 1))
@@ -145,6 +172,7 @@ class PointNet(nn.Module):
 
     def __init__(
         self,
+        in_channels=3,
         conv_channels=[64, 64, 128, 128, 1024],
         mlp_dims=[1024, 256, 256],
         head_channels=[512, 256, 256],
@@ -152,7 +180,7 @@ class PointNet(nn.Module):
         dropout=0.3,
     ):
         super().__init__()
-        self.feat = PointNetfeat(conv_channels, mlp_dims)
+        self.feat = PointNetfeat(in_channels, conv_channels, mlp_dims)
 
         head = []
         in_ch = self.feat.output_dim
