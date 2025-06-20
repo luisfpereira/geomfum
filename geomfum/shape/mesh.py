@@ -32,6 +32,8 @@ class TriangleMesh(Shape):
         self._edges = None
         self._face_normals = None
         self._face_areas = None
+        self._face_area_vectors = None
+
         self._vertex_areas = None
 
         self._at_init()
@@ -125,6 +127,24 @@ class TriangleMesh(Shape):
         )
 
     @property
+    def face_area_vectors(self):
+        """Compute face area vectors of a triangular mesh. The face area vector is the vector normal to the face, with a length equal to the area of the face.
+
+        Returns
+        -------
+        area_vectors : array-like, shape=[n_faces, 3]
+            Per-face area vectors.
+        """
+        if self._face_area_vectors is None:
+            face_vertex_coords = self.face_vertex_coords
+            self._face_area_vectors = gs.cross(
+                face_vertex_coords[:, 1, :] - face_vertex_coords[:, 0, :],
+                face_vertex_coords[:, 2, :] - face_vertex_coords[:, 0, :],
+            )
+
+        return self._face_area_vectors
+
+    @property
     def face_normals(self):
         """Compute face normals of a triangular mesh.
 
@@ -139,21 +159,11 @@ class TriangleMesh(Shape):
                 face_vertex_coords[:, 1, :] - face_vertex_coords[:, 0, :],
                 face_vertex_coords[:, 2, :] - face_vertex_coords[:, 0, :],
             )
+            self._face_normals /= gs.linalg.norm(
+                self._face_normals, axis=1, keepdims=True
+            )
 
         return self._face_normals
-
-    @property
-    def unit_face_normals(self):
-        """Compute face normals of a triangular mesh.
-
-        Returns
-        -------
-        normals : array-like, shape=[n_faces, 3]
-            Per-face normals.
-        """
-        return self.face_normals / gs.linalg.norm(
-            self.face_normals, axis=1, keepdims=True
-        )
 
     @property
     def face_areas(self):
