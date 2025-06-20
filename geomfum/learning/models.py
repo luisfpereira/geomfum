@@ -8,15 +8,11 @@ References
 
 import abc
 
-import torch
 import torch.nn as nn
 
-from geomfum.basis import EigenBasis
 from geomfum.convert import P2pFromFmConverter
 from geomfum.descriptor.learned import FeatureExtractor, LearnedDescriptor
 from geomfum.forward_functional_map import ForwardFunctionalMap
-from geomfum.refine import ProperRefiner
-from geomfum.convert import P2pFromFmConverter
 
 
 class BaseModel(abc.ABC, nn.Module):
@@ -51,6 +47,7 @@ class FMNet(BaseModel):
 
     def forward(self, mesh_a, mesh_b, as_dict=True):
         """Compute the functional map between two shapes.
+
         Parameters
         ----------
         mesh_a : TriangleMesh or dict
