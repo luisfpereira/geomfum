@@ -2,7 +2,8 @@
 
 import abc
 
-import numpy as np
+import geomstats.backend as gs
+import geomfum.backend as xgs
 
 
 class ForwardFunctionalMap(abc.ABC):
@@ -47,15 +48,15 @@ class ForwardFunctionalMap(abc.ABC):
         fmap = []
         for i in range(mask.shape[0]):
             if self.lmbda == 0:
-                map_row = np.linalg.inv(At_A) @ Bt_A[i, :].reshape(-1, 1)
+                map_row = gs.linalg.inv(At_A) @ Bt_A[i, :].reshape(-1, 1)
             else:
-                MASK_i = np.diag(mask[i, :].flatten())
-                map_row = np.linalg.inv(At_A + self.lmbda * MASK_i) @ Bt_A[
+                MASK_i = xgs.diag(mask[i, :].flatten())
+                map_row = gs.linalg.inv(At_A + self.lmbda * MASK_i) @ Bt_A[
                     i, :
                 ].reshape(-1, 1)
             fmap.append(map_row.T)
 
-        fmap = np.concatenate(fmap, axis=0)
+        fmap = gs.concatenate(fmap, 0)
 
         return fmap
 
@@ -111,13 +112,15 @@ class ForwardFunctionalMap(abc.ABC):
         mask : array-like, shape=[..., spectrum_size_a, spectrum_size_b]
             Mask for the functional map.
         """
-        scaling_factor = max(np.max(evals_a), np.max(evals_b))
-        evals_a, evals_b = evals_a / scaling_factor, evals_b / scaling_factor
-        evals_gamma_a = np.power(evals_a, resolvant_gamma)[np.newaxis, :]
-        evals_gamma_b = np.power(evals_b, resolvant_gamma)[:, np.newaxis]
+        evals_a = gs.array(evals_a)
+        evals_b = gs.array(evals_b)
 
-        M_re = evals_gamma_b / (np.square(evals_gamma_b) + 1) - evals_gamma_a / (
-            np.square(evals_gamma_a) + 1
+        scaling_factor = max(max(evals_a), max(evals_b))
+        evals_a, evals_b = evals_a / scaling_factor, evals_b / scaling_factor
+        evals_gamma_a = gs.power(evals_a, resolvant_gamma)[None, :]
+        evals_gamma_b = gs.power(evals_b, resolvant_gamma)[:, None]
+        M_re = evals_gamma_b / (xgs.square(evals_gamma_b) + 1) - evals_gamma_a / (
+            xgs.square(evals_gamma_a) + 1
         )
-        M_im = 1 / (np.square(evals_gamma_b) + 1) - 1 / (np.square(evals_gamma_a) + 1)
-        return np.square(M_re) + np.square(M_im)
+        M_im = 1 / (xgs.square(evals_gamma_b) + 1) - 1 / (xgs.square(evals_gamma_a) + 1)
+        return xgs.square(M_re) + xgs.square(M_im)
