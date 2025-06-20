@@ -23,7 +23,8 @@ dependencies = [
     "scipy",
     "scikit-learn",
     "meshio",
-    "pyfmaps","torch",
+    "pyfmaps",
+    "torch",
     "geomstats@git+https://github.com/geomstats/geomstats.git@main",
 ]
 

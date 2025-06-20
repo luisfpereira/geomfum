@@ -4,7 +4,6 @@ import abc
 
 import geomstats.backend as gs
 import networkx as nx
-import numpy as gs
 
 from geomfum._registry import HeatDistanceMetricRegistry, WhichRegistryMixins
 from geomfum.numerics.graph import single_source_partial_dijkstra_path_length

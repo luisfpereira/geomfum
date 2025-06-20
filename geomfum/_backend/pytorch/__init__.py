@@ -19,3 +19,20 @@ def geomspace(start, stop, num, *, dtype=None):
 
 def argsort(a, axis=-1):
     return _torch.argsort(a, dim=axis)
+
+
+def to_torch(a):
+    return a
+
+
+def to_device(a, device):
+    return a.to(device)
+
+
+def diag(array):
+    if array.ndim == 1:
+        return _torch.diag(array)
+    elif array.ndim == 2:
+        return _torch.diag(_torch.diagonal(array))
+    else:
+        raise ValueError("Input must be a 1D or 2D tensor.")
