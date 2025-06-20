@@ -137,7 +137,7 @@ class Laplacian(FunctionalOperator):
         if (
             not recompute
             and self._stiffness_matrix is not None
-            and self._mass_matrix is None
+            and self._mass_matrix is not None
         ):
             return self._stiffness_matrix, self._mass_matrix
 

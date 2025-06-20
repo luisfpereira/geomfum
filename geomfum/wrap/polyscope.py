@@ -51,6 +51,23 @@ class PsMeshPlotter(ShapePlotter):
         )
         return self
 
+    def highlight_vertices(self, coords, color=(1.0, 0.0, 0.0), size=0.01,):
+        """
+        Highlight vertices on a mesh using Polyscope by adding a point cloud.
+
+        Parameters
+        ----------
+        coords : array-like, shape = [n_vertices, 3]
+            Coordinates of vertices to highlight.
+        color : tuple
+            Color of the highlighted vertices (e.g., (1.0, 0.0, 0.0)).
+        radius : float
+            Radius of the rendered points (visual size).
+        """
+        name = 'Highlighted_points'
+        self._plotter.register_point_cloud(name, coords, radius = size, color = color)
+        return self
+
     def show(self):
         """Display plot."""
         self._plotter.show()

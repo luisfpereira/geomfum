@@ -1,10 +1,10 @@
-"""Module that metrics for calcualte distances on a mesh."""
+"""Module containing metrics to calcualte distances on a mesh."""
 
 import abc
 
+import geomstats.backend as gs
 import networkx as nx
 import numpy as gs
-import geomstats.backend as gs
 
 from geomfum._registry import HeatDistanceMetricRegistry, WhichRegistryMixins
 from geomfum.numerics.graph import single_source_partial_dijkstra_path_length
@@ -318,11 +318,20 @@ class GraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
             Distance.
         target_point : array-like, shape=[n_targets]
             Target index.
+
+        Notes
+        -----
+        The Distances are ordered following the order of the indices.
         """
         dist_dict = nx.single_source_dijkstra_path_length(
             self._graph, source_point.item(), cutoff=self.cutoff, weight="weight"
         )
-        return gs.array(list(dist_dict.values())), gs.array(list(dist_dict.keys()))
+        indices = gs.asarray(list(dist_dict.keys()))
+        distances = gs.asarray(list(dist_dict.values()))
+        sort_order = gs.argsort(indices)
+        return gs.asarray(list(distances[sort_order])), gs.asarray(
+            list(indices[sort_order])
+        )
 
 
 class KClosestGraphShortestPathMetric(_NxDijkstraMixins, FinitePointSetMetric):
