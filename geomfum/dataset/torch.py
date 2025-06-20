@@ -1,6 +1,5 @@
 """Shape dataset for PyTorch."""
 
-import hashlib
 import itertools
 import os
 import random
@@ -80,9 +79,12 @@ class ShapeDataset(Dataset):
                 ".off", ".vts"
             )  # Assuming correspondence files are .txt
             if os.path.exists(os.path.join(self.shape_dir, "corr", corr_filename)):
-                self.corrs[filename] = np.loadtxt(
-                    os.path.join(self.shape_dir, "corr", corr_filename)
-                ).astype(np.int32)
+                self.corrs[filename] = (
+                    np.loadtxt(
+                        os.path.join(self.shape_dir, "corr", corr_filename)
+                    ).astype(np.int32)
+                    - 1
+                )
             else:
                 self.corrs[filename] = np.arange(mesh.vertices.shape[0])
 

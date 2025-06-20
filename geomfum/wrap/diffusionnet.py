@@ -91,30 +91,26 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
         self.k_eig = k_eig
         self.cache_dir = cache_dir
         self.model = (
-            (
             DiffusionNet(
-                    in_channels=self.in_channels,
-                    out_channels=self.out_channels,
-                    hidden_channels=self.hidden_channels,
-                    n_block=self.n_block,
-                    last_activation=self.last_activation,
-                    mlp_hidden_channels=self.mlp_hidden_channels,
-                    output_at=self.output_at,
-                    dropout=self.dropout,
-                    with_gradient_features=self.with_gradient_features,
-                    with_gradient_rotations=self.with_gradient_rotations,
-                    diffusion_method=self.diffusion_method,
-                    k_eig=self.k_eig,
-                    cache_dir=self.cache_dir,
-                )
-            
+                in_channels=self.in_channels,
+                out_channels=self.out_channels,
+                hidden_channels=self.hidden_channels,
+                n_block=self.n_block,
+                last_activation=self.last_activation,
+                mlp_hidden_channels=self.mlp_hidden_channels,
+                output_at=self.output_at,
+                dropout=self.dropout,
+                with_gradient_features=self.with_gradient_features,
+                with_gradient_rotations=self.with_gradient_rotations,
+                diffusion_method=self.diffusion_method,
+                k_eig=self.k_eig,
+                cache_dir=self.cache_dir,
+            )
             .to(device)
             .float()
         )
-        self.descriptor = descriptor            .float()
-        )
+        self.descriptor = descriptor
 
-        self.n_features = self.out_channels
         self.device = device
 
     def forward(self, shape):

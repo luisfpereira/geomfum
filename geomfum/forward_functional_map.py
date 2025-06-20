@@ -84,6 +84,7 @@ class ForwardFunctionalMap(abc.ABC, nn.Module):
         fmap_21: array-like, shape=[spectrum_size_b, spectrum_size_a] or None
             Functional map from shape b to shape a if bijective, otherwise None.
         """
+        evals_a = mesh_a.basis.vals
         sdescr_a = mesh_a.basis.project(descr_a)
         evals_b = mesh_b.basis.vals
         sdescr_b = mesh_b.basis.project(descr_b)
@@ -117,21 +118,11 @@ class ForwardFunctionalMap(abc.ABC, nn.Module):
         evals_b = gs.array(evals_b)
 
         scaling_factor = max(max(evals_a), max(evals_b))
-        evals_a = gs.array(evals_a)
-        evals_b = gs.array(evals_b)
-
-        scaling_factor = max(max(evals_a), max(evals_b))
         evals_a, evals_b = evals_a / scaling_factor, evals_b / scaling_factor
         evals_gamma_a = gs.power(evals_a, resolvant_gamma)[None, :]
         evals_gamma_b = gs.power(evals_b, resolvant_gamma)[:, None]
         M_re = evals_gamma_b / (xgs.square(evals_gamma_b) + 1) - evals_gamma_a / (
             xgs.square(evals_gamma_a) + 1
-        evals_gamma_a = gs.power(evals_a, resolvant_gamma)[None, :]
-        evals_gamma_b = gs.power(evals_b, resolvant_gamma)[:, None]
-        M_re = evals_gamma_b / (xgs.square(evals_gamma_b) + 1) - evals_gamma_a / (
-            xgs.square(evals_gamma_a) + 1
         )
-        M_im = 1 / (xgs.square(evals_gamma_b) + 1) - 1 / (xgs.square(evals_gamma_a) + 1)
-        return xgs.square(M_re) + xgs.square(M_im)
         M_im = 1 / (xgs.square(evals_gamma_b) + 1) - 1 / (xgs.square(evals_gamma_a) + 1)
         return xgs.square(M_re) + xgs.square(M_im)

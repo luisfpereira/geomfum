@@ -440,10 +440,9 @@ class ScipyGraphShortestPathMetric(_ScipyShortestPathMixins, FinitePointSetMetri
         target_point : array-like, shape=[n_targets]
             Target index.
         """
-        dist, pred = shortest_path(
-            self._graph.adjacency_matrix,
+        dist = shortest_path(
+            nx.adjacency_matrix(self._graph).tolil(),
             directed=False,
-            indices=source_point.item(),
-            return_predecessors=True,
+            indices=source_point,
         )
-        return gs.array(list(dist)), gs.array(list(pred))
+        return gs.array(list(dist)), gs.arange(len(dist))

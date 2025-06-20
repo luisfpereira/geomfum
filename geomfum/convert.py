@@ -3,15 +3,15 @@
 import abc
 
 import geomstats.backend as gs
-import geomfum.backend as xgs
 import scipy
 from sklearn.neighbors import NearestNeighbors
-import torch.nn as nn
+
+import geomfum.backend as xgs
 import geomfum.wrap as _wrap  # noqa (for register)
 from geomfum._registry import (
     SinkhornNeighborFinderRegistry,
-    WhichRegistryMixins,
     TorchNeighborFinderRegistry,
+    WhichRegistryMixins,
 )
 
 
@@ -102,7 +102,7 @@ class BaseNeighborFinder(abc.ABC):
     """
 
     def __init__(self, n_neighbors=1):
-        self.n_neighbors = 1
+        self.n_neighbors = n_neighbors
 
     @abc.abstractmethod
     def fit(self, X, y=None):

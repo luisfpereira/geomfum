@@ -1,7 +1,6 @@
 """Definition of triangle mesh."""
 
 import geomstats.backend as gs
-import scipy
 
 import geomfum.backend as xgs
 from geomfum.io import load_mesh
@@ -329,15 +328,12 @@ class TriangleMesh(Shape):
 
             normal_projections = (
                 gs.sum(basis_x * normals, axis=1, keepdims=True) * normals
-                gs.sum(basis_x * normals, axis=1, keepdims=True) * normals
             )
             basis_x = basis_x - normal_projections
 
             basis_x_norm = gs.linalg.norm(basis_x, axis=1, keepdims=True)
-            basis_x_norm = gs.linalg.norm(basis_x, axis=1, keepdims=True)
             basis_x = basis_x / (basis_x_norm + 1e-12)
 
-            basis_y = gs.cross(normals, basis_x)
             basis_y = gs.cross(normals, basis_x)
 
             tangent_frame[:, 0, :] = basis_x
