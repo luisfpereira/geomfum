@@ -86,6 +86,7 @@ register_feature_extractor(
 register_sinkhorn_neighbor_finder(
     "pot", "PotSinkhornNeighborFinder", requires="ot", as_default=True
 )
+
 register_heat_distance_metric(
     "pp3d", "Pp3dHeatDistanceMetric", requires="potpourri3d", as_default=True
 )

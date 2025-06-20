@@ -26,6 +26,7 @@ dependencies = [
     "pyfmaps",
     "torch",
     "geomstats@git+https://github.com/geomstats/geomstats.git@main",
+    "torch",
 ]
 
 [project.optional-dependencies]

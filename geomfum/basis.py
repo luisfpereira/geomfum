@@ -2,7 +2,7 @@
 
 import abc
 
-import numpy as np
+import geomstats.backend as gs
 
 import geomfum.linalg as la
 
@@ -30,7 +30,7 @@ class EigenBasis(Basis):
         self.use_k = use_k
 
         # NB: assumes sorted
-        self._n_zeros = np.count_nonzero(np.isclose(vals, 0.0))
+        self._n_zeros = gs.sum(gs.isclose(vals, 0.0))
 
     @property
     def vals(self):

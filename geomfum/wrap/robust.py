@@ -35,8 +35,8 @@ class RobustMeshLaplacianFinder(BaseLaplacianFinder):
             Diagonal lumped mass matrix.
         """
         stiffness_matrix, mass_matrix = robust_laplacian.mesh_laplacian(
-            gs.to_numpy(shape.vertices),
-            gs.to_numpy(shape.faces),
+            gs.to_numpy(xgs.to_device(shape.vertices, "cpu")),
+            gs.to_numpy(xgs.to_device(shape.faces, "cpu")),
             mollify_factor=self.mollify_factor,
         )
 

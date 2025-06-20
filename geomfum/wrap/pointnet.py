@@ -12,10 +12,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import geomfum.backend as xgs
 from geomfum.descriptor.learned import BaseFeatureExtractor
 
 
-class PointnetFeatureExtractor(BaseFeatureExtractor):
+class PointnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
     """Feature extractor using PointNet architecture.
 
     Parameters
@@ -40,7 +41,7 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
     def __init__(
         self,
         in_channels=3,
-        n_features=128,
+        out_channels=128,
         conv_channels=[64, 64, 128],
         mlp_dims=[512, 256, 128],
         head_channels=[256, 128],
@@ -48,6 +49,7 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         device=None,
         descriptor=None,
     ):
+        super(PointnetFeatureExtractor, self).__init__()
         self.device = device or torch.device("cpu")
         self.descriptor = descriptor
 
@@ -59,14 +61,14 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
                 conv_channels=conv_channels,
                 mlp_dims=mlp_dims,
                 head_channels=head_channels,
-                out_features=n_features,
+                out_features=out_channels,
                 dropout=dropout,
             )
             .to(self.device)
             .float()
         )
 
-    def __call__(self, shape):
+    def forward(self, shape):
         """Extract point-wise features from a shape.
 
         Parameters
@@ -84,7 +86,7 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
         else:
             input_feat = self.descriptor(shape)
 
-        input_feat = torch.tensor(input_feat, dtype=torch.float32).to(self.device)
+        input_feat = xgs.to_torch(input_feat).to(self.device).float()
         input_feat = input_feat.unsqueeze(0).contiguous()
 
         if input_feat.shape[1] != self.in_channels:
