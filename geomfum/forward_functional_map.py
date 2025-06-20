@@ -51,16 +51,17 @@ class ForwardFunctionalMap(abc.ABC, nn.Module):
         fmap = []
         for i in range(mask.shape[0]):
             if self.lmbda == 0:
-                C = gs.linalg.inv(AA_aa) @ AA_ba[[i], :].reshape(-1, 1)
+                map_row = gs.linalg.inv(At_A) @ Bt_A[i, :].reshape(-1, 1)
             else:
                 MASK_i = xgs.diag(mask[i, :].flatten())
-                C = gs.linalg.inv(AA_aa + self.lmbda * MASK_i) @ AA_ba[[i], :].reshape(
-                    -1, 1
-                )
-            C_i.append(C.T)
+                map_row = gs.linalg.inv(At_A + self.lmbda * MASK_i) @ Bt_A[
+                    i, :
+                ].reshape(-1, 1)
+            fmap.append(map_row.T)
 
-        Cab = gs.concatenate(C_i, axis=0)
-        return Cab
+        fmap = gs.concatenate(fmap, 0)
+
+        return fmap
 
     def __call__(self, mesh_a, mesh_b, descr_a, descr_b):
         """Compute the functional map between two shapes.
@@ -116,11 +117,21 @@ class ForwardFunctionalMap(abc.ABC, nn.Module):
         evals_b = gs.array(evals_b)
 
         scaling_factor = max(max(evals_a), max(evals_b))
+        evals_a = gs.array(evals_a)
+        evals_b = gs.array(evals_b)
+
+        scaling_factor = max(max(evals_a), max(evals_b))
         evals_a, evals_b = evals_a / scaling_factor, evals_b / scaling_factor
         evals_gamma_a = gs.power(evals_a, resolvant_gamma)[None, :]
         evals_gamma_b = gs.power(evals_b, resolvant_gamma)[:, None]
         M_re = evals_gamma_b / (xgs.square(evals_gamma_b) + 1) - evals_gamma_a / (
             xgs.square(evals_gamma_a) + 1
+        evals_gamma_a = gs.power(evals_a, resolvant_gamma)[None, :]
+        evals_gamma_b = gs.power(evals_b, resolvant_gamma)[:, None]
+        M_re = evals_gamma_b / (xgs.square(evals_gamma_b) + 1) - evals_gamma_a / (
+            xgs.square(evals_gamma_a) + 1
         )
+        M_im = 1 / (xgs.square(evals_gamma_b) + 1) - 1 / (xgs.square(evals_gamma_a) + 1)
+        return xgs.square(M_re) + xgs.square(M_im)
         M_im = 1 / (xgs.square(evals_gamma_b) + 1) - 1 / (xgs.square(evals_gamma_a) + 1)
         return xgs.square(M_re) + xgs.square(M_im)
