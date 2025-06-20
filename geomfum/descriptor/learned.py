@@ -9,6 +9,7 @@ import geomstats.backend as gs
 
 from geomfum._registry import FeatureExtractorRegistry, WhichRegistryMixins
 from geomfum.descriptor._base import Descriptor
+import torch
 import torch.nn as nn
 
 
@@ -73,6 +74,6 @@ class LearnedDescriptor(Descriptor, abc.ABC, nn.Module):
             Shape.
         """
         features = self.feature_extractor(shape)
-        features = features.squeeze().T.double()
+        features = gs.asarray(features.squeeze().double()).T
 
         return features

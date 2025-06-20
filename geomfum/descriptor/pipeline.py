@@ -3,8 +3,10 @@
 import abc
 
 import geomstats.backend as gs
+import torch
 
 import geomfum.linalg as la
+from geomfum.descriptor.learned import LearnedDescriptor
 
 from ._base import Descriptor
 
@@ -146,8 +148,12 @@ class DescriptorPipeline:
         descr = None
         for step in self.steps:
             if isinstance(step, Descriptor):
-                descr = self._update_descr(descr, step(shape))
-
+                if isinstance(step, LearnedDescriptor):
+                    with torch.no_grad():
+                        new = step(shape)
+                    descr = self._update_descr(descr, new)
+                else:
+                    descr = self._update_descr(descr, step(shape))
             elif isinstance(step, Subsampler):
                 descr = step(descr)
 
