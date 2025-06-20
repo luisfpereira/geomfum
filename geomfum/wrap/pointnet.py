@@ -53,14 +53,18 @@ class PointnetFeatureExtractor(BaseFeatureExtractor):
 
         self.in_channels = in_channels
 
-        self.model = PointNet(
-            in_channels=self.in_channels,
-            conv_channels=conv_channels,
-            mlp_dims=mlp_dims,
-            head_channels=head_channels,
-            out_features=n_features,
-            dropout=dropout,
-        ).to(self.device)
+        self.model = (
+            PointNet(
+                in_channels=self.in_channels,
+                conv_channels=conv_channels,
+                mlp_dims=mlp_dims,
+                head_channels=head_channels,
+                out_features=n_features,
+                dropout=dropout,
+            )
+            .to(self.device)
+            .float()
+        )
 
     def __call__(self, shape):
         """Extract point-wise features from a shape.

@@ -18,7 +18,15 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 requires-python = ">= 3.9"
-dependencies = ["numpy", "scipy", "scikit-learn", "meshio", "pyfmaps","torch"]
+dependencies = [
+    "numpy",
+    "scipy",
+    "scikit-learn",
+    "meshio",
+    "pyfmaps",
+    "torch",
+    "geomstats@git+https://github.com/geomstats/geomstats.git@main",
+]
 
 [project.optional-dependencies]
 lapl = ["robust-laplacian", "libigl"]
@@ -35,7 +43,6 @@ fun = [
 test-scripts = ["nbformat", "nbconvert", "ipykernel", "ipython", "pyvista", "plotly"]
 test = [
     "pytest",
-    "geomstats",
     "polpo@git+https://github.com/geometric-intelligence/polpo.git@main",
     "geomfum[opt,test-scripts,plotting-all]",
 ]
