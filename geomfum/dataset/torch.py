@@ -99,7 +99,6 @@ class ShapeDataset(Dataset):
         mesh = self.meshes[filename]
 
         data = {
-            "shape": mesh,
             "corr": gs.array(self.corrs[filename]),
         }
 
@@ -191,13 +190,6 @@ class PairsDataset(Dataset):
         return random.sample(
             list(itertools.combinations(range(self.shape_data.__len__()), 2)), n_pairs
         )
-
-    def generate_category_based_pairs(self, category_dict):
-        """Generate pairs based on a specific category."""
-        pairs = []
-        for category, filenames in category_dict.items():
-            pairs.extend(itertools.combinations(range(self.shape_data.__len__()), 2))
-        return pairs
 
     def __getitem__(self, idx):
         """Get item by index.
