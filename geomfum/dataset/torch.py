@@ -73,6 +73,7 @@ class ShapeDataset(Dataset):
             corr_filename = base_name + ".vts"
 
             if os.path.exists(os.path.join(self.dataset_dir, "corr", corr_filename)):
+                # Load correspondences from file, subtract 1 to convert to zero-based indexing.
                 self.corrs[filename] = (
                     np.loadtxt(
                         os.path.join(self.dataset_dir, "corr", corr_filename)
