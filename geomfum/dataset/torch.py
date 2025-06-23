@@ -44,9 +44,7 @@ class ShapeDataset(Dataset):
         device=None,
     ):
         self.shape_dir = shape_dir
-        all_shape_files = sorted(
-            [f for f in os.listdir(shape_dir) if f.endswith(".off")]
-        )
+        all_shape_files = sorted([f for f in os.listdir(shape_dir)])
         if indices is not None:
             self.shape_files = [all_shape_files[i] for i in indices]
         else:
