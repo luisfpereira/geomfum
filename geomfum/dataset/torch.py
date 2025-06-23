@@ -28,8 +28,6 @@ class ShapeDataset(Dataset):
         Whether to compute geodesic distance matrices.
     k : int
         Number of eigenvectors to use for the spectral features.
-    indices : list[int], optional
-        List of indices to select a subset of the dataset.
     device : torch.device, optional
         Device to move the data to.
     """
@@ -40,15 +38,11 @@ class ShapeDataset(Dataset):
         spectral=False,
         distances=False,
         k=200,
-        indices=None,
         device=None,
     ):
         self.shape_dir = shape_dir
         all_shape_files = sorted([f for f in os.listdir(shape_dir)])
-        if indices is not None:
-            self.shape_files = [all_shape_files[i] for i in indices]
-        else:
-            self.shape_files = all_shape_files
+        self.shape_files = all_shape_files
 
         self.device = (
             device
