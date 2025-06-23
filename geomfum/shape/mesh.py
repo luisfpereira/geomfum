@@ -238,6 +238,41 @@ class TriangleMesh(Shape):
         return self._face_areas
 
     @property
+    def vertex_normals(self):
+        """Compute vertex normals of a triangular mesh.
+
+        Returns
+        -------
+        normals : array-like, shape=[n_vertices, 3]
+            Normalized per-vertex normals.
+        """
+        if self._vertex_normals is None:
+            I = gs.concatenate([self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]])
+            J = gs.zeros_like(I)
+
+            normals_repeated = gs.vstack([self.face_normals] * 3)
+
+            vertex_normals = gs.zeros_like(self.vertices)
+            for c in range(3):
+                V = normals_repeated[:, c]
+
+                vertex_normals[:, c] = gs.asarray(
+                    xgs.sparse.to_dense(
+                        xgs.sparse.coo_matrix(
+                            gs.stack([I, J]), V, shape=(self.n_vertices, 1)
+                        )
+                    ).flatten()
+                )
+
+            vertex_normals = vertex_normals / (
+                gs.linalg.norm(vertex_normals, axis=1, keepdims=True) + 1e-12
+            )
+
+            self._vertex_normals = vertex_normals
+
+        return self._vertex_normals
+
+    @property
     def vertex_areas(self):
         """Compute per-vertex areas.
 
@@ -275,12 +310,18 @@ class TriangleMesh(Shape):
         """
         if self._vertex_tangent_frames is None:
             normals = self.vertex_normals
-            tangent_frame = gs.zeros((self.n_vertices, 3, 3))
+            tangent_frame = xgs.to_device(
+                gs.zeros((self.n_vertices, 3, 3)), device=normals.device
+            )
 
             tangent_frame[:, 2, :] = normals
 
-            basis_cand1 = gs.tile([1, 0, 0], (self.n_vertices, 1))
-            basis_cand2 = gs.tile([0, 1, 0], (self.n_vertices, 1))
+            basis_cand1 = xgs.to_device(
+                gs.tile([1, 0, 0], (self.n_vertices, 1)), device=normals.device
+            )
+            basis_cand2 = xgs.to_device(
+                gs.tile([0, 1, 0], (self.n_vertices, 1)), device=normals.device
+            )
 
             dot_products = gs.sum(normals * basis_cand1, axis=1, keepdims=True)
             basis_x = gs.where(gs.abs(dot_products) < 0.9, basis_cand1, basis_cand2)
@@ -323,7 +364,10 @@ class TriangleMesh(Shape):
             # Project edge vectors onto the local tangent plane
             comp_x = gs.sum(edge_vecs * basis_x, axis=1)
             comp_y = gs.sum(edge_vecs * basis_y, axis=1)
+            comp_x = gs.sum(edge_vecs * basis_x, axis=1)
+            comp_y = gs.sum(edge_vecs * basis_y, axis=1)
 
+            self._edge_tangent_vectors = gs.stack((comp_x, comp_y), axis=-1)
             self._edge_tangent_vectors = gs.stack((comp_x, comp_y), axis=-1)
 
         return self._edge_tangent_vectors
@@ -337,6 +381,7 @@ class TriangleMesh(Shape):
 
         Returns
         -------
+        grad_op : xgs.sparse.csc_matrix, shape=[n_vertices, n_vertices]
         grad_op : xgs.sparse.csc_matrix, shape=[n_vertices, n_vertices]
             Complex sparse matrix representing the gradient operator.
             The real part corresponds to the X component in the local tangent frame,
@@ -389,7 +434,7 @@ class TriangleMesh(Shape):
                 lhs_T = lhs_mat.T
                 lhs_inv = gs.linalg.inv(lhs_T @ lhs_mat + eps_reg * gs.eye(2)) @ lhs_T
                 sol_mat = lhs_inv @ rhs_mat
-                sol_coefs = (sol_mat[0, :] + 1j * sol_mat[1, :]).T
+                sol_coefs = gs.transpose((sol_mat[0, :] + 1j * sol_mat[1, :]))
 
                 for i_neigh in range(num_neighbors + 1):
                     i_glob = lookup_vertices_idx[i_neigh]
@@ -397,9 +442,10 @@ class TriangleMesh(Shape):
                     col_inds.append(i_glob)
                     data_vals.append(sol_coefs[i_neigh])
 
-            row_inds = gs.array(row_inds)
-            col_inds = gs.array(col_inds)
-            data_vals = gs.array(data_vals)
+            # Build the sparse matrix
+            row_inds = gs.asarray(row_inds)
+            col_inds = gs.asarray(col_inds)
+            data_vals = gs.asarray(data_vals)
 
             self._gradient_matrix = xgs.sparse.to_csc(
                 xgs.sparse.coo_matrix(

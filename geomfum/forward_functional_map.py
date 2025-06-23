@@ -3,10 +3,13 @@
 import abc
 
 import geomstats.backend as gs
+import torch
+import torch.nn as nn
+
 import geomfum.backend as xgs
 
 
-class ForwardFunctionalMap(abc.ABC):
+class ForwardFunctionalMap(abc.ABC, nn.Module):
     """Class for the forward pass of the functional map.
 
     Parameters
@@ -81,17 +84,16 @@ class ForwardFunctionalMap(abc.ABC):
         fmap_21: array-like, shape=[spectrum_size_b, spectrum_size_a] or None
             Functional map from shape b to shape a if bijective, otherwise None.
         """
+        evals_a = mesh_a.basis.vals
         sdescr_a = mesh_a.basis.project(descr_a)
+        evals_b = mesh_b.basis.vals
         sdescr_b = mesh_b.basis.project(descr_b)
-        mask = self._compute_mask(
-            mesh_a.basis.vals, mesh_b.basis.vals, self.resolvent_gamma
-        )
+
+        mask = self._compute_mask(evals_a, evals_b, self.resolvent_gamma)
         fmap_12 = self._compute_functional_map(sdescr_a, sdescr_b, mask)
         fmap_21 = None
         if self.bijective:
-            mask = self._compute_mask(
-                mesh_b.basis.vals, mesh_a.basis.vals, self.resolvent_gamma
-            )
+            mask = self._compute_mask(evals_b, evals_a, self.resolvent_gamma)
             fmap_21 = self._compute_functional_map(sdescr_b, sdescr_a, mask)
         return fmap_12, fmap_21
 

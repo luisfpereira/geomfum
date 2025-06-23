@@ -8,11 +8,14 @@ References
 
 import abc
 
+import torch.nn as nn
+
+from geomfum.convert import P2pFromFmConverter
 from geomfum.descriptor.learned import FeatureExtractor, LearnedDescriptor
 from geomfum.forward_functional_map import ForwardFunctionalMap
 
 
-class BaseModel(abc.ABC):
+class BaseModel(abc.ABC, nn.Module):
     """Base class for all models."""
 
 
@@ -31,6 +34,7 @@ class FMNet(BaseModel):
         self,
         feature_extractor=FeatureExtractor.from_registry(which="diffusionnet"),
         fmap_module=ForwardFunctionalMap(),
+        converter=P2pFromFmConverter(),
     ):
         super(FMNet, self).__init__()
 
@@ -39,8 +43,9 @@ class FMNet(BaseModel):
             feature_extractor=self.feature_extractor
         )
         self.fmap_module = fmap_module
+        self.converter = converter
 
-    def __call__(self, mesh_a, mesh_b, as_dict=True):
+    def forward(self, mesh_a, mesh_b, as_dict=True):
         """Compute the functional map between two shapes.
 
         Parameters
@@ -49,8 +54,6 @@ class FMNet(BaseModel):
             The first shape, either as a TriangleMesh object or a dictionary containing 'basis', 'evals', and 'pinv'.
         mesh_b : TriangleMesh or dict
             The second shape, either as a TriangleMesh object or a dictionary containing 'basis', 'evals', and 'pinv'.
-        as_dict : bool, optional
-            If True, returns a dictionary with keys 'fmap12' and 'fmap21'. If False, returns a tuple of functional maps (fmap12, fmap21). Default is True.
 
         Returns
         -------
@@ -61,10 +64,25 @@ class FMNet(BaseModel):
         """
         desc_a = self.descriptors_module(mesh_a)
         desc_b = self.descriptors_module(mesh_b)
+
         fmap12, fmap21 = self.fmap_module(mesh_a, mesh_b, desc_a, desc_b)
         if as_dict:
-            return {
-                "fmap12": fmap12,
-                "fmap21": fmap21,
-            }
-        return fmap12, fmap21
+            if not self.training:
+                p2p21 = self.converter(fmap12, mesh_a.basis, mesh_b.basis)
+                p2p12 = self.converter(fmap21, mesh_b.basis, mesh_a.basis)
+                return {
+                    "fmap12": fmap12,
+                    "fmap21": fmap21,
+                    "p2p12": p2p12,
+                    "p2p21": p2p21,
+                }
+
+            else:
+                return {"fmap12": fmap12, "fmap21": fmap21}
+        else:
+            if not self.training:
+                p2p21 = self.converter(fmap12, mesh_a.basis, mesh_b.basis)
+                p2p12 = self.converter(fmap21, mesh_b.basis, mesh_a.basis)
+                return fmap12, fmap21, p2p12, p2p21
+            else:
+                return fmap12, fmap21

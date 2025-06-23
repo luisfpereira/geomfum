@@ -3,6 +3,8 @@
 import abc
 
 import geomstats.backend as gs
+import networkx as nx
+from scipy.sparse.csgraph import shortest_path
 import geomfum.backend as xgs
 import networkx as nx
 
@@ -383,3 +385,64 @@ class HeatDistanceMetric(WhichRegistryMixins):
     """
 
     _Registry = HeatDistanceMetricRegistry
+
+
+class _ScipyShortestPathMixins(_SingleDispatchMixins):
+    def dist_matrix(self):
+        """Distance between mesh vertices.
+
+        Returns
+        -------
+        dist_matrix : array-like, shape=[n_vertices, n_vertices]
+            Distance matrix.
+
+        Notes
+        -----
+        * infinitely slow
+        """
+        dist_mat = shortest_path(
+            nx.adjacency_matrix(self._graph).tolil(),
+            directed=False,
+        )
+
+        return gs.array(dist_mat)
+
+
+class ScipyGraphShortestPathMetric(_ScipyShortestPathMixins, FinitePointSetMetric):
+    """Shortest path on edge graph of mesh with Scipy shortest path solver.
+
+    Parameters
+    ----------
+    shape : Shape
+        Shape.
+    cutoff : float
+        Length (sum of edge weights) at which the search is stopped.
+    """
+
+    def __init__(self, shape, cutoff=None):
+        self.cutoff = cutoff
+
+        super().__init__(shape)
+        self._graph = to_nx_edge_graph(shape)
+
+    def _dist_from_source_single(self, source_point):
+        """Distance between mesh vertices.
+
+        Parameters
+        ----------
+        source_point : array-like, shape=()
+            Index of source point.
+
+        Returns
+        -------
+        dist : array-like, shape=[n_targets]
+            Distance.
+        target_point : array-like, shape=[n_targets]
+            Target index.
+        """
+        dist = shortest_path(
+            nx.adjacency_matrix(self._graph).tolil(),
+            directed=False,
+            indices=source_point,
+        )
+        return gs.array(list(dist)), gs.arange(len(dist))
