@@ -68,9 +68,9 @@ class SquaredFrobeniusLoss(nn.Module):
         Parameters
         ----------
         a : torch.Tensor
-            First input tensor (vector or matrix).
+            First input tensor matrix.
         b : torch.Tensor
-            Second input tensor (vector or matrix), must be broadcastable to the shape of `a`.
+            Second input tansor matrix, must be broadcastable to the shape of `a`.
 
         Returns
         -------
