@@ -90,9 +90,9 @@ class OrthonormalityLoss(nn.Module):
         Parameters
         ----------
         fmap12 : torch.Tensor
-            Functional map tensor of shape (batch_size, dim_out, dim_in).
+            Functional map tensor of shape ( spectrum_size_a, spectrum_size_b).
         fmap21 : torch.Tensor
-            Functional map tensor of shape (batch_size, dim_in, dim_out).
+            Functional map tensor of shape ( spectrum_size_b, spectrum_size_a).
 
         Returns
         -------
@@ -130,9 +130,9 @@ class BijectivityLoss(nn.Module):
         Parameters
         ----------
         fmap12 : torch.Tensor
-            Functional map tensor from shape 1 to shape 2 of shape (batch_size, dim_out, dim_in).
+            Functional map tensor from shape 1 to shape 2 of shape (spectrum_size_a, spectrum_size_b).
         fmap21 : torch.Tensor
-            Functional map tensor from shape 2 to shape 1 of shape (batch_size, dim_in, dim_out).
+            Functional map tensor from shape 2 to shape 1 of shape (spectrum_size_b, spectrum_size_a).
 
         Returns
         -------
@@ -169,11 +169,11 @@ class LaplacianCommutativityLoss(nn.Module):
         Parameters
         ----------
         fmap12 : torch.Tensor
-            Functional map tensor from source to target shape, of shape (batch_size, dim_out, dim_in).
-        mesh_a : dict
-            Dictionary containing source shape information, must include key "evals" with eigenvalues tensor of shape (batch_size, dim_in).
-        mesh_b : dict
-            Dictionary containing target shape information, must include key "evals" with eigenvalues tensor of shape (batch_size, dim_out).
+            Functional map tensor from source to target shape, of shape ( spectrum_size_a, spectrum_size_b ).
+        mesh_a : TriangleMesh
+            TriangleMesh object containing source shape information.
+        mesh_b : TriangleMesh
+            TriangleMesh object containing target shape information.
 
         Returns
         -------
