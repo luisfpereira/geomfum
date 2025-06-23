@@ -50,28 +50,25 @@ class ShapeDataset(Dataset):
             if device is not None
             else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
+
         self.spectral = spectral
         self.k = k
         self.distances = distances
         # Preload meshes (or their important features) into memory
         self.meshes = {}
+        self.meshes_names = []
         self.corrs = {}
         for filename in self.shape_files:
             mesh = TriangleMesh.from_file(os.path.join(self.shape_dir, filename))
             base_name, _ = os.path.splitext(filename)
-
             # preprocess
             if spectral:
                 mesh.laplacian.find_spectrum(spectrum_size=200, set_as_basis=True)
                 mesh.basis.use_k = self.k
-            if distances:
-                mat_subfolder = os.path.join(self.dataset_dir, "dist")
-                mat_filename = base_name + ".mat"
-                mesh.mat_dist_path = os.path.join(mat_subfolder, mat_filename)
 
             self.meshes[filename] = mesh
-            corr_filename = base_name + ".vts"
 
+            corr_filename = base_name + ".vts"
             if os.path.exists(os.path.join(self.dataset_dir, "corr", corr_filename)):
                 # Load correspondences from file, subtract 1 to convert to zero-based indexing.
                 self.corrs[filename] = (
@@ -101,12 +98,16 @@ class ShapeDataset(Dataset):
         filename = self.shape_files[idx]
         mesh = self.meshes[filename]
 
-        # the datas are stored in dictionaries
         data = {
-            "corr": self.corrs[filename],
+            "shape": mesh,
+            "corr": gs.array(self.corrs[filename]),
         }
+
         if self.distances:
-            dist_path = mesh.mat_dist_path
+            mat_subfolder = os.path.join(self.dataset_dir, "dist")
+            base_name, _ = os.path.splitext(filename)
+            mat_filename = base_name + ".mat"
+            dist_path = os.path.join(mat_subfolder, mat_filename)
             if os.path.exists(dist_path):
                 mat_contents = scipy.io.loadmat(dist_path)
                 if "D" in mat_contents:
