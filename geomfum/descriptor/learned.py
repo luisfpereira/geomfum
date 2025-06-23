@@ -16,6 +16,10 @@ import torch.nn as nn
 class BaseFeatureExtractor(abc.ABC):
     """Base class for feature extractor."""
 
+    def __init__(self):
+        """Initialize the feature extractor."""
+        self.model = None
+
     def load_from_path(self, path):
         """Load model parameters from the provided file path.
 
