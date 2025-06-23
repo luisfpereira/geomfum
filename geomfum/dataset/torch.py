@@ -90,14 +90,14 @@ class ShapeDataset(Dataset):
 
         Returns
         -------
-        data: dict
+        shape_data: dict
             Dictionary containing the shape, the correspondence and the distances if available and required.
 
         """
         filename = self.shape_files[idx]
         mesh = self.meshes[filename]
 
-        data = {
+        shape_data = {
             "corr": gs.array(self.corrs[filename]),
         }
 
@@ -120,7 +120,7 @@ class ShapeDataset(Dataset):
                     {"D": gs.to_numpy(geod_distance_matrix)},
                 )
 
-            data.update({"dist_matrix": gs.array(geod_distance_matrix)})
+            shape_data.update({"dist_matrix": gs.array(geod_distance_matrix)})
 
         mesh.vertices = xgs.to_device(mesh.vertices, self.device)
         mesh.faces = xgs.to_device(mesh.faces, self.device)
@@ -130,9 +130,9 @@ class ShapeDataset(Dataset):
             mesh.laplacian._mass_matrix, self.device
         )
 
-        data.update({"mesh": mesh})
+        shape_data.update({"mesh": mesh})
 
-        return data
+        return shape_data
 
     def __len__(self):
         """Get the length of the dataset."""
