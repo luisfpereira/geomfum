@@ -20,8 +20,8 @@ class ShapeDataset(Dataset):
 
     Parameters
     ----------
-    shape_dir : str
-        Path to the directory containing the shapes.
+    dataset_dir : str
+        Path to the directory containing the dataset. We assume the dataset directory to have a subfolder shapes, for shapes, corr, for correspondences and dist, for chaced distance matrices.
     spectral : bool
         Whether to compute the spectral features.
     distances : bool
@@ -34,14 +34,15 @@ class ShapeDataset(Dataset):
 
     def __init__(
         self,
-        shape_dir,
+        dataset_dir,
         spectral=False,
         distances=False,
         k=200,
         device=None,
     ):
-        self.shape_dir = shape_dir
-        all_shape_files = sorted([f for f in os.listdir(shape_dir)])
+        self.dataset_dir = dataset_dir
+        self.shape_dir = os.path.join(dataset_dir, "shapes")
+        all_shape_files = sorted([f for f in os.listdir(self.shape_dir)])
         self.shape_files = all_shape_files
 
         self.device = (
@@ -57,23 +58,24 @@ class ShapeDataset(Dataset):
         self.corrs = {}
         for filename in self.shape_files:
             mesh = TriangleMesh.from_file(os.path.join(self.shape_dir, filename))
+            base_name, _ = os.path.splitext(filename)
+
             # preprocess
             if spectral:
                 mesh.laplacian.find_spectrum(spectrum_size=200, set_as_basis=True)
                 mesh.basis.use_k = self.k
             if distances:
-                mat_subfolder = os.path.join(self.shape_dir, "dist")
-                mat_filename = filename.replace(".off", ".mat")
+                mat_subfolder = os.path.join(self.dataset_dir, "dist")
+                mat_filename = base_name + ".mat"
                 mesh.mat_dist_path = os.path.join(mat_subfolder, mat_filename)
 
             self.meshes[filename] = mesh
-            corr_filename = filename.replace(
-                ".off", ".vts"
-            )  # Assuming correspondence files are .txt
-            if os.path.exists(os.path.join(self.shape_dir, "corr", corr_filename)):
+            corr_filename = base_name + ".vts"
+
+            if os.path.exists(os.path.join(self.dataset_dir, "corr", corr_filename)):
                 self.corrs[filename] = (
                     np.loadtxt(
-                        os.path.join(self.shape_dir, "corr", corr_filename)
+                        os.path.join(self.dataset_dir, "corr", corr_filename)
                     ).astype(np.int32)
                     - 1
                 )
