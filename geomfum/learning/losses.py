@@ -24,6 +24,7 @@ class LossManager:
         ----------
         outputs : dict
             Dictionary containing the outputs of the model, which should include all required inputs for the loss functions
+
         Returns
         -------
         total_loss : torch.Tensor

@@ -56,7 +56,6 @@ class ShapeDataset(Dataset):
         self.distances = distances
         # Preload meshes (or their important features) into memory
         self.meshes = {}
-        self.meshes_names = []
         self.corrs = {}
         for filename in self.shape_files:
             mesh = TriangleMesh.from_file(os.path.join(self.shape_dir, filename))
@@ -107,17 +106,12 @@ class ShapeDataset(Dataset):
             base_name, _ = os.path.splitext(filename)
             mat_filename = base_name + ".mat"
             dist_path = os.path.join(mat_subfolder, mat_filename)
+            geod_distance_matrix = None
             if os.path.exists(dist_path):
                 mat_contents = scipy.io.loadmat(dist_path)
                 if "D" in mat_contents:
                     geod_distance_matrix = mat_contents["D"]
-                else:
-                    metric = ScipyGraphShortestPathMetric(mesh)
-                    geod_distance_matrix = metric.dist_matrix()
-                    mat_contents["D"] = gs.to_numpy(geod_distance_matrix)
-                    os.makedirs(os.path.dirname(dist_path), exist_ok=True)
-                    scipy.io.savemat(dist_path, mat_contents)
-            else:
+            if geod_distance_matrix is None:
                 metric = ScipyGraphShortestPathMetric(mesh)
                 geod_distance_matrix = metric.dist_matrix()
                 os.makedirs(os.path.dirname(dist_path), exist_ok=True)
