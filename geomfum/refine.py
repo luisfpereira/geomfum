@@ -112,6 +112,53 @@ class OrthogonalRefiner(Refiner):
         return opt_rot
 
 
+class ProperRefiner(Refiner):
+    """Refinement projecting the functional map to the proper functional map space.
+
+    Parameters
+    ----------
+    p2p_from_fm_converter : P2pFromFmConverter
+        Pointwise map from functional map.
+    fm_from_p2p_converter : FmFromP2pConverter
+        Functional map from pointwise map.
+    """
+
+    def __init__(
+        self,
+        p2p_from_fm_converter=None,
+        fm_from_p2p_converter=None,
+    ):
+        super().__init__()
+        if p2p_from_fm_converter is None:
+            p2p_from_fm_converter = P2pFromFmConverter()
+
+        if fm_from_p2p_converter is None:
+            fm_from_p2p_converter = FmFromP2pConverter()
+
+        self.p2p_from_fm_converter = p2p_from_fm_converter
+        self.fm_from_p2p_converter = fm_from_p2p_converter
+
+    def __call__(self, fmap_matrix, basis_a, basis_b):
+        """Apply refiner.
+
+        Parameters
+        ----------
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Functional map matrix.
+        basis_a : Eigenbasis.
+            Basis.
+        basis_b: Eigenbasis.
+            Basis.
+
+        Returns
+        -------
+        fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
+            Refined functional map matrix.
+        """
+        p2p_21 = self.p2p_from_fm_converter(fmap_matrix, basis_a, basis_b)
+        return self.fm_from_p2p_converter(p2p_21, basis_a, basis_b)
+
+
 class IterativeRefiner(Refiner):
     """Iterative refinement of functional map.
 
