@@ -55,6 +55,7 @@ class LearnedDescriptor(Descriptor, abc.ABC, nn.Module):
     ----------
     feature_extractor: Feature Extractor
         Feature extractor to use.
+
     """
 
     def __init__(self, feature_extractor=None):
@@ -72,6 +73,11 @@ class LearnedDescriptor(Descriptor, abc.ABC, nn.Module):
         ----------
         shape : Shape.
             Shape.
+
+        Returns
+        -------
+        features : array-like, shape=[..., n_features, n_vertices]
+            Descriptors of the shape, where `n_features` is the number of features extracted by the feature extractor.
         """
         features = self.feature_extractor(shape)
         features = gs.asarray(features.squeeze().double()).T
