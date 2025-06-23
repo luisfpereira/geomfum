@@ -6,11 +6,11 @@ The learned descriptor is a descriptor that uses a neural network to compute fea
 import abc
 
 import geomstats.backend as gs
+import torch
+import torch.nn as nn
 
 from geomfum._registry import FeatureExtractorRegistry, WhichRegistryMixins
 from geomfum.descriptor._base import Descriptor
-import torch
-import torch.nn as nn
 
 
 class BaseFeatureExtractor(abc.ABC):
