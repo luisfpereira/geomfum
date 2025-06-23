@@ -90,10 +90,6 @@ class ShapeDataset(Dataset):
         ----------
         idx : int
             Index of the item to retrieve.
-        data : dict
-            Dictionary containing mesh data, including vertices, faces, correspondence information,
-            and optionally spectral features (eigenvalues, eigenvectors, pseudoinverse) and geodesic distances,
-            depending on dataset configuration.
         """
         filename = self.shape_files[idx]
         mesh = self.meshes[filename]
