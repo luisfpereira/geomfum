@@ -90,6 +90,13 @@ class ShapeDataset(Dataset):
         ----------
         idx : int
             Index of the item to retrieve.
+
+
+        Returns
+        -------
+        data: dict
+            Dictionary containing the shape, the correspondence and the distances if available and required.
+
         """
         filename = self.shape_files[idx]
         mesh = self.meshes[filename]
