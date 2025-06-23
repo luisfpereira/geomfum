@@ -25,7 +25,7 @@ class ShapeDataset(Dataset):
     spectral : bool
         Whether to compute the spectral features.
     distances : bool
-        Whether to compute geodesic distance matrices.
+        Whether to compute geodesic distance matrices. For computational reasons, these are not computed on the fly, but rather loaded from a precomputed .mat file.
     k : int
         Number of eigenvectors to use for the spectral features.
     device : torch.device, optional
