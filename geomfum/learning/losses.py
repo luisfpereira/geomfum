@@ -18,7 +18,19 @@ class LossManager:
         self.losses = losses
 
     def compute_loss(self, outputs):
-        """Compute the total loss and a dictionary of individual losses."""
+        """Compute the total loss and a dictionary of individual losses.
+
+        Parameters
+        ----------
+        outputs : dict
+            Dictionary containing the outputs of the model, which should include all required inputs for the loss functions
+        Returns
+        -------
+        total_loss : torch.Tensor
+            Scalar tensor representing the total loss computed from all loss functions.
+        loss_dict : dict
+            Dictionary mapping loss function names to their computed values.
+        """
         total_loss = 0
         loss_dict = {}
         for loss_fn in self.losses:
