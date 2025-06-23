@@ -17,7 +17,8 @@ class BaseFeatureExtractor(abc.ABC):
     """Base class for feature extractor."""
 
     def __init__(self):
-        """Initialize the feature extractor."""
+        super().__init__()
+
         self.model = None
 
     def load_from_path(self, path):

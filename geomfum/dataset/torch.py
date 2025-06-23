@@ -155,7 +155,7 @@ class PairsDataset(Dataset):
         Device to move the data to. If None, uses CUDA if available, else CPU.
     """
 
-    def __init__(self, dataset=None, pair_mode="all", n_pairs=100, device=None):
+    def __init__(self, dataset=None, pair_mode="all", pairs_ratio=100, device=None):
         # Preload meshes
         self.shape_data = dataset
         self.pair_mode = pair_mode
@@ -170,7 +170,7 @@ class PairsDataset(Dataset):
             self.pairs = self.generate_all_pairs()
         elif pair_mode == "random":
             self.pairs = self.generate_random_pairs(
-                n_pairs
+                pairs_ratio
             )  # You can specify the number of pairs
         else:
             raise ValueError(f"Unsupported pair_mode: {pair_mode}")
@@ -179,10 +179,18 @@ class PairsDataset(Dataset):
         """Generate all possible pairs of shapes."""
         return list(itertools.permutations(range(self.shape_data.__len__()), 2))
 
-    def generate_random_pairs(self, n_pairs=100):
-        """Generate random pairs of shapes."""
+    def generate_random_pairs(self, pairs_ratio=0.5):
+        """Generate random pairs of shapes.
+
+        Parameters
+        ----------
+        pairs_ratio : float
+            Ratio of pairs to generate compared to the total number of possible pairs.
+            Default is 0.5, meaning half of the possible pairs will be generated.
+        """
         return random.sample(
-            list(itertools.combinations(range(self.shape_data.__len__()), 2)), n_pairs
+            list(itertools.combinations(range(self.shape_data.__len__()), 2)),
+            int(self.shape_data.__len__() * pairs_ratio),
         )
 
     def __getitem__(self, idx):
