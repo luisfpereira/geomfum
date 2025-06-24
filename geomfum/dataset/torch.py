@@ -5,6 +5,7 @@ import os
 import random
 
 import geomstats.backend as gs
+import meshio
 import numpy as np
 import scipy
 import torch
@@ -58,7 +59,11 @@ class ShapeDataset(Dataset):
         self.meshes = {}
         self.corrs = {}
         for filename in self.shape_files:
-            mesh = TriangleMesh.from_file(os.path.join(self.shape_dir, filename))
+            ext = os.path.splitext(filename)[1].lower()
+            if ext not in meshio._helpers._writer_map:
+                continue
+            filepath = os.path.join(self.shape_dir, filename)
+            mesh = TriangleMesh.from_file(filepath)
             base_name, _ = os.path.splitext(filename)
             # preprocess
             if spectral:
