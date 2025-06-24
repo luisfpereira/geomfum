@@ -3,6 +3,7 @@
 import itertools
 import os
 import random
+import warnings
 
 import geomstats.backend as gs
 import meshio
@@ -59,8 +60,9 @@ class ShapeDataset(Dataset):
         self.meshes = {}
         self.corrs = {}
         for filename in self.shape_files:
-            ext = os.path.splitext(filename)[1].lower()
+            ext = os.path.splitext(filename)[1][1:]
             if ext not in meshio._helpers._writer_map:
+                warnings.warn(f"Skipped unsupported mesh file: {filename}")
                 continue
             filepath = os.path.join(self.shape_dir, filename)
             mesh = TriangleMesh.from_file(filepath)
