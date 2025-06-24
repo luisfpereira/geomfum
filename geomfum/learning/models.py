@@ -56,6 +56,9 @@ class FMNet(BaseModel):
             The first shape, either as a TriangleMesh object or a dictionary containing 'basis', 'evals', and 'pinv'.
         mesh_b : TriangleMesh or dict
             The second shape, either as a TriangleMesh object or a dictionary containing 'basis', 'evals', and 'pinv'.
+        as_dict : bool, optional
+            If True, returns a dictionary with functional maps and, optionally, point-to-point correspondences.
+            If False, returns the functional maps and, optionally, point-to-point correspondences as separate tensors.
 
         Returns
         -------
