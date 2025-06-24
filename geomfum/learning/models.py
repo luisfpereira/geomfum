@@ -28,6 +28,8 @@ class FMNet(BaseModel):
         Feature extractor to use for the descriptors.
     fmap_module : ForwardFunctionalMap
         Functional map module to use for the forward pass.
+    converter : P2pFromFmConverter
+        Converter to convert functional maps to point-to-point correspondences.
     """
 
     def __init__(
@@ -61,6 +63,10 @@ class FMNet(BaseModel):
                 Functional map from shape a to shape b.
             fmap21 : array-like, shape=[..., spectrum_size_b, spectrum_size_a]
                 Functional map from shape b to shape a.
+            p2p12 : array-like, shape=[..., num_points_b]
+                Point-to-point correspondence from shape a to shape b.
+            p2p21 : array-like, shape=[..., num_points_a]
+                Point-to-point correspondence from shape b to shape a.
         """
         desc_a = self.descriptors_module(mesh_a)
         desc_b = self.descriptors_module(mesh_b)
