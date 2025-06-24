@@ -238,41 +238,6 @@ class TriangleMesh(Shape):
         return self._face_areas
 
     @property
-    def vertex_normals(self):
-        """Compute vertex normals of a triangular mesh.
-
-        Returns
-        -------
-        normals : array-like, shape=[n_vertices, 3]
-            Normalized per-vertex normals.
-        """
-        if self._vertex_normals is None:
-            I = gs.concatenate([self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]])
-            J = gs.zeros_like(I)
-
-            normals_repeated = gs.vstack([self.face_normals] * 3)
-
-            vertex_normals = gs.zeros_like(self.vertices)
-            for c in range(3):
-                V = normals_repeated[:, c]
-
-                vertex_normals[:, c] = gs.asarray(
-                    xgs.sparse.to_dense(
-                        xgs.sparse.coo_matrix(
-                            gs.stack([I, J]), V, shape=(self.n_vertices, 1)
-                        )
-                    ).flatten()
-                )
-
-            vertex_normals = vertex_normals / (
-                gs.linalg.norm(vertex_normals, axis=1, keepdims=True) + 1e-12
-            )
-
-            self._vertex_normals = vertex_normals
-
-        return self._vertex_normals
-
-    @property
     def vertex_areas(self):
         """Compute per-vertex areas.
 
@@ -310,17 +275,19 @@ class TriangleMesh(Shape):
         """
         if self._vertex_tangent_frames is None:
             normals = self.vertex_normals
+            device = getattr(normals, "device", None)
+
             tangent_frame = xgs.to_device(
-                gs.zeros((self.n_vertices, 3, 3)), device=normals.device
+                gs.zeros((self.n_vertices, 3, 3)), device=device
             )
 
             tangent_frame[:, 2, :] = normals
 
             basis_cand1 = xgs.to_device(
-                gs.tile([1, 0, 0], (self.n_vertices, 1)), device=normals.device
+                gs.tile([1, 0, 0], (self.n_vertices, 1)), device=device
             )
             basis_cand2 = xgs.to_device(
-                gs.tile([0, 1, 0], (self.n_vertices, 1)), device=normals.device
+                gs.tile([0, 1, 0], (self.n_vertices, 1)), device=device
             )
 
             dot_products = gs.sum(normals * basis_cand1, axis=1, keepdims=True)
