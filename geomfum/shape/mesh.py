@@ -194,14 +194,15 @@ class TriangleMesh(Shape):
             Normalized per-vertex normals.
         """
         if self._vertex_normals is None:
+            device = getattr(self.vertices, "device", None)
+
             vind012 = gs.concatenate(
                 [self.faces[:, 0], self.faces[:, 1], self.faces[:, 2]]
             )
-            zeros = gs.zeros(len(vind012))
+            zeros = xgs.to_device(gs.zeros(len(vind012)), device)
 
             normals_repeated = gs.vstack([self.face_normals] * 3)
-
-            vertex_normals = gs.zeros_like(self.vertices)
+            vertex_normals = xgs.to_device(gs.zeros_like(self.vertices), device)
             for c in range(3):
                 normals = normals_repeated[:, c]
 

@@ -39,6 +39,7 @@ class ShapeDataset(Dataset):
         dataset_dir,
         spectral=False,
         distances=False,
+        correspondences=True,
         k=200,
         device=None,
     ):
@@ -56,6 +57,7 @@ class ShapeDataset(Dataset):
         self.spectral = spectral
         self.k = k
         self.distances = distances
+        self.correspondences = correspondences
         # Preload meshes (or their important features) into memory
         self.meshes = {}
         self.corrs = {}
@@ -75,16 +77,19 @@ class ShapeDataset(Dataset):
             self.meshes[filename] = mesh
 
             corr_filename = base_name + ".vts"
-            if os.path.exists(os.path.join(self.dataset_dir, "corr", corr_filename)):
-                # Load correspondences from file, subtract 1 to convert to zero-based indexing.
-                self.corrs[filename] = (
-                    np.loadtxt(
-                        os.path.join(self.dataset_dir, "corr", corr_filename)
-                    ).astype(np.int32)
-                    - 1
-                )
-            else:
-                self.corrs[filename] = np.arange(mesh.vertices.shape[0])
+            if self.correspondences:
+                if os.path.exists(
+                    os.path.join(self.dataset_dir, "corr", corr_filename)
+                ):
+                    # Load correspondences from file, subtract 1 to convert to zero-based indexing.
+                    self.corrs[filename] = (
+                        np.loadtxt(
+                            os.path.join(self.dataset_dir, "corr", corr_filename)
+                        ).astype(np.int32)
+                        - 1
+                    )
+                else:
+                    self.corrs[filename] = np.arange(mesh.vertices.shape[0])
 
     def __getitem__(self, idx):
         """Retrieve a data sample by index.
@@ -104,9 +109,10 @@ class ShapeDataset(Dataset):
         filename = self.shape_files[idx]
         mesh = self.meshes[filename]
 
-        shape_data = {
-            "corr": gs.array(self.corrs[filename]),
-        }
+        shape_data = {}
+
+        if self.correspondences:
+            shape_data.update({"corr": gs.array(self.corrs[filename])})
 
         if self.distances:
             mat_subfolder = os.path.join(self.dataset_dir, "dist")

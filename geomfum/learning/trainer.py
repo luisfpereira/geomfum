@@ -95,10 +95,23 @@ class DeepFunctionalMapTrainer:
                     {
                         "mesh_a": mesh_a,
                         "mesh_b": mesh_b,
-                        "corr_a": pair["source"]["corr"],
-                        "corr_b": pair["target"]["corr"],
                     }
                 )
+                if self.train_set.shape_data.correspondences:
+                    outputs.update(
+                        {
+                            "corr_a": pair["source"]["corr"],
+                            "corr_b": pair["target"]["corr"],
+                        }
+                    )
+                if self.train_set.shape_data.distances:
+                    outputs.update(
+                        {
+                            "dist_a": pair["source"]["dist_matrix"],
+                            "dist_b": pair["target"]["dist_matrix"],
+                        }
+                    )
+
                 loss, loss_dict = self.train_loss_manager.compute_loss(outputs)
 
                 loss.backward()
@@ -124,12 +137,22 @@ class DeepFunctionalMapTrainer:
                         {
                             "mesh_a": mesh_a,
                             "mesh_b": mesh_b,
-                            "corr_a": pair["source"]["corr"],
-                            "corr_b": pair["target"]["corr"],
-                            "dist_a": pair["source"]["dist_matrix"],
-                            "dist_b": pair["target"]["dist_matrix"],
                         }
                     )
+                    if self.val_set.shape_data.correspondences:
+                        outputs.update(
+                            {
+                                "corr_a": pair["source"]["corr"],
+                                "corr_b": pair["target"]["corr"],
+                            }
+                        )
+                    if self.val_set.shape_data.distances:
+                        outputs.update(
+                            {
+                                "dist_a": pair["source"]["dist_matrix"],
+                                "dist_b": pair["target"]["dist_matrix"],
+                            }
+                        )
                     loss, loss_dict = self.val_loss_manager.compute_loss(outputs)
                     val_loss += loss.item()
                     for k, v in loss_dict.items():
