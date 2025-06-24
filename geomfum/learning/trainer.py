@@ -31,6 +31,12 @@ class DeepFunctionalMapTrainer:
         Number of epochs to train the model (default is 100).
     device : str, optional
         Device to run the training on, either "cuda" or "cpu" (default is "cuda").
+    checkpoint_path : str, optional
+        Path to save the model checkpoints (default is None, no checkpointing).
+    monitor_metric : str, optional
+        Metric to monitor for saving checkpoints (default is "loss").
+    mode : str, optional
+        Mode for monitoring the metric, either "min" or "max" (default is "min").
     """
 
     def __init__(
