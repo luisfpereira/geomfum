@@ -75,23 +75,19 @@ class FMNet(BaseModel):
         desc_b = self.descriptors_module(mesh_b)
 
         fmap12, fmap21 = self.fmap_module(mesh_a, mesh_b, desc_a, desc_b)
-        if as_dict:
-            if not self.training:
-                p2p21 = self.converter(fmap12, mesh_a.basis, mesh_b.basis)
-                p2p12 = self.converter(fmap21, mesh_b.basis, mesh_a.basis)
-                return {
-                    "fmap12": fmap12,
-                    "fmap21": fmap21,
-                    "p2p12": p2p12,
-                    "p2p21": p2p21,
-                }
+        p2p12 = p2p21 = None
+        if not self.training:
+            p2p21 = self.converter(fmap12, mesh_a.basis, mesh_b.basis)
+            p2p12 = self.converter(fmap21, mesh_b.basis, mesh_a.basis)
 
-            else:
-                return {"fmap12": fmap12, "fmap21": fmap21}
-        else:
+        if as_dict:
+            result = {"fmap12": fmap12, "fmap21": fmap21}
             if not self.training:
-                p2p21 = self.converter(fmap12, mesh_a.basis, mesh_b.basis)
-                p2p12 = self.converter(fmap21, mesh_b.basis, mesh_a.basis)
-                return fmap12, fmap21, p2p12, p2p21
-            else:
-                return fmap12, fmap21
+                result.update({"p2p12": p2p12, "p2p21": p2p21})
+            return result
+        else:
+            return (
+                (fmap12, fmap21, p2p12, p2p21)
+                if not self.training
+                else (fmap12, fmap21)
+            )
