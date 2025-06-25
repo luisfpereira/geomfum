@@ -15,11 +15,12 @@ import torch
 import torch.nn as nn
 
 import geomfum.backend as xgs
+import geomfum.backend as xgs
 from geomfum.descriptor.learned import BaseFeatureExtractor
 
 
 # TODO: Implement betching operations. for now diffusionnet accept just one mesh as input
-class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
+class DiffusionnetFeatureExtractor(BaseFeatureExtractor, nn.Module):
     """Feature extractor that uses DiffusionNet for geometric deep learning on 3D mesh data.
 
     Parameters
@@ -109,10 +110,10 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
             .float()
         )
         self.descriptor = descriptor
-        self.n_features = self.out_channels
+
         self.device = device
 
-    def __call__(self, shape):
+    def forward(self, shape):
         """Call pass through the DiffusionNet model.
 
         Parameters
@@ -125,8 +126,9 @@ class DiffusionnetFeatureExtractor(BaseFeatureExtractor):
         torch.Tensor
             Extracted feature tensor of shape [1, V, out_channels].
         """
-        v = torch.tensor(shape.vertices).to(torch.float32).to(self.device)
-        f = torch.tensor(shape.faces).to(torch.int64).to(self.device)
+        # Support both Shape and dict
+        v = xgs.to_torch(shape.vertices).float().to(self.device)
+        f = xgs.to_torch(shape.faces).int().to(self.device)
 
         # Compute spectral operators
         frames, mass, L, evals, evecs, gradX, gradY = self._get_operators(
@@ -370,13 +372,12 @@ class DiffusionNet(nn.Module):
         if faces is not None:
             assert faces.dim() == 3, "Only support batch operation"
 
-        mass = mass.to(device=verts.device)
-        L = L.to(device=verts.device)
-        evals = evals.to(device=verts.device)
-        evecs = evecs.to(device=verts.device)
-        gradX = gradX.to(device=verts.device)
-        gradY = gradY.to(device=verts.device)
-
+        mass = mass
+        L = L
+        evals = evals
+        evecs = evecs
+        gradX = gradX
+        gradY = gradY
         if feats is not None:
             x = feats
         else:

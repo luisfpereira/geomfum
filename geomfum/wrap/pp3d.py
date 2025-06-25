@@ -45,9 +45,9 @@ class Pp3dHeatDistanceMetric(_SingleDispatchMixins, FinitePointSetMetric):
         """
         dist_mat = []
         for i in range(self._shape.n_vertices):
-            dist_mat.append(self.solver.compute_distance(i))
+            dist_mat.append(gs.asarray(self.solver.compute_distance(i)))
 
-        return gs.stack(dist_mat)
+        return gs.stack(dist_mat, axis=0)
 
     def _dist_from_source_single(self, source_point):
         """Distance between mesh vertices.

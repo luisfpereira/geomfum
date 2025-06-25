@@ -29,8 +29,15 @@ def hks_default_domain(shape, n_domain):
         Time points.
     """
     nonzero_vals = shape.basis.nonzero_vals
-    return xgs.geomspace(
-        4 * gs.log(10) / nonzero_vals[-1], 4 * gs.log(10) / nonzero_vals[0], n_domain
+    device = getattr(nonzero_vals, "device", None)
+
+    return xgs.to_device(
+        xgs.geomspace(
+            4 * gs.log(10) / nonzero_vals[-1],
+            4 * gs.log(10) / nonzero_vals[0],
+            n_domain,
+        ),
+        device,
     )
 
 
@@ -70,6 +77,7 @@ class WksDefaultDomain:
             Standard deviation.
         """
         nonzero_vals = shape.basis.nonzero_vals
+        device = getattr(nonzero_vals, "device", None)
 
         e_min, e_max = gs.log(nonzero_vals[0]), gs.log(nonzero_vals[-1])
 
@@ -82,7 +90,7 @@ class WksDefaultDomain:
         e_min += self.n_trans * sigma
         e_max -= self.n_trans * sigma
 
-        energy = gs.linspace(e_min, e_max, self.n_domain)
+        energy = xgs.to_device(gs.linspace(e_min, e_max, self.n_domain), device)
 
         return energy, sigma
 
