@@ -24,21 +24,21 @@ For ``pyRMT`` follow the instructions `here <https://github.com/filthynobleman/r
 List of Implemented Papers
 --------------------------
 
-1)  * [Functional Maps: A Flexible Representation of Maps Between Shapes](http://www.lix.polytechnique.fr/~maks/papers/obsbg_fmaps.pdf)
+1)  [Functional Maps: A Flexible Representation of Maps Between Shapes](http://www.lix.polytechnique.fr/~maks/papers/obsbg_fmaps.pdf)
 
-2)  * [Rematching: Low-resolution representations for scalable shape correspondence](https://arxiv.org/abs/2305.09274)
+2)  [Rematching: Low-resolution representations for scalable shape correspondence](https://arxiv.org/abs/2305.09274)
 
-3)  * [ZoomOut: Spectral Upsampling for Efficient Shape Correspondence](https://arxiv.org/abs/1904.07865)
+3)  [ZoomOut: Spectral Upsampling for Efficient Shape Correspondence](https://arxiv.org/abs/1904.07865)
 
-4)  * [Fast Sinkhorn Filters: Using Matrix Scaling for Non-Rigid Shape Correspondence with Functional Maps](https://openaccess.thecvf.com/content/CVPR2021/html/Pai_Fast_Sinkhorn_Filters_Using_Matrix_Scaling_for_Non-Rigid_Shape_Correspondence_CVPR_2021_paper.html)
+4)  [Fast Sinkhorn Filters: Using Matrix Scaling for Non-Rigid Shape Correspondence with Functional Maps](https://openaccess.thecvf.com/content/CVPR2021/html/Pai_Fast_Sinkhorn_Filters_Using_Matrix_Scaling_for_Non-Rigid_Shape_Correspondence_CVPR_2021_paper.html)
 
-5)  * [Structured regularization of functional map computations](https://www.lix.polytechnique.fr/Labo/Ovsjanikov.Maks/papers/resolvent_SGP19_small.pdf)
+5)  [Structured regularization of functional map computations](https://www.lix.polytechnique.fr/Labo/Ovsjanikov.Maks/papers/resolvent_SGP19_small.pdf)
 
-6)  * [Bijective upsampling and learned embedding for point clouds correspondences](https://www.sciencedirect.com/science/article/pii/S0097849324001201)
+6)  [Bijective upsampling and learned embedding for point clouds correspondences](https://www.sciencedirect.com/science/article/pii/S0097849324001201)
 
-7)  * [Deep Geometric Functional Maps: Robust Feature Learning for Shape Correspondence](https://arxiv.org/abs/2003.14286)
+7)  [Deep Geometric Functional Maps: Robust Feature Learning for Shape Correspondence](https://arxiv.org/abs/2003.14286)
 
-8)  * [Laplace-Beltrami Eigenfunctions Towards an Algorithm That "Understands" Geometry](https://brunolevy.github.io/papers/Laplacian_SMI_2006.pdf)
+8)  [Laplace-Beltrami Eigenfunctions Towards an Algorithm That "Understands" Geometry](https://brunolevy.github.io/papers/Laplacian_SMI_2006.pdf)
 
 9)  [The Heat Method for Distance Computation](https://www.cs.cmu.edu/~kmcrane/Projects/HeatMethod/) 
 
