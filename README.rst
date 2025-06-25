@@ -1,4 +1,4 @@
-GEOMFUM
+
 # GEOMFUM
 
 A Modular Python Package for Machine Learning with Functional Maps  
