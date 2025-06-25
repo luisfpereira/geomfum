@@ -24,7 +24,7 @@ For ``pyRMT`` follow the instructions `here <https://github.com/filthynobleman/r
 List of Implemented Papers
 --------------------------
 
-1) [Functional Maps: A Flexible Representation of Maps Between Shapes](http://www.lix.polytechnique.fr/~maks/papers/obsbg_fmaps.pdf)
+1) *[Functional Maps: A Flexible Representation of Maps Between Shapes](http://www.lix.polytechnique.fr/~maks/papers/obsbg_fmaps.pdf)
 
 2) [Rematching: Low-resolution representations for scalable shape correspondence](https://arxiv.org/abs/2305.09274)
 
