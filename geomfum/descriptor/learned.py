@@ -19,8 +19,6 @@ class BaseFeatureExtractor(abc.ABC):
     def __init__(self):
         super().__init__()
 
-        self.model = None
-
     def load_from_path(self, path):
         """Load model parameters from the provided file path.
 
@@ -85,6 +83,6 @@ class LearnedDescriptor(Descriptor, abc.ABC, nn.Module):
             Descriptors of the shape, where `n_features` is the number of features extracted by the feature extractor.
         """
         features = self.feature_extractor(shape)
-        features = gs.asarray(features.squeeze().double()).T
+        features = gs.array(features.squeeze().double()).T
 
         return features

@@ -45,7 +45,13 @@ class ShapeDataset(Dataset):
     ):
         self.dataset_dir = dataset_dir
         self.shape_dir = os.path.join(dataset_dir, "shapes")
-        all_shape_files = sorted([f for f in os.listdir(self.shape_dir)])
+        all_shape_files = sorted(
+            [
+                f
+                for f in os.listdir(self.shape_dir)
+                if f.lower().endswith((".off", ".ply", ".obj"))
+            ]
+        )
         self.shape_files = all_shape_files
 
         self.device = (

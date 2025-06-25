@@ -12,6 +12,14 @@ logging.basicConfig(
 import random
 
 
+# helper function
+def get_dataset_attr(dataset, attr):
+    # Recursively get the attribute from Subset or the base dataset
+    while isinstance(dataset, torch.utils.data.Subset):
+        dataset = dataset.dataset
+    return getattr(dataset, attr)
+
+
 class DeepFunctionalMapTrainer:
     """Trainer for Deep Functional Maps (DFM) using PyTorch.
 
@@ -97,14 +105,14 @@ class DeepFunctionalMapTrainer:
                         "mesh_b": mesh_b,
                     }
                 )
-                if self.train_set.shape_data.correspondences:
+                if get_dataset_attr(self.train_set.shape_data, "distances"):
                     outputs.update(
                         {
                             "corr_a": pair["source"]["corr"],
                             "corr_b": pair["target"]["corr"],
                         }
                     )
-                if self.train_set.shape_data.distances:
+                if get_dataset_attr(self.train_set.shape_data, "correspondences"):
                     outputs.update(
                         {
                             "dist_a": pair["source"]["dist_matrix"],
@@ -139,14 +147,14 @@ class DeepFunctionalMapTrainer:
                             "mesh_b": mesh_b,
                         }
                     )
-                    if self.val_set.shape_data.correspondences:
+                    if get_dataset_attr(self.val_set.shape_data, "correspondences"):
                         outputs.update(
                             {
                                 "corr_a": pair["source"]["corr"],
                                 "corr_b": pair["target"]["corr"],
                             }
                         )
-                    if self.val_set.shape_data.distances:
+                    if get_dataset_attr(self.val_set.shape_data, "distances"):
                         outputs.update(
                             {
                                 "dist_a": pair["source"]["dist_matrix"],
