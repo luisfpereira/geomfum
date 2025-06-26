@@ -45,4 +45,27 @@ How to use
 The `how-to notebooks <./notebooks/how_to>`_ are designed to safely let you dive in the package.
 Why not starting from the `beginning <./notebooks/how_to/load_mesh_from_file.ipynb>`_ and simply follow the links that inspire you the most?
 
-Have fun!
+Choose the backend
+------------------
+
+GeomFuM can run seamlessly with ``numpy`` and ``pytorch``. 
+By default, the ``numpy`` backend is used. The visualizations are only available with this backend.
+
+The backend is based on the `Geomstats <https://github.com/geomstats/geomstats>` backend, which is installed automatically. The GeomFuM backend add functionality, especially regarding sparse matrices and device handling.
+
+You can choose your backend by setting the environment variable
+``GEOMSTATS_BACKEND`` to ``numpy``, or ``pytorch``, and
+importing the backend module. From the command line:
+
+::
+
+    export GEOMSTATS_BACKEND=<backend_name>
+
+and in the Python3 code:
+
+::
+
+    import geomstats.backend as gs
+    import geomfum.backend as xgs
+
+**Have fun!**
