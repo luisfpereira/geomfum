@@ -43,6 +43,7 @@ How to use
 ----------
 
 The `how-to notebooks <./notebooks/how_to>`_ are designed to safely let you dive in the package.
+
 Why not starting from the `beginning <./notebooks/how_to/load_mesh_from_file.ipynb>`_ and simply follow the links that inspire you the most?
 
 Choose the backend
@@ -68,4 +69,4 @@ and in the Python3 code:
     import geomstats.backend as gs
     import geomfum.backend as xgs
 
-**Have fun!**
+**Have FuM!**
