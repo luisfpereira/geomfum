@@ -13,11 +13,13 @@ Installation
 
 Or the classic pipeline: ``clone + pip install .``
 
-> ⚠️ Installation issues may arise from dependencies relying on C++  
-> (particularly `robust_laplacian <https://pypi.org/project/robust-laplacian/>`_).  
-> Make sure all their requirements are installed.  
->
-> For `pyRMT`, follow the instructions `here <https://github.com/filthynobleman/rematching/tree/python-binding>`_.
+ ⚠️  **ISSUES**  ⚠️ :
+
+- Installation issues may arise from dependencies relying on C++ (particularly `robust_laplacian <https://pypi.org/project/robust-laplacian/>`_).
+
+- Make sure all their requirements are installed.
+
+- For `pyRMT`, follow the instructions `here <https://github.com/filthynobleman/rematching/tree/python-binding>`_.
 
 List of Implemented Papers
 --------------------------
