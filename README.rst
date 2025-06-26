@@ -1,9 +1,7 @@
 .. image:: GeomFuM.png
-  :width: 400
+  :width: 350
   :alt: GeomFuM logo
-**GeomFuM**
-
-A Modular Python Package for Machine Learning with Functional Maps  
+**GeomFuM** is a Modular Python Package for Machine Learning with Functional Maps  
 <https://dl.acm.org/doi/10.1145/2185520.2185526>
 
 ## Installation
