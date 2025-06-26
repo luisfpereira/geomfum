@@ -4,13 +4,15 @@
 **GeomFuM** is a Modular Python Package for Machine Learning with Functional Maps  
 <https://dl.acm.org/doi/10.1145/2185520.2185526>
 
-## Installation
+Installation
+------------
 
-```bash
-pip install geomfum@git+https://github.com/luisfpereira/geomfum.git@main
-```
+::
+    
+    pip install geomfum@git+https://github.com/luisfpereira/geomfum.git@main
 
-Or the classic pipeline: `clone + pip install .`
+
+Or the classic pipeline: ``clone + pip install .``
 
 > ⚠️ Installation issues may arise from dependencies relying on C++  
 > (particularly [`robust_laplacian`](https://pypi.org/project/robust-laplacian/)).  
@@ -18,7 +20,8 @@ Or the classic pipeline: `clone + pip install .`
 >
 > For `pyRMT`, follow the instructions [here](https://github.com/filthynobleman/rematching/tree/python-binding).
 
-## List of Implemented Papers
+List of Implemented Papers
+--------------------------
 
 1. [Functional Maps: A Flexible Representation of Maps Between Shapes](http://www.lix.polytechnique.fr/~maks/papers/obsbg_fmaps.pdf)
 2. [Rematching: Low-resolution representations for scalable shape correspondence](https://arxiv.org/abs/2305.09274)
