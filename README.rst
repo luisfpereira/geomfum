@@ -11,9 +11,9 @@ Installation
     pip install geomfum@git+https://github.com/luisfpereira/geomfum.git@main
 
 
-Or the classic pipeline: ``clone + pip install .``
+Or the classic pipeline: ``clone + pip install``.
 
- ⚠️  **ISSUES**  ⚠️ :
+⚠️ **ISSUES**
 
 - Installation issues may arise from dependencies relying on C++ (particularly `robust_laplacian <https://pypi.org/project/robust-laplacian/>`_).
 
@@ -51,7 +51,7 @@ Choose the backend
 GeomFuM can run seamlessly with ``numpy`` and ``pytorch``. 
 By default, the ``numpy`` backend is used. The visualizations are only available with this backend.
 
-The backend is based on the `Geomstats <https://github.com/geomstats/geomstats>` backend, which is installed automatically. The GeomFuM backend add functionality, especially regarding sparse matrices and device handling.
+The backend is based on the `Geomstats <https://github.com/geomstats/geomstats>`_ backend, which is installed automatically. The GeomFuM backend add functionality, especially regarding sparse matrices and device handling.
 
 You can choose your backend by setting the environment variable
 ``GEOMSTATS_BACKEND`` to ``numpy``, or ``pytorch``, and
