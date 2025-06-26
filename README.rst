@@ -1,7 +1,7 @@
 .. image:: GeomFuM.png
   :width: 350
   :alt: GeomFuM logo
-**GeomFuM** is a Modular Python Package for Machine Learning with `Functional Maps <https://dl.acm.org/doi/10.1145/2185520.2185526>`
+**GeomFuM** is a Modular Python Package for Machine Learning with `Functional Maps <https://dl.acm.org/doi/10.1145/2185520.2185526>`_.
 
 Installation
 ------------
@@ -22,7 +22,7 @@ Or the classic pipeline: ``clone + pip install .``
 List of Implemented Papers
 --------------------------
 
-1. `Functional Maps: A Flexible Representation of Maps Between Shapes]<http://www.lix.polytechnique.fr/~maks/papers/obsbg_fmaps.pdf>`
+1. `Functional Maps: A Flexible Representation of Maps Between Shapes <http://www.lix.polytechnique.fr/~maks/papers/obsbg_fmaps.pdf>`_
 2. [Rematching: Low-resolution representations for scalable shape correspondence](https://arxiv.org/abs/2305.09274)
 3. [ZoomOut: Spectral Upsampling for Efficient Shape Correspondence](https://arxiv.org/abs/1904.07865)
 4. [Fast Sinkhorn Filters: Using Matrix Scaling for Non-Rigid Shape Correspondence with Functional Maps](https://openaccess.thecvf.com/content/CVPR2021/html/Pai_Fast_Sinkhorn_Filters_Using_Matrix_Scaling_for_Non-Rigid_Shape_Correspondence_CVPR_2021_paper.html)
