@@ -7,6 +7,8 @@ import geomfum.linalg as la
 from geomfum._registry import (
     HeatKernelSignatureRegistry,
     WaveKernelSignatureRegistry,
+    LandmarkHeatKernelSignatureRegistry,
+    LandmarkWaveKernelSignatureRegistry,
     WhichRegistryMixins,
 )
 
@@ -113,8 +115,7 @@ class HeatKernelSignature(WhichRegistryMixins, SpectralDescriptor):
 
     def __init__(self, scale=True, n_domain=3, domain=None):
         super().__init__(
-            domain or (lambda shape: hks_default_domain(shape, n_domain=n_domain)),
-            use_landmarks=False,
+            domain or (lambda shape: hks_default_domain(shape, n_domain=n_domain))
         )
         self.scale = scale
 
@@ -150,7 +151,6 @@ class WaveKernelSignature(WhichRegistryMixins, SpectralDescriptor):
     def __init__(self, scale=True, sigma=None, n_domain=3, domain=None):
         super().__init__(
             domain or WksDefaultDomain(n_domain=n_domain, sigma=sigma),
-            use_landmarks=False,
         )
         self.scale = scale
         self.sigma = sigma
@@ -176,7 +176,7 @@ class WaveKernelSignature(WhichRegistryMixins, SpectralDescriptor):
             sigma = self.sigma
 
         exp_arg = -xgs.square(gs.log(shape.basis.nonzero_vals) - domain[:, None]) / (
-            2 * sigma**2
+            2 * xgs.square(sigma)
         )
         vals_term = gs.exp(exp_arg)
         vecs_term = xgs.square(shape.basis.nonzero_vecs)
@@ -185,3 +185,145 @@ class WaveKernelSignature(WhichRegistryMixins, SpectralDescriptor):
             vals_term = la.scale_to_unit_sum(vals_term)
 
         return gs.einsum("...j,ij->...i", vals_term, vecs_term)
+
+
+class LandmarkHeatKernelSignature(SpectralDescriptor):
+    """Landmark-based Heat Kernel Signature.
+
+    Parameters
+    ----------
+    scale : bool
+        Whether to scale weights to sum to one.
+    n_domain : int
+        Number of domain points. Ignored if ``domain`` is not None.
+    domain : callable or array-like, shape=[n_domain]
+        Method to compute domain points (``f(shape)``) or
+        domain points.
+    """
+
+    _Registry = LandmarkHeatKernelSignatureRegistry
+
+    def __init__(self, scale=True, n_domain=3, domain=None):
+        super().__init__(
+            domain or (lambda shape: hks_default_domain(shape, n_domain=n_domain)),
+        )
+        self.scale = scale
+
+    def __call__(self, shape):
+        """Compute landmark-based HKS descriptor.
+
+        Parameters
+        ----------
+        shape : Shape.
+            Shape with basis and landmark_indices.
+
+        Returns
+        -------
+        descr : array-like, shape=[n_landmarks * n_domain, n_vertices]
+            Landmark-based HKS descriptor.
+        """
+        if not hasattr(shape, "landmark_indices") or shape.landmark_indices is None:
+            raise AttributeError(
+                "Shape must have 'landmark_indices' set for LandmarkHeatKernelSignature."
+            )
+
+        domain = self.domain(shape) if callable(self.domain) else self.domain
+        evals = shape.basis.vals
+        evects = shape.basis.vecs
+        landmarks = shape.landmark_indices
+
+        # coefs: (n_domain, n_eigen)
+        coefs = gs.exp(-gs.outer(domain, evals))
+        # weighted_evects: (n_domain, n_landmarks, n_eigen)
+        weighted_evects = evects[landmarks][None, :, :] * coefs[:, None, :]
+        # landmarks_HKS: (n_landmarks, n_domain, n_vertices)
+        landmarks_HKS = gs.einsum("tpk,nk->ptn", weighted_evects, evects)
+
+        if self.scale:
+            inv_scaling = coefs.sum(1)  # (n_domain,)
+            landmarks_HKS = (1 / inv_scaling)[None, :, None] * landmarks_HKS
+
+        # reshape to (n_landmarks * n_domain, n_vertices)
+        descr = gs.reshape(
+            landmarks_HKS,
+            (landmarks_HKS.shape[0] * landmarks_HKS.shape[1], evects.shape[0]),
+        )
+        return descr
+
+
+class LandmarkWaveKernelSignature(SpectralDescriptor):
+    """Landmark-based Wave Kernel Signature.
+
+    Parameters
+    ----------
+    scale : bool
+        Whether to scale weights to sum to one.
+    sigma : float
+        Standard deviation for the Gaussian.
+    n_domain : int
+        Number of domain points. Ignored if ``domain`` is not None.
+    domain : callable or array-like, shape=[n_domain]
+        Method to compute domain points (``f(shape)``) or
+        domain points.
+    """
+
+    _Registry = LandmarkWaveKernelSignatureRegistry
+
+    def __init__(self, scale=True, sigma=None, n_domain=3, domain=None):
+        super().__init__(
+            domain or WksDefaultDomain(n_domain=n_domain, sigma=sigma),
+        )
+        self.scale = scale
+        self.sigma = sigma
+
+    def __call__(self, shape):
+        """Compute landmark-based WKS descriptor.
+
+        Parameters
+        ----------
+        shape : Shape.
+            Shape with basis and landmark_indices.
+
+        Returns
+        -------
+        descr : array-like, shape=[n_landmarks * n_domain, n_vertices]
+            Landmark-based WKS descriptor.
+        """
+        if not hasattr(shape, "landmark_indices") or shape.landmark_indices is None:
+            raise AttributeError(
+                "Shape must have 'landmark_indices' set for LandmarkWaveKernelSignature."
+            )
+
+        if callable(self.domain):
+            domain, sigma = self.domain(shape)
+        else:
+            domain = self.domain
+            sigma = self.sigma
+
+        if sigma is None or sigma <= 0:
+            raise ValueError(f"Sigma should be positive! Given value: {sigma}")
+
+        evals = shape.basis.nonzero_vals
+        evects = shape.basis.nonzero_vecs
+        landmarks = shape.landmark_indices
+
+        # coefs: (n_domain, n_eigen)
+        coefs = gs.exp(
+            -xgs.square(domain[:, None] - gs.log(gs.abs(evals))[None, :])
+            / (2 * sigma**2)
+        )
+        # weighted_evects: (n_domain, n_landmarks, n_eigen)
+        weighted_evects = evects[None, landmarks, :] * coefs[:, None, :]
+        # landmarks_WKS: (n_landmarks, n_domain, n_vertices)
+        landmarks_WKS = gs.einsum("tpk,nk->ptn", weighted_evects, evects)
+
+        if self.scale:
+            inv_scaling = coefs.sum(1)  # (n_domain,)
+            landmarks_WKS = (1 / inv_scaling)[None, :, None] * landmarks_WKS
+
+        # reshape to (n_landmarks * n_domain, n_vertices)
+        descr = gs.reshape(
+            landmarks_WKS,
+            (landmarks_WKS.shape[0] * landmarks_WKS.shape[1], evects.shape[0]),
+        )
+        return descr

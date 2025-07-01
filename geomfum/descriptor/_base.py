@@ -14,14 +14,11 @@ class SpectralDescriptor(Descriptor, abc.ABC):
     domain : callable or array-like, shape=[n_domain]
         Method to compute domain points (``f(basis, n_domain)``) or
         domain points.
-    use_landmarks : bool
-        Whether to use landmarks.
     """
 
-    def __init__(self, domain, use_landmarks=False):
+    def __init__(self, domain):
         super().__init__()
         self.domain = domain
-        self.use_landmarks = use_landmarks
 
     @abc.abstractmethod
     def __call__(self, shape, domain=None):
