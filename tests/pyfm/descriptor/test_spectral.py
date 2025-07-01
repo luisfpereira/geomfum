@@ -118,7 +118,7 @@ def spectral_descriptors(request):
         sigma = np.random.uniform(low=0.1, high=2.0, size=1)[0]
         if not use_landmarks:
             descriptor_a = WaveKernelSignature.from_registry(
-                scale=True, n_domain=n_domain, sigma=sigma, use_landmarks=use_landmarks
+                scale=True, n_domain=n_domain, sigma=sigma
             )
         else:
             descriptor_a = LandmarkWaveKernelSignature.from_registry(
