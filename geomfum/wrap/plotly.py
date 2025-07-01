@@ -36,7 +36,6 @@ class PlotlyMeshPlotter(ShapePlotter):
 
         hover_text = [f"Index: {index}" for index in range(len(mesh.vertices))]
         self._plotter.data[0]["text"] = hover_text
-
         return self
 
     def set_vertex_scalars(self, scalars, name="scalars"):
@@ -52,11 +51,9 @@ class PlotlyMeshPlotter(ShapePlotter):
         data = self._plotter.data[0]
         data["intensity"] = scalars
         data["colorscale"] = self.colormap
-
-        self._plotter.update(data=[data])
-
+        self._plotter.data[0].update(data)
         return self
-
+    
     def highlight_vertices(self, coords, color='red', size=4,):
         """Highlight vertices on mesh.
 
