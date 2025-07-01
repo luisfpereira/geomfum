@@ -187,7 +187,7 @@ class WaveKernelSignature(WhichRegistryMixins, SpectralDescriptor):
         return gs.einsum("...j,ij->...i", vals_term, vecs_term)
 
 
-class LandmarkHeatKernelSignature(SpectralDescriptor):
+class LandmarkHeatKernelSignature(WhichRegistryMixins, SpectralDescriptor):
     """Landmark-based Heat Kernel Signature.
 
     Parameters
@@ -251,7 +251,7 @@ class LandmarkHeatKernelSignature(SpectralDescriptor):
         return descr
 
 
-class LandmarkWaveKernelSignature(SpectralDescriptor):
+class LandmarkWaveKernelSignature(WhichRegistryMixins, SpectralDescriptor):
     """Landmark-based Wave Kernel Signature.
 
     Parameters
