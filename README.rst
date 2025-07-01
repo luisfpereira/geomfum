@@ -52,6 +52,19 @@ and in the Python3 code:
     import geomstats.backend as gs
     import geomfum.backend as xgs
 
+Contributions
+-------------
+
+We welcome contributions from the community!  
+If you have suggestions, bug reports, or want to improve the code or documentation, feel free to:
+
+- Open an issue
+- Submit a pull request
+- Improve or add new examples/notebooks
+
+Please follow our contribution guidelines (coming soon) and adhere to best practices for clean, modular, and well-documented code.
+
+
 List of Implemented Papers
 --------------------------
 
