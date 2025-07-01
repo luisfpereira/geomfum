@@ -4,6 +4,7 @@ import abc
 
 import geomstats.backend as gs
 import scipy
+import torch
 from sklearn.neighbors import NearestNeighbors
 
 import geomfum.backend as xgs
@@ -12,6 +13,7 @@ from geomfum._registry import (
     SinkhornNeighborFinderRegistry,
     WhichRegistryMixins,
 )
+from geomfum.neural_adjoint_map import NeuralAdjointMap
 
 
 class BaseP2pFromFmConverter(abc.ABC):
@@ -252,3 +254,121 @@ class FmFromP2pBijectiveConverter(BaseFmFromP2pConverter):
         """
         evects2_pb = basis_b.vecs[p2p, :]
         return gs.from_numpy(scipy.linalg.lstsq(evects2_pb, basis_a.vecs)[0])
+
+
+class BaseNamFromP2pConverter(abc.ABC):
+    """Neural Adjoint Map from pointwise map."""
+
+
+class NamFromP2pConverter(BaseNamFromP2pConverter):
+    """Neural Adjoint Map from pointwise map using Neural Adjoint Maps (NAMs)."""
+
+    def __init__(
+        self, optimizer=None, iter_max=200, patience=10, min_delta=1e-4, device="cpu"
+    ):
+        """Initialize the converter.
+
+        Parameters
+        ----------
+        optimizer : torch.optim.Optimizer, optional
+            Optimizer for training the Neural Adjoint Map.
+        device : str, optional
+            Device to use for the Neural Adjoint Map (e.g., 'cpu' or 'cuda').
+        """
+        self.optimizer = optimizer
+        self.iter_max = iter_max
+        self.device = device
+        self.min_delta = min_delta
+        self.patientce = patience
+
+    def __call__(self, p2p, basis_a, basis_b):
+        """Convert point to point map.
+
+        Parameters
+        ----------
+        p2p : array-like, shape=[n_vertices_b]
+            Pointwise map.
+
+        Returns
+        -------
+        NeuralAdjointMap : size=[spectrum_size_b, spectrum_size_a]
+            Neural Adjoint Map model.
+        """
+        evects2_pb = xgs.to_torch(basis_b.vecs[p2p, :])
+        evects1 = xgs.to_torch(basis_a.vecs)
+        nam = NeuralAdjointMap(
+            input_dim=basis_a.spectrum_size,
+            output_dim=basis_b.spectrum_size,
+        ).to(self.device)
+
+        best_loss = float("inf")
+        wait = 0
+
+        for _ in range(self.iter_max):
+            self.optimizer.zero_grad()
+
+            pred = self.model(evects2_pb)
+
+            loss = torch.nn.functional.mse_loss(pred[p2p], evects1)
+            loss.backward()
+            self.optimizer.step()
+
+            if loss.item() < best_loss - self.min_delta:
+                best_loss = loss.item()
+                wait = 0
+            else:
+                wait += 1
+            if wait >= self.patience:
+                break
+
+        return nam
+
+
+class BaseP2pFromNamConverter(abc.ABC):
+    """Pointwise map from Neural Adjoint Map (NAM)."""
+
+
+class P2pFromNamConverter(BaseP2pFromNamConverter):
+    """Pointwise map from Neural Adjoint Map (NAM).
+
+    Parameters
+    ----------
+    neighbor_finder : NeighborFinder
+        Nearest neighbor finder.
+    """
+
+    def __init__(self, neighbor_finder=None):
+        if neighbor_finder is None:
+            neighbor_finder = NearestNeighbors(
+                n_neighbors=1, leaf_size=40, algorithm="kd_tree", n_jobs=1
+            )
+        if neighbor_finder.n_neighbors > 1:
+            raise ValueError("Expects `n_neighors = 1`.")
+
+        self.neighbor_finder = neighbor_finder
+
+    def __call__(self, nam, basis_a, basis_b):
+        """Convert neural adjoint map.
+
+        Parameters
+        ----------
+        nam : NeuralAdjointMap, shape=[spectrum_size_b, spectrum_size_a]
+            Nam model.
+
+        Returns
+        -------
+        p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
+            Pointwise map. ``bijective`` controls shape.
+        """
+        k2, k1 = nam.shape
+
+        emb1 = basis_a.full_vecs[:, :k1]
+        emb2 = nam(basis_b.full_vecs[:, :k2])
+
+        # TODO: update neighbor finder instead
+        self.neighbor_finder.fit(xgs.to_device(emb1, "cpu"))
+        p2p_21 = self.neighbor_finder.kneighbors(
+            xgs.to_device(emb2, "cpu"), return_distance=False
+        )
+
+        return gs.from_numpy(p2p_21[:, 0])
