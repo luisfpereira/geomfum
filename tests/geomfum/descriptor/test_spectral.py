@@ -38,6 +38,7 @@ def spectral_descriptors(request):
     shapes = testing_data.shapes
 
     shapes.set_spectrum_finder(spectrum_size=spectrum_size)
+    shapes.set_landmarks(landmark_randomly)
 
     if descr_type == "hks":
         descriptor_a = HeatKernelSignature(n_domain=n_domain, scale=scale)
