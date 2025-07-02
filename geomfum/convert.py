@@ -275,13 +275,12 @@ class NamFromP2pConverter(BaseNamFromP2pConverter):
         device : str, optional
             Device to use for the Neural Adjoint Map (e.g., 'cpu' or 'cuda').
         """
-        self.optimizer = optimizer
         self.iter_max = iter_max
         self.device = device
         self.min_delta = min_delta
         self.patientce = patience
 
-    def __call__(self, p2p, basis_a, basis_b):
+    def __call__(self, p2p, basis_a, basis_b, optimizer=None):
         """Convert point to point map.
 
         Parameters
@@ -294,31 +293,35 @@ class NamFromP2pConverter(BaseNamFromP2pConverter):
         NeuralAdjointMap : size=[spectrum_size_b, spectrum_size_a]
             Neural Adjoint Map model.
         """
-        evects2_pb = xgs.to_torch(basis_b.vecs[p2p, :])
-        evects1 = xgs.to_torch(basis_a.vecs)
+        evects2_pb = xgs.to_torch(basis_b.vecs[p2p, :]).to(self.device).double()
+        evects1 = xgs.to_torch(basis_a.vecs).to(self.device).double()
         nam = NeuralAdjointMap(
             input_dim=basis_a.spectrum_size,
             output_dim=basis_b.spectrum_size,
-        ).to(self.device)
+            device=self.device,
+        ).double()
+
+        if optimizer is None:
+            optimizer = torch.optim.Adam(nam.parameters(), lr=0.001, weight_decay=1e-5)
 
         best_loss = float("inf")
         wait = 0
 
         for _ in range(self.iter_max):
-            self.optimizer.zero_grad()
+            optimizer.zero_grad()
 
-            pred = self.model(evects2_pb)
+            pred = nam(evects2_pb)
 
-            loss = torch.nn.functional.mse_loss(pred[p2p], evects1)
+            loss = torch.nn.functional.mse_loss(pred, evects1)
             loss.backward()
-            self.optimizer.step()
+            optimizer.step()
 
             if loss.item() < best_loss - self.min_delta:
                 best_loss = loss.item()
                 wait = 0
             else:
                 wait += 1
-            if wait >= self.patience:
+            if wait >= self.iter_max:
                 break
 
         return nam
@@ -360,15 +363,15 @@ class P2pFromNamConverter(BaseP2pFromNamConverter):
         p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
             Pointwise map. ``bijective`` controls shape.
         """
-        k2, k1 = nam.shape
+        k2, k1 = nam.input_dim, nam.output_dim
 
-        emb1 = basis_a.full_vecs[:, :k1]
-        emb2 = nam(basis_b.full_vecs[:, :k2])
+        emb1 = xgs.to_torch(basis_a.full_vecs[:, :k1]).to(nam.device).double()
+        emb2 = nam(xgs.to_torch(basis_b.full_vecs[:, :k2]).to(nam.device).double())
 
         # TODO: update neighbor finder instead
-        self.neighbor_finder.fit(xgs.to_device(emb1, "cpu"))
+        self.neighbor_finder.fit(emb2.detach().cpu())
         p2p_21 = self.neighbor_finder.kneighbors(
-            xgs.to_device(emb2, "cpu"), return_distance=False
+            emb1.detach().cpu(), return_distance=False
         )
 
         return gs.from_numpy(p2p_21[:, 0])

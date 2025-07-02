@@ -484,10 +484,11 @@ class NeuralZoomOut(ZoomOut):
         self,
         nit=10,
         step=1,
+        device="cpu",
     ):
         super().__init__(
             nit=nit,
             step=step,
             p2p_from_fm_converter=P2pFromNamConverter(),
-            fm_from_p2p_converter=NamFromP2pConverter(),
+            fm_from_p2p_converter=NamFromP2pConverter(device=device),
         )
