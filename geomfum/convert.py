@@ -363,7 +363,7 @@ class P2pFromNamConverter(BaseP2pFromNamConverter):
         p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
             Pointwise map. ``bijective`` controls shape.
         """
-        k2, k1 = nam.input_dim, nam.output_dim
+        k2, k1 = nam.shape
 
         emb1 = xgs.to_torch(basis_a.full_vecs[:, :k1]).to(nam.device).double()
         emb2 = nam(xgs.to_torch(basis_b.full_vecs[:, :k2]).to(nam.device).double())
