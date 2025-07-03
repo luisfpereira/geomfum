@@ -83,6 +83,11 @@ register_feature_extractor(
     "diffusionnet", "DiffusionnetFeatureExtractor", requires="torch", as_default=True
 )
 
+register_feature_extractor(
+    "deltaconv", "DeltaConvFeatureExtractor", requires="torch", as_default=False
+)
+
+
 register_sinkhorn_neighbor_finder(
     "pot", "PotSinkhornNeighborFinder", requires="ot", as_default=True
 )

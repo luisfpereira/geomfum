@@ -15,7 +15,6 @@ import torch
 import torch.nn as nn
 
 import geomfum.backend as xgs
-import geomfum.backend as xgs
 from geomfum.descriptor.learned import BaseFeatureExtractor
 
 
