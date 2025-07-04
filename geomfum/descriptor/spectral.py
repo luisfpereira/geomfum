@@ -131,6 +131,10 @@ class HeatKernelSignature(WhichRegistryMixins, SpectralDescriptor):
         descr : array-like, shape=[n_domain, n_vertices]
             Descriptor.
         """
+        if self.k is not None:
+            if shape.basis.spectrum_size != self.k:
+                shape.basis.use_k = self.k
+
         domain = self.domain(shape) if callable(self.domain) else self.domain
 
         vals_term = gs.exp(-la.scalarvecmul(domain, shape.basis.vals))
@@ -168,6 +172,11 @@ class WaveKernelSignature(WhichRegistryMixins, SpectralDescriptor):
         descr : array-like, shape=[n_domain, n_vertices]
             Descriptor.
         """
+
+        if self.k is not None:
+            if shape.basis.spectrum_size != self.k:
+                shape.basis.use_k = self.k
+
         if callable(self.domain):
             # TODO: document domain better
             domain, sigma = self.domain(shape)
