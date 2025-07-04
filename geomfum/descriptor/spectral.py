@@ -111,10 +111,11 @@ class HeatKernelSignature(WhichRegistryMixins, SpectralDescriptor):
 
     _Registry = HeatKernelSignatureRegistry
 
-    def __init__(self, scale=True, n_domain=3, domain=None):
+    def __init__(self, scale=True, n_domain=3, domain=None, k=None):
         super().__init__(
             domain or (lambda shape: hks_default_domain(shape, n_domain=n_domain)),
             use_landmarks=False,
+            k=k,
         )
         self.scale = scale
 
@@ -151,10 +152,11 @@ class WaveKernelSignature(WhichRegistryMixins, SpectralDescriptor):
 
     _Registry = WaveKernelSignatureRegistry
 
-    def __init__(self, scale=True, sigma=None, n_domain=3, domain=None):
+    def __init__(self, scale=True, sigma=None, n_domain=3, domain=None, k=None):
         super().__init__(
             domain or WksDefaultDomain(n_domain=n_domain, sigma=sigma),
             use_landmarks=False,
+            k=k,
         )
         self.scale = scale
         self.sigma = sigma
