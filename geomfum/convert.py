@@ -264,14 +264,12 @@ class NamFromP2pConverter(BaseNamFromP2pConverter):
     """Neural Adjoint Map from pointwise map using Neural Adjoint Maps (NAMs)."""
 
     def __init__(
-        self, optimizer=None, iter_max=200, patience=10, min_delta=1e-4, device="cpu"
+        self, iter_max=200, patience=10, min_delta=1e-4, device="cpu"
     ):
         """Initialize the converter.
 
         Parameters
         ----------
-        optimizer : torch.optim.Optimizer, optional
-            Optimizer for training the Neural Adjoint Map.
         iter_max : int, optional
             Maximum number of iterations for training the Neural Adjoint Map.
         patience : int, optional
@@ -293,6 +291,12 @@ class NamFromP2pConverter(BaseNamFromP2pConverter):
         ----------
         p2p : array-like, shape=[n_vertices_b]
             Pointwise map.
+        basis_a : Basis, shape=[n_vertices_a, spectrum_size_a]
+            Basis of the source shape.
+        basis_b : Basis, shape=[n_vertices_b, spectrum_size_b]
+            Basis of the target shape.
+        optimizer : torch.optim.Optimizer, optional
+            Optimizer for training the Neural Adjoint Map.
 
         Returns
         -------
