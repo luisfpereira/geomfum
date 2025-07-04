@@ -284,7 +284,7 @@ class NamFromP2pConverter(BaseNamFromP2pConverter):
         self.iter_max = iter_max
         self.device = device
         self.min_delta = min_delta
-        self.patientce = patience
+        self.patience = patience
 
     def __call__(self, p2p, basis_a, basis_b, optimizer=None):
         """Convert point to point map.
@@ -327,7 +327,7 @@ class NamFromP2pConverter(BaseNamFromP2pConverter):
                 wait = 0
             else:
                 wait += 1
-            if wait >= self.iter_max:
+            if wait >= self.patience:
                 break
 
         return nam
