@@ -29,8 +29,8 @@ class NeuralAdjointMap(nn.Module):
         self,
         input_dim,
         output_dim,
-        linear_branch=None,
-        non_linear_branch=None,
+        linear_module=None,
+        non_linear_module=None,
         device="cpu",
     ):
         super().__init__()
@@ -44,16 +44,16 @@ class NeuralAdjointMap(nn.Module):
         self.device = device
 
         # Linear Module
-        self.linear_branch = linear_branch
-        if self.linear_branch is None:
-            self.linear_branch = nn.Linear(input_dim, output_dim, bias=False).to(
+        self.linear_module = linear_module
+        if self.linear_module is None:
+            self.linear_module = nn.Linear(input_dim, output_dim, bias=False).to(
                 self.device
             )
 
         # Non-linear MLP Module
-        self.nonlinear_branch = non_linear_branch
-        if self.nonlinear_branch is None:
-            self.nonlinear_branch = MLP(
+        self.nonlinear_module= non_linear_module
+        if self.nonlinear_module is None:
+            self.nonlinear_module = MLP(
                 input_dim=input_dim,
                 output_dim=output_dim,
                 depth=2,
@@ -65,11 +65,11 @@ class NeuralAdjointMap(nn.Module):
         self._reset_parameters()
 
     def forward(self, x):
-        """Forward pass through both the linear and non-linear branches."""
+        """Forward pass through both the linear and non-linear modules."""
         x = x[:, : self.input_dim]
 
-        fmap = self.linear_branch(x)
-        t = self.mlp_scale * self.nonlinear_branch(x)
+        fmap = self.linear_module(x)
+        t = self.mlp_scale * self.nonlinear_module(x)
         x_out = fmap + t
 
         return x_out.squeeze()
