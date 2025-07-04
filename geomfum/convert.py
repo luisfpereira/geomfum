@@ -272,6 +272,12 @@ class NamFromP2pConverter(BaseNamFromP2pConverter):
         ----------
         optimizer : torch.optim.Optimizer, optional
             Optimizer for training the Neural Adjoint Map.
+        iter_max : int, optional
+            Maximum number of iterations for training the Neural Adjoint Map.
+        patience : int, optional
+            Number of iterations with no improvement after which training will be stopped.
+        min_delta : float, optional
+            Minimum change in the loss to qualify as an improvement.
         device : str, optional
             Device to use for the Neural Adjoint Map (e.g., 'cpu' or 'cuda').
         """
@@ -290,7 +296,7 @@ class NamFromP2pConverter(BaseNamFromP2pConverter):
 
         Returns
         -------
-        NeuralAdjointMap : size=[spectrum_size_b, spectrum_size_a]
+        nam: NeuralAdjointMap , shape=[spectrum_size_b, spectrum_size_a]
             Neural Adjoint Map model.
         """
         evects2_pb = xgs.to_torch(basis_b.vecs[p2p, :]).to(self.device).double()
