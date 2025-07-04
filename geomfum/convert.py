@@ -63,7 +63,10 @@ class P2pFromFmConverter(BaseP2pFromFmConverter):
         ----------
         fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
-
+        basis_a : Basis, 
+            Basis of the source shape.
+        basis_b : Basis,
+            Basis of the target shape.
         Returns
         -------
         p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
@@ -215,6 +218,10 @@ class FmFromP2pConverter(BaseFmFromP2pConverter):
         ----------
         p2p : array-like, shape=[n_vertices_b]
             Poinwise map.
+        basis_a : Basis, 
+            Basis of the source shape.
+        basis_b : Basis,
+            Basis of the target shape.
 
         Returns
         -------
@@ -246,6 +253,11 @@ class FmFromP2pBijectiveConverter(BaseFmFromP2pConverter):
         ----------
         p2p : array-like, shape=[n_vertices_a]
             Pointwise map.
+        basis_a : Basis, 
+            Basis of the source shape.
+        basis_b : Basis,
+            Basis of the target shape.
+
 
         Returns
         -------
@@ -256,11 +268,9 @@ class FmFromP2pBijectiveConverter(BaseFmFromP2pConverter):
         return gs.from_numpy(scipy.linalg.lstsq(evects2_pb, basis_a.vecs)[0])
 
 
-class BaseNamFromP2pConverter(abc.ABC):
-    """Neural Adjoint Map from pointwise map."""
 
 
-class NamFromP2pConverter(BaseNamFromP2pConverter):
+class NamFromP2pConverter(BaseFmFromP2pConverter):
     """Neural Adjoint Map from pointwise map using Neural Adjoint Maps (NAMs)."""
 
     def __init__(
@@ -291,13 +301,13 @@ class NamFromP2pConverter(BaseNamFromP2pConverter):
         ----------
         p2p : array-like, shape=[n_vertices_b]
             Pointwise map.
-        basis_a : Basis, shape=[n_vertices_a, spectrum_size_a]
+        basis_a : Basis, 
             Basis of the source shape.
-        basis_b : Basis, shape=[n_vertices_b, spectrum_size_b]
+        basis_b : Basis,
             Basis of the target shape.
         optimizer : torch.optim.Optimizer, optional
             Optimizer for training the Neural Adjoint Map.
-
+            
         Returns
         -------
         nam: NeuralAdjointMap , shape=[spectrum_size_b, spectrum_size_a]
@@ -337,11 +347,7 @@ class NamFromP2pConverter(BaseNamFromP2pConverter):
         return nam
 
 
-class BaseP2pFromNamConverter(abc.ABC):
-    """Pointwise map from Neural Adjoint Map (NAM)."""
-
-
-class P2pFromNamConverter(BaseP2pFromNamConverter):
+class P2pFromNamConverter(BaseP2pFromFmConverter):
     """Pointwise map from Neural Adjoint Map (NAM).
 
     Parameters
@@ -351,6 +357,7 @@ class P2pFromNamConverter(BaseP2pFromNamConverter):
     """
 
     def __init__(self, neighbor_finder=None):
+        
         if neighbor_finder is None:
             neighbor_finder = NearestNeighbors(
                 n_neighbors=1, leaf_size=40, algorithm="kd_tree", n_jobs=1
@@ -367,11 +374,14 @@ class P2pFromNamConverter(BaseP2pFromNamConverter):
         ----------
         nam : NeuralAdjointMap, shape=[spectrum_size_b, spectrum_size_a]
             Nam model.
-
+        basis_a : Basis, 
+            Basis of the source shape.
+        basis_b : Basis,
+            Basis of the target shape.
         Returns
         -------
         p2p : array-like, shape=[{n_vertices_b, n_vertices_a}]
-            Pointwise map. ``bijective`` controls shape.
+            Pointwise map.
         """
         k2, k1 = nam.shape
 
