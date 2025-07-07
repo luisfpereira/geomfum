@@ -63,7 +63,7 @@ class P2pFromFmConverter(BaseP2pFromFmConverter):
         ----------
         fmap_matrix : array-like, shape=[spectrum_size_b, spectrum_size_a]
             Functional map matrix.
-        basis_a : Basis, 
+        basis_a : Basis,
             Basis of the source shape.
         basis_b : Basis,
             Basis of the target shape.
@@ -218,7 +218,7 @@ class FmFromP2pConverter(BaseFmFromP2pConverter):
         ----------
         p2p : array-like, shape=[n_vertices_b]
             Poinwise map.
-        basis_a : Basis, 
+        basis_a : Basis,
             Basis of the source shape.
         basis_b : Basis,
             Basis of the target shape.
@@ -253,7 +253,7 @@ class FmFromP2pBijectiveConverter(BaseFmFromP2pConverter):
         ----------
         p2p : array-like, shape=[n_vertices_a]
             Pointwise map.
-        basis_a : Basis, 
+        basis_a : Basis,
             Basis of the source shape.
         basis_b : Basis,
             Basis of the target shape.
@@ -268,14 +268,10 @@ class FmFromP2pBijectiveConverter(BaseFmFromP2pConverter):
         return gs.from_numpy(scipy.linalg.lstsq(evects2_pb, basis_a.vecs)[0])
 
 
-
-
 class NamFromP2pConverter(BaseFmFromP2pConverter):
     """Neural Adjoint Map from pointwise map using Neural Adjoint Maps (NAMs)."""
 
-    def __init__(
-        self, iter_max=200, patience=10, min_delta=1e-4, device="cpu"
-    ):
+    def __init__(self, iter_max=200, patience=10, min_delta=1e-4, device="cpu"):
         """Initialize the converter.
 
         Parameters
@@ -301,13 +297,13 @@ class NamFromP2pConverter(BaseFmFromP2pConverter):
         ----------
         p2p : array-like, shape=[n_vertices_b]
             Pointwise map.
-        basis_a : Basis, 
+        basis_a : Basis,
             Basis of the source shape.
         basis_b : Basis,
             Basis of the target shape.
         optimizer : torch.optim.Optimizer, optional
             Optimizer for training the Neural Adjoint Map.
-            
+
         Returns
         -------
         nam: NeuralAdjointMap , shape=[spectrum_size_b, spectrum_size_a]
@@ -322,7 +318,7 @@ class NamFromP2pConverter(BaseFmFromP2pConverter):
         ).double()
 
         if optimizer is None:
-            optimizer = torch.optim.Adam(nam.parameters(), lr=0.001, weight_decay=1e-5)
+            optimizer = torch.optim.Adam(nam.parameters(), lr=0.01, weight_decay=1e-5)
 
         best_loss = float("inf")
         wait = 0
@@ -357,7 +353,6 @@ class P2pFromNamConverter(BaseP2pFromFmConverter):
     """
 
     def __init__(self, neighbor_finder=None):
-        
         if neighbor_finder is None:
             neighbor_finder = NearestNeighbors(
                 n_neighbors=1, leaf_size=40, algorithm="kd_tree", n_jobs=1
@@ -374,7 +369,7 @@ class P2pFromNamConverter(BaseP2pFromFmConverter):
         ----------
         nam : NeuralAdjointMap, shape=[spectrum_size_b, spectrum_size_a]
             Nam model.
-        basis_a : Basis, 
+        basis_a : Basis,
             Basis of the source shape.
         basis_b : Basis,
             Basis of the target shape.
